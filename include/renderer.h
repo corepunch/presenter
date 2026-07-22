@@ -17,7 +17,10 @@ public:
                                       const FontAtlas& smallFont);
 
     void clear(int r = 30, int g = 30, int b = 40);
-    void drawText(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color);
+    void drawText(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color, bool bold = false);
+    void renderFormatted(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color);
+    void renderFormattedBlock(const std::string& text, int x, int y,
+                               const FontAtlas& font, SDL_Color color, int maxWidth = 0);
     int textHeight(const FontAtlas& font);
     void renderTextBlock(const std::string& text, int x, int y,
                          const FontAtlas& font, SDL_Color color, int maxWidth = 0);

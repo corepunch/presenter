@@ -1,7 +1,7 @@
 layout: title
 notes: Welcome everyone. Today I'll walk you through our SDL2 Game Engine project — a modern rendering pipeline built from the ground up. This project started about 14 months ago with the goal of creating a performant 2D/3D engine using SDL2 as the foundation.
 
-# SDL2 Game Engine
+# **SDL2** Game Engine
 
 A Modern Rendering Pipeline
 
@@ -10,9 +10,9 @@ notes: Here are the four pillars of our engine. Rendering uses a deferred pipeli
 
 # Key Features
 
-- Deferred rendering pipeline with OpenGL 4.5 and custom shader system
-- Spatial audio engine with real-time mixing and 3D positional audio
-- Unified input layer abstracting keyboard, mouse, and gamepad devices
+- **Deferred** rendering pipeline with OpenGL 4.5 and custom shader system
+- **Spatial** audio engine with real-time mixing and 3D positional audio
+- **Unified** input layer abstracting keyboard, mouse, and gamepad devices
 - Lightweight physics system with AABB collision and spatial hashing
 
 layout: section

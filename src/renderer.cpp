@@ -34,7 +34,7 @@ void Renderer::clear(int r, int g, int b) {
 }
 
 void Renderer::drawText(const std::string& text, float x, float y,
-                        const FontAtlas& font, SDL_Color color) {
+                        const FontAtlas& font, SDL_Color color, bool bold) {
     if (text.empty() || !m_surface) return;
 
     const uint8_t* atlasBitmap = font.bitmapData();
@@ -77,6 +77,10 @@ void Renderer::drawText(const std::string& text, float x, float y,
                 g.height
             };
             SDL_BlitSurface(atlasRGBA, &srcRect, m_surface, &dstRect);
+            if (bold) {
+                SDL_Rect dstBold = {dstRect.x + 1, dstRect.y, g.width, g.height};
+                SDL_BlitSurface(atlasRGBA, &srcRect, m_surface, &dstBold);
+            }
         }
 
         curX += g.xadvance;
@@ -86,6 +90,31 @@ void Renderer::drawText(const std::string& text, float x, float y,
     }
 
     SDL_FreeSurface(atlasRGBA);
+}
+
+void Renderer::renderFormatted(const std::string& text, float x, float y,
+                                const FontAtlas& font, SDL_Color color) {
+    float curX = x;
+    bool bold = false;
+    size_t pos = 0;
+
+    while (pos < text.size()) {
+        size_t marker = text.find("**", pos);
+        if (marker == std::string::npos) {
+            std::string segment = text.substr(pos);
+            drawText(segment, curX, y, font, color, bold);
+            break;
+        }
+
+        if (marker > pos) {
+            std::string segment = text.substr(pos, marker - pos);
+            drawText(segment, curX, y, font, color, bold);
+            curX += font.measureString(segment);
+        }
+
+        bold = !bold;
+        pos = marker + 2;
+    }
 }
 
 int Renderer::textHeight(const FontAtlas& font) {
@@ -163,6 +192,20 @@ void Renderer::renderTextBlock(const std::string& text, int x, int y,
     }
 }
 
+void Renderer::renderFormattedBlock(const std::string& text, int x, int y,
+                                     const FontAtlas& font, SDL_Color color, int maxWidth) {
+    if (maxWidth > 0) {
+        auto lines = wordWrap(text, font, maxWidth);
+        int lineH = textHeight(font);
+        for (size_t i = 0; i < lines.size(); i++) {
+            renderFormatted(lines[i], static_cast<float>(x),
+                           static_cast<float>(y + static_cast<int>(i) * lineH), font, color);
+        }
+    } else {
+        renderFormatted(text, static_cast<float>(x), static_cast<float>(y), font, color);
+    }
+}
+
 // ---- slide rendering: simple text layout ----
 
 static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
@@ -175,28 +218,28 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
     SDL_Color ltgray = {200, 200, 210, 255};
 
     // title
-    r->drawText(slide.title, static_cast<float>(margin),
+    r->renderFormatted(slide.title, static_cast<float>(margin),
                 static_cast<float>(y), font, white);
-    y += th + 4;
+    y += th + 8;
 
-    // underline
+    // underline (centered between title and content)
     Uint32 lineColor = makeColor(surf, 100, 100, 120);
     SDL_Rect lineRect = {margin, y, w - 2 * margin, 1};
     SDL_FillRect(surf, &lineRect, lineColor);
-    y += 16;
+    y += 9;
 
     int contentW = w - 2 * margin;
 
     // subtitle (for title slides stored in imageAlt)
     if (!slide.imageAlt.empty() && slide.type == SlideType::Title) {
-        r->renderTextBlock(slide.imageAlt, margin, y, font, ltgray, contentW);
+        r->renderFormattedBlock(slide.imageAlt, margin, y, font, ltgray, contentW);
         y += th + 8;
     }
 
     // bullets / text content
     for (size_t i = 0; i < slide.bullets.size(); i++) {
         std::string line = "\xE2\x80\xA2 " + slide.bullets[i];
-        r->renderTextBlock(line, margin, y, font, ltgray, contentW);
+        r->renderFormattedBlock(line, margin, y, font, ltgray, contentW);
         y += th;
     }
 
@@ -249,10 +292,10 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
         y += th;
 
         // left content
-        r->renderTextBlock(slide.leftContent, margin, y, font, ltgray, colW);
+        r->renderFormattedBlock(slide.leftContent, margin, y, font, ltgray, colW);
 
         // right content
-        r->renderTextBlock(slide.rightContent, margin + colW + gap, y, font, ltgray, colW);
+        r->renderFormattedBlock(slide.rightContent, margin + colW + gap, y, font, ltgray, colW);
     }
 }
 
@@ -302,7 +345,7 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontA
 
     // title (larger font)
     const Slide& current = pres.currentSlide();
-    drawText(current.title, static_cast<float>(margin), static_cast<float>(y), font, white);
+    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), font, white);
     y += textHeight(font) + 12;
 
     // notes section
@@ -316,7 +359,7 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontA
 
         drawText("Notes:", static_cast<float>(margin + 6),
                  static_cast<float>(y + 4), smallFont, dim);
-        renderTextBlock(current.notes, margin + 6, y + th + 4, smallFont, ltgray, contentW - 12);
+        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallFont, ltgray, contentW - 12);
         y += notesH + 12;
     }
 
