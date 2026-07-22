@@ -34,7 +34,7 @@ void Renderer::clear(int r, int g, int b) {
 }
 
 void Renderer::drawText(const std::string& text, float x, float y,
-                        const FontAtlas& font, SDL_Color color, bool bold) {
+                        const FontAtlas& font, SDL_Color color, FontType fontType) {
     if (text.empty() || !m_surface) return;
 
     const uint8_t* atlasBitmap = font.bitmapData();
@@ -77,7 +77,7 @@ void Renderer::drawText(const std::string& text, float x, float y,
                 g.height
             };
             SDL_BlitSurface(atlasRGBA, &srcRect, m_surface, &dstRect);
-            if (bold) {
+            if (fontType == FontType::Bold || fontType == FontType::BoldItalic) {
                 SDL_Rect dstBold = {dstRect.x + 1, dstRect.y, g.width, g.height};
                 SDL_BlitSurface(atlasRGBA, &srcRect, m_surface, &dstBold);
             }
@@ -96,7 +96,7 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
                                 const FontAtlas& font, SDL_Color color) {
     SDL_Color codeColor = {255, 255, 0, 255};
     float curX = x;
-    bool bold = false;
+    FontType fontType = FontType::Regular;
     bool code = false;
     size_t pos = 0;
 
@@ -124,7 +124,7 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
             // no more markers, render remaining text
             std::string segment = text.substr(pos);
             SDL_Color clr = code ? codeColor : color;
-            drawText(segment, curX, y, font, clr, bold);
+            drawText(segment, curX, y, font, clr, fontType);
             break;
         }
 
@@ -132,13 +132,13 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
         if (marker > pos) {
             std::string segment = text.substr(pos, marker - pos);
             SDL_Color clr = code ? codeColor : color;
-            drawText(segment, curX, y, font, clr, bold);
+            drawText(segment, curX, y, font, clr, fontType);
             curX += font.measureString(segment);
         }
 
         // toggle state
         if (markerType == 1) {
-            bold = !bold;
+            fontType = (fontType == FontType::Bold) ? FontType::Regular : FontType::Bold;
         } else {
             code = !code;
         }
@@ -238,9 +238,10 @@ void Renderer::renderFormattedBlock(const std::string& text, int x, int y,
 // ---- slide rendering: simple text layout ----
 
 static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
-                               const Slide& slide, const FontAtlas& font,
+                               const Slide& slide, const FontSet& fonts,
                                int w, int h) {
     int margin = 40;
+    const FontAtlas& font = fonts.get(FontType::Regular);
     int th = static_cast<int>(font.getFontSize()) + 6;
     int y = margin;
     SDL_Color white = {255, 255, 255, 255};
@@ -249,13 +250,13 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
     // title
     r->renderFormatted(slide.title, static_cast<float>(margin),
                 static_cast<float>(y), font, white);
-    // y += th - 2;
+    y += th - 2;
 
     // underline (centered between title and content)
     Uint32 lineColor = makeColor(surf, 100, 100, 120);
     SDL_Rect lineRect = {margin, y, w - 2 * margin, 1};
     SDL_FillRect(surf, &lineRect, lineColor);
-    y += 9;
+    y += th + 9;
 
     int contentW = w - 2 * margin;
 
@@ -328,7 +329,7 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
     }
 }
 
-SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontAtlas& font) {
+SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts) {
     clear();
 
     SDL_Renderer* savedR = m_renderer;
@@ -341,7 +342,7 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontAtlas& font) {
         SDL_FillRect(surf, nullptr, makeColor(surf, 30, 30, 40));
         m_surface = surf;
 
-        renderSlideSimple(this, surf, slide, font, m_width, m_height);
+        renderSlideSimple(this, surf, slide, fonts, m_width, m_height);
 
         SDL_Rect dst = {0, 0, m_width, m_height};
         SDL_BlitSurface(surf, nullptr, savedS, &dst);
@@ -355,11 +356,12 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontAtlas& font) {
     return texture;
 }
 
-SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontAtlas& font,
-                                            const FontAtlas& smallFont) {
+SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontSet& fonts) {
     clear(40, 40, 50);
 
     int margin = 20;
+    const FontAtlas& font = fonts.get(FontType::Regular);
+    const FontAtlas& smallFont = fonts.get(FontType::Regular);
     int th = textHeight(smallFont);
     int y = margin;
     SDL_Color white = {255, 255, 255, 255};
@@ -382,7 +384,7 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontA
     if (!current.notes.empty()) {
         Uint32 notesBg = makeColor(m_surface, 35, 35, 45);
         int notesH = std::max(th * 3, m_height - y - margin - th * 2);
-        SDL_Rect notesRect = {margin, y, contentW, notesH};
+        SDL_Rect notesRect = {margin, y - 18, contentW, notesH};
         SDL_FillRect(m_surface, &notesRect, notesBg);
         drawRectOutline(&notesRect, makeColor(m_surface, 60, 60, 70));
 

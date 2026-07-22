@@ -9,8 +9,7 @@
 #include <string>
 
 static void printUsage(const char* prog) {
-    printf("Usage: %s <presentation.md> [--font path.ttf] [--size N]\n", prog);
-    printf("  --font   Path to TTF font (default: assets/Roboto-Regular.ttf)\n");
+    printf("Usage: %s <presentation.md> [--size N]\n", prog);
     printf("  --size   Font size in pixels (default: 28)\n");
 }
 
@@ -21,13 +20,10 @@ int main(int argc, char* argv[]) {
     }
 
     std::string mdPath = argv[1];
-    std::string fontPath = "assets/Roboto-Regular.ttf";
     float fontSize = 28.0f;
 
     for (int i = 2; i < argc; i++) {
-        if (std::string(argv[i]) == "--font" && i + 1 < argc) {
-            fontPath = argv[++i];
-        } else if (std::string(argv[i]) == "--size" && i + 1 < argc) {
+        if (std::string(argv[i]) == "--size" && i + 1 < argc) {
             fontSize = static_cast<float>(std::atoi(argv[++i]));
         }
     }
@@ -44,22 +40,13 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    FontAtlas font;
-    if (!font.load(fontPath, fontSize)) {
-        fprintf(stderr, "Failed to load font: %s\n", fontPath.c_str());
+    FontSet fonts;
+    if (!fonts.load(fontSize)) {
+        fprintf(stderr, "Failed to load fonts\n");
         SDL_Quit();
         return 1;
     }
-    printf("Loaded font %s at %.0fpx\n", fontPath.c_str(), fontSize);
-
-    FontAtlas smallFont;
-    float smallFontSize = fontSize * 0.7f;
-    if (!smallFont.load(fontPath, smallFontSize)) {
-        fprintf(stderr, "Failed to load small font: %s\n", fontPath.c_str());
-        SDL_Quit();
-        return 1;
-    }
-    printf("Loaded small font %s at %.0fpx\n", fontPath.c_str(), smallFontSize);
+    printf("Loaded fonts at %.0fpx\n", fontSize);
 
     // Audience window
     SDL_Window* audienceWindow = SDL_CreateWindow(
@@ -85,7 +72,7 @@ int main(int argc, char* argv[]) {
     SDL_Window* presenterWindow = SDL_CreateWindow(
         "Presenter View",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        960, 600,
+        640, 480,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
     );
     if (!presenterWindow) {
@@ -184,8 +171,8 @@ int main(int argc, char* argv[]) {
         }
 
         if (needsRender) {
-            SDL_Texture* audienceTex = audienceRend.renderSlide(pres.currentSlide(), font);
-            SDL_Texture* presenterTex = presenterRend.renderPresenterView(pres, font, smallFont);
+            SDL_Texture* audienceTex = audienceRend.renderSlide(pres.currentSlide(), fonts);
+            SDL_Texture* presenterTex = presenterRend.renderPresenterView(pres, fonts);
 
             // Render audience
             SDL_RenderClear(audienceRenderer);

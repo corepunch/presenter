@@ -12,12 +12,11 @@ public:
     bool init(SDL_Renderer* renderer, int width, int height);
     void cleanup();
 
-    SDL_Texture* renderSlide(const Slide& slide, const FontAtlas& font);
-    SDL_Texture* renderPresenterView(const Presentation& pres, const FontAtlas& font,
-                                      const FontAtlas& smallFont);
+    SDL_Texture* renderSlide(const Slide& slide, const FontSet& fonts);
+    SDL_Texture* renderPresenterView(const Presentation& pres, const FontSet& fonts);
 
     void clear(int r = 30, int g = 30, int b = 40);
-    void drawText(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color, bool bold = false);
+    void drawText(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color, FontType fontType = FontType::Regular);
     void renderFormatted(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color);
     void renderFormattedBlock(const std::string& text, int x, int y,
                                const FontAtlas& font, SDL_Color color, int maxWidth = 0);

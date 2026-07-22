@@ -3,6 +3,14 @@
 #include <vector>
 #include <cstdint>
 
+enum class FontType {
+    Regular,
+    Bold,
+    Italic,
+    BoldItalic,
+    Monospace
+};
+
 enum class SlideType {
     Title,       // Large centered title + subtitle
     Content,     // Title + bullet points
