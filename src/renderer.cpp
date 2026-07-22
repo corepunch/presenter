@@ -1,6 +1,8 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "utf8.h"
+
 #include "renderer.h"
 #include <algorithm>
 #include <cstring>
@@ -37,22 +39,19 @@ void Renderer::drawText(const std::string& text, float x, float y,
                         const Font& font, SDL_Color color, FontType fontType) {
     if (text.empty() || !m_surface) return;
 
+    bool bold = (fontType == FontType::Bold || fontType == FontType::BoldItalic);
     float curX = x;
-    for (size_t i = 0; i < text.size(); i++) {
-        char c = text[i];
+    utf8_int32_t prev = 0;
+    const utf8_int8_t* s = reinterpret_cast<const utf8_int8_t*>(text.c_str());
+    while (*s) {
+        utf8_int32_t cp = 0;
+        s = utf8codepoint(s, &cp);
 
-        font.drawGlyph(m_surface, c, curX, y, color);
-        if (fontType == FontType::Bold || fontType == FontType::BoldItalic) {
-            font.drawGlyph(m_surface, c, curX + 1.0f, y, color);
-        }
+        if (prev) curX += font.getKerning(static_cast<uint32_t>(prev), static_cast<uint32_t>(cp));
+        if (bold) font.drawGlyph(m_surface, static_cast<uint32_t>(cp), curX + 1.0f, y, color);
+        curX += font.drawGlyph(m_surface, static_cast<uint32_t>(cp), curX, y, color);
 
-        // Advance
-        if (i > 0) {
-            curX += font.getKerning(text[i - 1], c);
-        }
-        // measureString for single char to get advance
-        char buf[2] = {c, '\0'};
-        curX += font.measureString(buf);
+        prev = cp;
     }
 }
 

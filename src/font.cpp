@@ -1,6 +1,8 @@
 #define STB_TRUETYPE_IMPLEMENTATION
 #include "stb_truetype.h"
 
+#include "utf8.h"
+
 #include "font.h"
 #include <fstream>
 #include <algorithm>
@@ -43,17 +45,53 @@ bool Font::load(const std::string& ttfPath, float fontSize) {
     return true;
 }
 
-void Font::drawGlyph(SDL_Surface* surface, char c, float x, float y, SDL_Color color) const {
-    if (!m_fontInfo || !surface || c == ' ') return;
-    auto* fontInfo = static_cast<stbtt_fontinfo*>(m_fontInfo);
+bool Font::loadCandidates(const std::vector<std::string>& paths, float fontSize) {
+    for (const auto& path : paths) {
+        if (load(path, fontSize)) return true;
+    }
+    return false;
+}
+
+const void* Font::resolveFont(uint32_t codepoint, float* outScale) const {
+    auto* primary = static_cast<const stbtt_fontinfo*>(m_fontInfo);
+    if (primary && stbtt_FindGlyphIndex(primary, static_cast<int>(codepoint)) != 0) {
+        *outScale = m_scale;
+        return primary;
+    }
+    if (m_fallback) {
+        auto* fb = static_cast<const stbtt_fontinfo*>(m_fallback->m_fontInfo);
+        if (fb && stbtt_FindGlyphIndex(fb, static_cast<int>(codepoint)) != 0) {
+            *outScale = m_fallback->m_scale;
+            return fb;
+        }
+    }
+    return nullptr;
+}
+
+float Font::drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y, SDL_Color color) const {
+    float scale = 0;
+    const stbtt_fontinfo* info = static_cast<const stbtt_fontinfo*>(resolveFont(codepoint, &scale));
+
+    // Missing everywhere: fall back to '?' so we don't render tofu
+    if (!info) {
+        codepoint = '?';
+        info = static_cast<const stbtt_fontinfo*>(resolveFont(codepoint, &scale));
+        if (!info) return 0;
+    }
+
+    int advanceWidth;
+    stbtt_GetCodepointHMetrics(info, static_cast<int>(codepoint), &advanceWidth, nullptr);
+    float advance = static_cast<float>(advanceWidth) * scale;
+
+    if (!surface || codepoint == ' ') return advance;
 
     int width, height, xoff, yoff;
     uint8_t* bitmap = stbtt_GetCodepointBitmap(
-        fontInfo, m_scale, m_scale, c, &width, &height, &xoff, &yoff);
+        info, scale, scale, static_cast<int>(codepoint), &width, &height, &xoff, &yoff);
 
     if (!bitmap || width <= 0 || height <= 0) {
         stbtt_FreeBitmap(bitmap, nullptr);
-        return;
+        return advance;
     }
 
     int baseX = static_cast<int>(x + xoff);
@@ -89,26 +127,35 @@ void Font::drawGlyph(SDL_Surface* surface, char c, float x, float y, SDL_Color c
 
     SDL_UnlockSurface(surface);
     stbtt_FreeBitmap(bitmap, nullptr);
+    return advance;
 }
 
-float Font::getKerning(char a, char b) const {
-    if (!m_fontInfo) return 0;
-    auto* fontInfo = static_cast<stbtt_fontinfo*>(m_fontInfo);
-    int kern = stbtt_GetCodepointKernAdvance(fontInfo, a, b);
+float Font::getKerning(uint32_t a, uint32_t b) const {
+    // Kerning is only meaningful within a single font
+    auto* primary = static_cast<const stbtt_fontinfo*>(m_fontInfo);
+    if (!primary) return 0;
+    if (stbtt_FindGlyphIndex(primary, static_cast<int>(a)) == 0) return 0;
+    if (stbtt_FindGlyphIndex(primary, static_cast<int>(b)) == 0) return 0;
+    int kern = stbtt_GetCodepointKernAdvance(primary, static_cast<int>(a), static_cast<int>(b));
     return static_cast<float>(kern) * m_scale;
 }
 
 float Font::measureString(const std::string& text) const {
-    if (!m_fontInfo) return 0;
-    auto* fontInfo = static_cast<stbtt_fontinfo*>(m_fontInfo);
     float width = 0;
-    for (size_t i = 0; i < text.size(); i++) {
-        int advanceWidth;
-        stbtt_GetCodepointHMetrics(fontInfo, text[i], &advanceWidth, nullptr);
-        width += static_cast<float>(advanceWidth) * m_scale;
-        if (i > 0) {
-            width += getKerning(text[i - 1], text[i]);
+    utf8_int32_t prev = 0;
+    const utf8_int8_t* s = reinterpret_cast<const utf8_int8_t*>(text.c_str());
+    while (*s) {
+        utf8_int32_t cp = 0;
+        s = utf8codepoint(s, &cp);
+        if (prev) width += getKerning(static_cast<uint32_t>(prev), static_cast<uint32_t>(cp));
+        float scale = 0;
+        auto* info = static_cast<const stbtt_fontinfo*>(resolveFont(static_cast<uint32_t>(cp), &scale));
+        if (info) {
+            int advanceWidth;
+            stbtt_GetCodepointHMetrics(info, cp, &advanceWidth, nullptr);
+            width += static_cast<float>(advanceWidth) * scale;
         }
+        prev = cp;
     }
     return width;
 }

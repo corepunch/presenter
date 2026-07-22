@@ -49,6 +49,20 @@ static void test_measureString_space(const Font& font) {
     TEST_ASSERT(w > 0, "measureString(\" \") returns width > 0");
 }
 
+static void test_measureString_utf8(const Font& font) {
+    // U+2014 EM DASH, 3 bytes in UTF-8
+    float w = font.measureString("\xE2\x80\x94");
+    TEST_ASSERT(w > 0, "measureString of em-dash (U+2014) returns width > 0");
+}
+
+static void test_measureString_utf8_counts_codepoints(const Font& font) {
+    // "—" is 1 codepoint; byte-wise it would be 3 bogus chars
+    float dash = font.measureString("\xE2\x80\x94");
+    float dashTwice = font.measureString("\xE2\x80\x94\xE2\x80\x94");
+    TEST_ASSERT_NEAR(dashTwice, dash * 2, 2.0f,
+        "two em-dashes measure ~2x one em-dash (codepoint iteration)");
+}
+
 // ── Renderer::wordWrap tests ──────────────────────────────────────────────
 
 static void test_wordWrap_short_text(const Font& font, Renderer& renderer) {
@@ -241,6 +255,8 @@ int main(int argc, char* argv[]) {
     test_measureString_empty(fonts.get(FontType::Regular));
     test_measureString_additive(fonts.get(FontType::Regular));
     test_measureString_space(fonts.get(FontType::Regular));
+    test_measureString_utf8(fonts.get(FontType::Regular));
+    test_measureString_utf8_counts_codepoints(fonts.get(FontType::Regular));
 
     printf("\n=== Renderer::wordWrap tests ===\n");
     test_wordWrap_short_text(fonts.get(FontType::Regular), renderer);
