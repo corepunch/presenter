@@ -59,10 +59,10 @@ notes: Let me walk through the benchmarks. We ran these on a mid-range laptop â€
 
 # Performance Results
 
-- Draw calls reduced from 1,200 to 89 (93% reduction) via GPU instancing
-- Frame time improved from 16.7ms to 2.1ms on integrated graphics
+- Draw calls reduced from 1,200 to 89 (93% reduction) via `GPU` instancing
+- Frame time improved from `16.7ms` to `2.1ms` on integrated graphics
 - Memory usage decreased by 34% through shared texture atlases
-- Shader compilation time reduced to <50ms with parallel compilation
+- Shader compilation time reduced to `<50ms` with parallel compilation
 
 layout: title
 notes: That concludes the overview. Our engine has come a long way from a simple sprite renderer to a full-featured deferred pipeline. Next steps include adding skeletal animation, a particle system, and eventually Vulkan support. I'm happy to take any questions about the architecture, performance, or design decisions.

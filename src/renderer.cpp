@@ -94,26 +94,55 @@ void Renderer::drawText(const std::string& text, float x, float y,
 
 void Renderer::renderFormatted(const std::string& text, float x, float y,
                                 const FontAtlas& font, SDL_Color color) {
+    SDL_Color codeColor = {255, 255, 0, 255};
     float curX = x;
     bool bold = false;
+    bool code = false;
     size_t pos = 0;
 
     while (pos < text.size()) {
-        size_t marker = text.find("**", pos);
+        size_t boldMarker = text.find("**", pos);
+        size_t codeMarker = text.find('`', pos);
+
+        // pick the nearest marker
+        size_t marker = std::string::npos;
+        size_t markerLen = 0;
+        int markerType = 0; // 1=bold, 2=code
+
+        if (boldMarker != std::string::npos && (marker == std::string::npos || boldMarker < marker)) {
+            marker = boldMarker;
+            markerLen = 2;
+            markerType = 1;
+        }
+        if (codeMarker != std::string::npos && (marker == std::string::npos || codeMarker < marker)) {
+            marker = codeMarker;
+            markerLen = 1;
+            markerType = 2;
+        }
+
         if (marker == std::string::npos) {
+            // no more markers, render remaining text
             std::string segment = text.substr(pos);
-            drawText(segment, curX, y, font, color, bold);
+            SDL_Color clr = code ? codeColor : color;
+            drawText(segment, curX, y, font, clr, bold);
             break;
         }
 
+        // render text before marker
         if (marker > pos) {
             std::string segment = text.substr(pos, marker - pos);
-            drawText(segment, curX, y, font, color, bold);
+            SDL_Color clr = code ? codeColor : color;
+            drawText(segment, curX, y, font, clr, bold);
             curX += font.measureString(segment);
         }
 
-        bold = !bold;
-        pos = marker + 2;
+        // toggle state
+        if (markerType == 1) {
+            bold = !bold;
+        } else {
+            code = !code;
+        }
+        pos = marker + markerLen;
     }
 }
 
