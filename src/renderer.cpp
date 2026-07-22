@@ -288,7 +288,7 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
 
     // title at 2x size
     r->renderFormatted(slide.title, static_cast<float>(margin),
-                static_cast<float>(y), titleV, white);
+                static_cast<float>(y+25), titleV, white);
     y += thTitle - 2;
 
     // underline (centered between title and content)
@@ -301,7 +301,7 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
 
     // subtitle (for title slides stored in imageAlt)
     if (!slide.imageAlt.empty() && slide.type == SlideType::Title) {
-        r->renderFormattedBlock(slide.imageAlt, margin, y, baseV, ltgray, contentW);
+        r->renderFormattedBlock(slide.imageAlt, margin, y + 10, baseV, ltgray, contentW);
         y += th + 8;
     }
 
