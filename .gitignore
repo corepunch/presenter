@@ -1,0 +1,5 @@
+build/
+*.o
+*.obj
+.DS_Store
+test/test_parser
