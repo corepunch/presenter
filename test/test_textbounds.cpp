@@ -65,23 +65,23 @@ static void test_measureString_utf8_counts_codepoints(const Font& font) {
 
 // ── Renderer::wordWrap tests ──────────────────────────────────────────────
 
-static void test_wordWrap_short_text(const Font& font, Renderer& renderer) {
-    auto lines = renderer.wordWrap("Hello", font, 1920);
+static void test_wordWrap_short_text(const FontVariants& fonts, Renderer& renderer) {
+    auto lines = renderer.wordWrap("Hello", fonts, 1920);
     TEST_ASSERT(lines.size() == 1,
         "wordWrap short text produces single line");
 }
 
-static void test_wordWrap_long_text(const Font& font, Renderer& renderer) {
+static void test_wordWrap_long_text(const FontVariants& fonts, Renderer& renderer) {
     std::string longText = "This is a fairly long sentence that should definitely "
                            "wrap onto more than one line when given a narrow width";
-    auto lines = renderer.wordWrap(longText, font, 200);
+    auto lines = renderer.wordWrap(longText, fonts, 200);
     TEST_ASSERT(lines.size() > 1,
         "wordWrap long text produces multiple lines");
 }
 
-static void test_wordWrap_preserves_words(const Font& font, Renderer& renderer) {
+static void test_wordWrap_preserves_words(const FontVariants& fonts, Renderer& renderer) {
     std::string input = "alpha beta gamma delta epsilon";
-    auto lines = renderer.wordWrap(input, font, 200);
+    auto lines = renderer.wordWrap(input, fonts, 200);
 
     // Reconstruct all words from the wrapped output
     std::string reconstructed;
@@ -92,6 +92,16 @@ static void test_wordWrap_preserves_words(const Font& font, Renderer& renderer) 
 
     TEST_ASSERT(reconstructed == input,
         "wordWrap preserves all input words in order");
+}
+
+static void test_wordWrap_formatted_words(const FontVariants& fonts, Renderer& renderer) {
+    // markers are not measured as literal characters
+    std::string plain = "alpha beta gamma delta epsilon";
+    std::string formatted = "alpha **beta** gamma `delta` _epsilon_";
+    auto linesPlain = renderer.wordWrap(plain, fonts, 200);
+    auto linesFmt = renderer.wordWrap(formatted, fonts, 200);
+    TEST_ASSERT(linesFmt.size() <= linesPlain.size() + 1,
+        "wordWrap with format markers wraps sanely");
 }
 
 // ── Rendering smoke tests ─────────────────────────────────────────────────
@@ -259,9 +269,10 @@ int main(int argc, char* argv[]) {
     test_measureString_utf8_counts_codepoints(fonts.get(FontType::Regular));
 
     printf("\n=== Renderer::wordWrap tests ===\n");
-    test_wordWrap_short_text(fonts.get(FontType::Regular), renderer);
-    test_wordWrap_long_text(fonts.get(FontType::Regular), renderer);
-    test_wordWrap_preserves_words(fonts.get(FontType::Regular), renderer);
+    test_wordWrap_short_text(fonts.variants(), renderer);
+    test_wordWrap_long_text(fonts.variants(), renderer);
+    test_wordWrap_preserves_words(fonts.variants(), renderer);
+    test_wordWrap_formatted_words(fonts.variants(), renderer);
 
     printf("\n=== Rendering smoke tests ===\n");
     test_renderSlide_content(sdlRenderer, fonts, renderer);

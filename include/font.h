@@ -1,5 +1,6 @@
 #pragma once
 #include "common.h"
+#include "constants.h"
 #include <SDL2/SDL.h>
 #include <string>
 #include <vector>
@@ -43,27 +44,56 @@ private:
     const Font* m_fallback = nullptr;
 };
 
-struct FontSet {
-    std::array<Font, 5> fonts; // indexed by FontType
-    Font fallback;
+// The five style variants of one size class
+struct FontVariants {
+    const Font* fonts[5]; // indexed by FontType
 
-    bool load(float fontSize) {
-        for (int i = 0; i < 5; i++) {
-            if (!fonts[i].load(getFontPath(static_cast<FontType>(i)), fontSize))
-                return false;
-        }
-        // Fallback is best-effort: the app still works without it
-        if (fallback.loadCandidates(fallbackFontCandidates(), fontSize)) {
-            for (auto& f : fonts) f.setFallback(&fallback);
-        }
-        return true;
+    const Font& get(FontType type) const {
+        return *fonts[static_cast<int>(type)];
+    }
+};
+
+struct FontSet {
+    std::array<Font, 5> fonts;       // base size
+    std::array<Font, 5> titleFonts;  // base * FONT_SIZE_TITLE_SCALE
+    std::array<Font, 5> smallFonts;  // base * FONT_SIZE_SMALL_SCALE
+    Font fallback;
+    Font titleFallback;
+    Font smallFallback;
+
+    bool load(float baseSize) {
+        return loadGroup(fonts, fallback, baseSize)
+            && loadGroup(titleFonts, titleFallback, baseSize * FONT_SIZE_TITLE_SCALE)
+            && loadGroup(smallFonts, smallFallback, baseSize * FONT_SIZE_SMALL_SCALE);
     }
 
     const Font& get(FontType type) const {
         return fonts[static_cast<int>(type)];
     }
 
+    FontVariants variants() const      { return makeVariants(fonts); }
+    FontVariants titleVariants() const { return makeVariants(titleFonts); }
+    FontVariants smallVariants() const { return makeVariants(smallFonts); }
+
 private:
+    static bool loadGroup(std::array<Font, 5>& group, Font& fb, float size) {
+        for (int i = 0; i < 5; i++) {
+            if (!group[i].load(getFontPath(static_cast<FontType>(i)), size))
+                return false;
+        }
+        // Fallback is best-effort: the app still works without it
+        if (fb.loadCandidates(fallbackFontCandidates(), size)) {
+            for (auto& f : group) f.setFallback(&fb);
+        }
+        return true;
+    }
+
+    static FontVariants makeVariants(const std::array<Font, 5>& group) {
+        FontVariants v;
+        for (int i = 0; i < 5; i++) v.fonts[i] = &group[i];
+        return v;
+    }
+
     static std::vector<std::string> fallbackFontCandidates() {
 #if defined(_WIN32)
         return {

@@ -1,4 +1,5 @@
 #include "common.h"
+#include "constants.h"
 #include "parser.h"
 #include "font.h"
 #include "renderer.h"
@@ -10,7 +11,7 @@
 
 static void printUsage(const char* prog) {
     printf("Usage: %s <presentation.md> [--size N]\n", prog);
-    printf("  --size   Font size in pixels (default: 28)\n");
+    printf("  --size   Font size in pixels (default: %d)\n", static_cast<int>(FONT_SIZE_BASE));
 }
 
 int main(int argc, char* argv[]) {
@@ -20,7 +21,7 @@ int main(int argc, char* argv[]) {
     }
 
     std::string mdPath = argv[1];
-    float fontSize = 28.0f;
+    float fontSize = FONT_SIZE_BASE;
 
     for (int i = 2; i < argc; i++) {
         if (std::string(argv[i]) == "--size" && i + 1 < argc) {

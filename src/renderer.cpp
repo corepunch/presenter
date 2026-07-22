@@ -36,10 +36,9 @@ void Renderer::clear(int r, int g, int b) {
 }
 
 void Renderer::drawText(const std::string& text, float x, float y,
-                        const Font& font, SDL_Color color, FontType fontType) {
+                        const Font& font, SDL_Color color) {
     if (text.empty() || !m_surface) return;
 
-    bool bold = (fontType == FontType::Bold || fontType == FontType::BoldItalic);
     float curX = x;
     utf8_int32_t prev = 0;
     const utf8_int8_t* s = reinterpret_cast<const utf8_int8_t*>(text.c_str());
@@ -48,69 +47,111 @@ void Renderer::drawText(const std::string& text, float x, float y,
         s = utf8codepoint(s, &cp);
 
         if (prev) curX += font.getKerning(static_cast<uint32_t>(prev), static_cast<uint32_t>(cp));
-        if (bold) font.drawGlyph(m_surface, static_cast<uint32_t>(cp), curX + 1.0f, y, color);
         curX += font.drawGlyph(m_surface, static_cast<uint32_t>(cp), curX, y, color);
 
         prev = cp;
     }
 }
 
-void Renderer::renderFormatted(const std::string& text, float x, float y,
-                                const Font& font, SDL_Color color) {
-    SDL_Color codeColor = {255, 255, 0, 255};
-    float curX = x;
-    FontType fontType = FontType::Regular;
-    bool code = false;
+// Pick the font matching the current inline-format state
+static const Font& pickFont(const FontVariants& fonts, const TextFormat& fmt) {
+    if (fmt.code)                 return fonts.get(FontType::Monospace);
+    if (fmt.bold && fmt.italic)   return fonts.get(FontType::BoldItalic);
+    if (fmt.bold)                 return fonts.get(FontType::Bold);
+    if (fmt.italic)               return fonts.get(FontType::Italic);
+    return fonts.get(FontType::Regular);
+}
+
+// Find the nearest format marker at or after pos.
+// Returns marker position (or npos); *outLen = marker length, *outKind = 1=bold 2=italic 3=code.
+static size_t findMarker(const std::string& text, size_t pos, size_t* outLen, int* outKind) {
+    size_t boldMarker   = text.find("**", pos);
+    size_t italicMarker = text.find('_', pos);
+    size_t codeMarker   = text.find('`', pos);
+
+    size_t marker = std::string::npos;
+    size_t markerLen = 0;
+    int kind = 0;
+
+    if (boldMarker != std::string::npos) {
+        marker = boldMarker; markerLen = 2; kind = 1;
+    }
+    if (italicMarker != std::string::npos && (marker == std::string::npos || italicMarker < marker)) {
+        marker = italicMarker; markerLen = 1; kind = 2;
+    }
+    if (codeMarker != std::string::npos && (marker == std::string::npos || codeMarker < marker)) {
+        marker = codeMarker; markerLen = 1; kind = 3;
+    }
+
+    *outLen = markerLen;
+    *outKind = kind;
+    return marker;
+}
+
+static void toggleFormat(TextFormat& fmt, int kind) {
+    if (kind == 1)      fmt.bold = !fmt.bold;
+    else if (kind == 2) fmt.italic = !fmt.italic;
+    else                fmt.code = !fmt.code;
+}
+
+// Measure text with inline format markers applied. Updates fmt as it scans,
+// so callers can keep one state across word/line boundaries.
+static float measureFormatted(const FontVariants& fonts, const std::string& text, TextFormat& fmt) {
+    float width = 0;
     size_t pos = 0;
 
     while (pos < text.size()) {
-        size_t boldMarker = text.find("**", pos);
-        size_t codeMarker = text.find('`', pos);
-
-        // pick the nearest marker
-        size_t marker = std::string::npos;
         size_t markerLen = 0;
-        int markerType = 0; // 1=bold, 2=code
-
-        if (boldMarker != std::string::npos && (marker == std::string::npos || boldMarker < marker)) {
-            marker = boldMarker;
-            markerLen = 2;
-            markerType = 1;
-        }
-        if (codeMarker != std::string::npos && (marker == std::string::npos || codeMarker < marker)) {
-            marker = codeMarker;
-            markerLen = 1;
-            markerType = 2;
-        }
+        int kind = 0;
+        size_t marker = findMarker(text, pos, &markerLen, &kind);
 
         if (marker == std::string::npos) {
-            // no more markers, render remaining text
+            width += pickFont(fonts, fmt).measureString(text.substr(pos));
+            break;
+        }
+        if (marker > pos) {
+            width += pickFont(fonts, fmt).measureString(text.substr(pos, marker - pos));
+        }
+        toggleFormat(fmt, kind);
+        pos = marker + markerLen;
+    }
+    return width;
+}
+
+void Renderer::renderFormatted(const std::string& text, float x, float y,
+                                const FontVariants& fonts, SDL_Color color) {
+    SDL_Color codeColor = {255, 255, 0, 255};
+    float curX = x;
+    TextFormat fmt;
+    size_t pos = 0;
+
+    while (pos < text.size()) {
+        size_t markerLen = 0;
+        int kind = 0;
+        size_t marker = findMarker(text, pos, &markerLen, &kind);
+
+        if (marker == std::string::npos) {
             std::string segment = text.substr(pos);
-            SDL_Color clr = code ? codeColor : color;
-            drawText(segment, curX, y, font, clr, fontType);
+            SDL_Color clr = fmt.code ? codeColor : color;
+            drawText(segment, curX, y, pickFont(fonts, fmt), clr);
             break;
         }
 
-        // render text before marker
         if (marker > pos) {
             std::string segment = text.substr(pos, marker - pos);
-            SDL_Color clr = code ? codeColor : color;
-            drawText(segment, curX, y, font, clr, fontType);
+            const Font& font = pickFont(fonts, fmt);
+            SDL_Color clr = fmt.code ? codeColor : color;
+            drawText(segment, curX, y, font, clr);
             curX += font.measureString(segment);
         }
 
-        // toggle state
-        if (markerType == 1) {
-            fontType = (fontType == FontType::Bold) ? FontType::Regular : FontType::Bold;
-        } else {
-            code = !code;
-        }
+        toggleFormat(fmt, kind);
         pos = marker + markerLen;
     }
 }
 
 int Renderer::textHeight(const Font& font) {
-    return static_cast<int>(font.getFontSize()) + 6;
+    return static_cast<int>(font.getFontSize()) + LINE_PADDING;
 }
 
 void Renderer::drawRectOutline(const SDL_Rect* rect, Uint32 color) {
@@ -122,13 +163,14 @@ void Renderer::drawRectOutline(const SDL_Rect* rect, Uint32 color) {
 }
 
 std::vector<std::string> Renderer::wordWrap(const std::string& text,
-                                             const Font& font, int maxWidth) {
+                                              const FontVariants& fonts, int maxWidth) {
     std::vector<std::string> lines;
     if (text.empty() || maxWidth <= 0) {
         lines.push_back(text);
         return lines;
     }
 
+    TextFormat fmt; // persists across words so ** multi-word spans ** measure right
     std::string line;
     float lineWidth = 0;
     std::string word;
@@ -138,13 +180,14 @@ std::vector<std::string> Renderer::wordWrap(const std::string& text,
 
         if (c == ' ' || c == '\n' || i == text.size()) {
             if (!word.empty()) {
-                float wordWidth = font.measureString(word);
-                float spaceW = line.empty() ? 0 : font.measureString(" ");
+                float wordWidth = measureFormatted(fonts, word, fmt);
+                TextFormat fmtCopy = fmt;
+                float spaceW = line.empty() ? 0 : measureFormatted(fonts, " ", fmtCopy);
 
                 if (lineWidth + spaceW + wordWidth > maxWidth && !line.empty()) {
                     lines.push_back(line);
                     line = word;
-                    lineWidth = font.measureString(word);
+                    lineWidth = wordWidth;
                 } else {
                     if (!line.empty()) line += " ";
                     line += word;
@@ -173,7 +216,8 @@ std::vector<std::string> Renderer::wordWrap(const std::string& text,
 void Renderer::renderTextBlock(const std::string& text, int x, int y,
                                 const Font& font, SDL_Color color, int maxWidth) {
     if (maxWidth > 0) {
-        auto lines = wordWrap(text, font, maxWidth);
+        FontVariants v = { &font, &font, &font, &font, &font };
+        auto lines = wordWrap(text, v, maxWidth);
         int lineH = textHeight(font);
         for (size_t i = 0; i < lines.size(); i++) {
             drawText(lines[i], static_cast<float>(x),
@@ -184,17 +228,46 @@ void Renderer::renderTextBlock(const std::string& text, int x, int y,
     }
 }
 
+// Returns true if the raw line is a markdown heading (# .. ###### followed by a space)
+static bool isHeadingLine(const std::string& raw, std::string* outText) {
+    size_t hashes = raw.find_first_not_of('#');
+    if (hashes == 0 || hashes == std::string::npos || hashes > 6) return false;
+    if (raw[hashes] != ' ') return false;
+    *outText = raw.substr(hashes + 1);
+    return true;
+}
+
 void Renderer::renderFormattedBlock(const std::string& text, int x, int y,
-                                     const Font& font, SDL_Color color, int maxWidth) {
-    if (maxWidth > 0) {
-        auto lines = wordWrap(text, font, maxWidth);
-        int lineH = textHeight(font);
-        for (size_t i = 0; i < lines.size(); i++) {
-            renderFormatted(lines[i], static_cast<float>(x),
-                           static_cast<float>(y + static_cast<int>(i) * lineH), font, color);
+                                     const FontVariants& fonts, SDL_Color color, int maxWidth,
+                                     const FontVariants* headingFonts) {
+    int lineH = textHeight(fonts.get(FontType::Regular));
+    int curY = y;
+
+    // Process one raw line at a time so markdown headings render correctly
+    size_t start = 0;
+    while (true) {
+        size_t nl = text.find('\n', start);
+        std::string raw = (nl == std::string::npos)
+            ? text.substr(start)
+            : text.substr(start, nl - start);
+
+        std::string heading;
+        if (headingFonts && isHeadingLine(raw, &heading)) {
+            renderFormatted(heading, static_cast<float>(x), static_cast<float>(curY), *headingFonts, color);
+            curY += textHeight(headingFonts->get(FontType::Regular));
+        } else if (maxWidth > 0) {
+            auto lines = wordWrap(raw, fonts, maxWidth);
+            for (const auto& l : lines) {
+                renderFormatted(l, static_cast<float>(x), static_cast<float>(curY), fonts, color);
+                curY += lineH;
+            }
+        } else {
+            renderFormatted(raw, static_cast<float>(x), static_cast<float>(curY), fonts, color);
+            curY += lineH;
         }
-    } else {
-        renderFormatted(text, static_cast<float>(x), static_cast<float>(y), font, color);
+
+        if (nl == std::string::npos) break;
+        start = nl + 1;
     }
 }
 
@@ -203,17 +276,20 @@ void Renderer::renderFormattedBlock(const std::string& text, int x, int y,
 static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
                                const Slide& slide, const FontSet& fonts,
                                int w, int h) {
-    int margin = 40;
-    const Font& font = fonts.get(FontType::Regular);
-    int th = static_cast<int>(font.getFontSize()) + 6;
+    int margin = SLIDE_MARGIN;
+    FontVariants baseV = fonts.variants();
+    FontVariants titleV = fonts.titleVariants();
+    const Font& baseFont = baseV.get(FontType::Regular);
+    int th = static_cast<int>(baseFont.getFontSize()) + LINE_PADDING;
+    int thTitle = static_cast<int>(titleV.get(FontType::Regular).getFontSize()) + LINE_PADDING;
     int y = margin;
     SDL_Color white = {255, 255, 255, 255};
     SDL_Color ltgray = {200, 200, 210, 255};
 
-    // title
+    // title at 2x size
     r->renderFormatted(slide.title, static_cast<float>(margin),
-                static_cast<float>(y), font, white);
-    y += th - 2;
+                static_cast<float>(y), titleV, white);
+    y += thTitle - 2;
 
     // underline (centered between title and content)
     Uint32 lineColor = makeColor(surf, 100, 100, 120);
@@ -225,15 +301,23 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
 
     // subtitle (for title slides stored in imageAlt)
     if (!slide.imageAlt.empty() && slide.type == SlideType::Title) {
-        r->renderFormattedBlock(slide.imageAlt, margin, y, font, ltgray, contentW);
+        r->renderFormattedBlock(slide.imageAlt, margin, y, baseV, ltgray, contentW);
         y += th + 8;
     }
 
     // bullets / text content
     for (size_t i = 0; i < slide.bullets.size(); i++) {
-        std::string line = "\xE2\x80\xA2 " + slide.bullets[i];
-        r->renderFormattedBlock(line, margin, y, font, ltgray, contentW);
-        y += th;
+        std::string heading;
+        if (isHeadingLine(slide.bullets[i], &heading)) {
+            // ## / ### sub-heading: render at title size, no bullet marker
+            r->renderFormatted(heading, static_cast<float>(margin),
+                               static_cast<float>(y), titleV, white);
+            y += thTitle;
+        } else {
+            std::string line = "\xE2\x80\xA2 " + slide.bullets[i];
+            r->renderFormattedBlock(line, margin, y, baseV, ltgray, contentW);
+            y += th;
+        }
     }
 
     // image
@@ -267,7 +351,7 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
             SDL_Rect ph = {margin, y, contentW, 80};
             SDL_FillRect(surf, &ph, phColor);
             r->drawText("[ image not found ]", static_cast<float>(margin + 8),
-                        static_cast<float>(y + 30), font, ltgray);
+                        static_cast<float>(y + 30), baseFont, ltgray);
             y += 88;
         }
     }
@@ -280,15 +364,15 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
 
         // left column label
         SDL_Color colLabel = {180, 180, 200, 255};
-        r->drawText("Old:", static_cast<float>(margin), static_cast<float>(y), font, colLabel);
-        r->drawText("New:", static_cast<float>(margin + colW + gap), static_cast<float>(y), font, colLabel);
+        r->drawText("Old:", static_cast<float>(margin), static_cast<float>(y), baseFont, colLabel);
+        r->drawText("New:", static_cast<float>(margin + colW + gap), static_cast<float>(y), baseFont, colLabel);
         y += th;
 
         // left content
-        r->renderFormattedBlock(slide.leftContent, margin, y, font, ltgray, colW);
+        r->renderFormattedBlock(slide.leftContent, margin, y, baseV, ltgray, colW, &titleV);
 
         // right content
-        r->renderFormattedBlock(slide.rightContent, margin + colW + gap, y, font, ltgray, colW);
+        r->renderFormattedBlock(slide.rightContent, margin + colW + gap, y, baseV, ltgray, colW, &titleV);
     }
 }
 
@@ -322,9 +406,11 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts) {
 SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontSet& fonts) {
     clear(40, 40, 50);
 
-    int margin = 20;
-    const Font& font = fonts.get(FontType::Regular);
-    const Font& smallFont = fonts.get(FontType::Regular);
+    int margin = PRESENTER_MARGIN;
+    FontVariants baseV = fonts.variants();
+    FontVariants smallV = fonts.smallVariants();
+    const Font& baseFont = baseV.get(FontType::Regular);
+    const Font& smallFont = smallV.get(FontType::Regular);
     int th = textHeight(smallFont);
     int y = margin;
     SDL_Color white = {255, 255, 255, 255};
@@ -337,10 +423,10 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
     drawText(numBuf, static_cast<float>(margin), static_cast<float>(y), smallFont, dim);
     y += th + 4;
 
-    // title (larger font)
+    // title (base size)
     const Slide& current = pres.currentSlide();
-    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), font, white);
-    y += textHeight(font) + 12;
+    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), baseV, white);
+    y += textHeight(baseFont) + 12;
 
     // notes section
     int contentW = m_width - 2 * margin;
@@ -353,7 +439,7 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
 
         drawText("Notes:", static_cast<float>(margin + 6),
                  static_cast<float>(y + 4), smallFont, dim);
-        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallFont, ltgray, contentW - 12);
+        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallV, ltgray, contentW - 12);
         y += notesH + 12;
     }
 
