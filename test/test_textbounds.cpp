@@ -24,19 +24,19 @@ static int tests_failed = 0;
 #define TEST_ASSERT_NEAR(a, b, eps, msg)                               \
     TEST_ASSERT(std::fabs((a) - (b)) < (eps), msg)
 
-// ── FontAtlas tests ────────────────────────────────────────────────────────
+// ── Font tests ─────────────────────────────────────────────────────────────
 
-static void test_measureString_nonempty(const FontAtlas& font) {
+static void test_measureString_nonempty(const Font& font) {
     float w = font.measureString("Hello");
     TEST_ASSERT(w > 0, "measureString(\"Hello\") returns width > 0");
 }
 
-static void test_measureString_empty(const FontAtlas& font) {
+static void test_measureString_empty(const Font& font) {
     float w = font.measureString("");
     TEST_ASSERT(w == 0.0f, "measureString(\"\") returns 0");
 }
 
-static void test_measureString_additive(const FontAtlas& font) {
+static void test_measureString_additive(const Font& font) {
     float wA  = font.measureString("A");
     float wB  = font.measureString("B");
     float wAB = font.measureString("AB");
@@ -44,38 +44,20 @@ static void test_measureString_additive(const FontAtlas& font) {
         "measureString(\"AB\") ≈ measureString(\"A\") + measureString(\"B\")");
 }
 
-static void test_glyph_validity(const FontAtlas& font) {
-    bool allValid = true;
-    const char* ranges[] = { "ABCDEFGHIJKLMNOPQRSTUVWXYZ",
-                             "abcdefghijklmnopqrstuvwxyz",
-                             "0123456789" };
-    for (const char* r : ranges) {
-        for (const char* p = r; *p; ++p) {
-            const GlyphInfo& g = font.getGlyph(*p);
-            if (g.width <= 0 || g.height <= 0) {
-                allValid = false;
-                printf("    glyph '%c': width=%d height=%d\n", *p, g.width, g.height);
-            }
-        }
-    }
-    TEST_ASSERT(allValid,
-        "getGlyph for A-Z, a-z, 0-9 has valid dimensions (width>0, height>0)");
-}
-
-static void test_space_glyph(const FontAtlas& font) {
-    const GlyphInfo& g = font.getGlyph(' ');
-    TEST_ASSERT(g.xadvance > 0, "getGlyph(' ').xadvance > 0");
+static void test_measureString_space(const Font& font) {
+    float w = font.measureString(" ");
+    TEST_ASSERT(w > 0, "measureString(\" \") returns width > 0");
 }
 
 // ── Renderer::wordWrap tests ──────────────────────────────────────────────
 
-static void test_wordWrap_short_text(const FontAtlas& font, Renderer& renderer) {
+static void test_wordWrap_short_text(const Font& font, Renderer& renderer) {
     auto lines = renderer.wordWrap("Hello", font, 1920);
     TEST_ASSERT(lines.size() == 1,
         "wordWrap short text produces single line");
 }
 
-static void test_wordWrap_long_text(const FontAtlas& font, Renderer& renderer) {
+static void test_wordWrap_long_text(const Font& font, Renderer& renderer) {
     std::string longText = "This is a fairly long sentence that should definitely "
                            "wrap onto more than one line when given a narrow width";
     auto lines = renderer.wordWrap(longText, font, 200);
@@ -83,7 +65,7 @@ static void test_wordWrap_long_text(const FontAtlas& font, Renderer& renderer) {
         "wordWrap long text produces multiple lines");
 }
 
-static void test_wordWrap_preserves_words(const FontAtlas& font, Renderer& renderer) {
+static void test_wordWrap_preserves_words(const Font& font, Renderer& renderer) {
     std::string input = "alpha beta gamma delta epsilon";
     auto lines = renderer.wordWrap(input, font, 200);
 
@@ -254,12 +236,11 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    printf("=== FontAtlas tests ===\n");
+    printf("=== Font tests ===\n");
     test_measureString_nonempty(fonts.get(FontType::Regular));
     test_measureString_empty(fonts.get(FontType::Regular));
     test_measureString_additive(fonts.get(FontType::Regular));
-    test_glyph_validity(fonts.get(FontType::Regular));
-    test_space_glyph(fonts.get(FontType::Regular));
+    test_measureString_space(fonts.get(FontType::Regular));
 
     printf("\n=== Renderer::wordWrap tests ===\n");
     test_wordWrap_short_text(fonts.get(FontType::Regular), renderer);

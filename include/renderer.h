@@ -16,14 +16,14 @@ public:
     SDL_Texture* renderPresenterView(const Presentation& pres, const FontSet& fonts);
 
     void clear(int r = 30, int g = 30, int b = 40);
-    void drawText(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color, FontType fontType = FontType::Regular);
-    void renderFormatted(const std::string& text, float x, float y, const FontAtlas& font, SDL_Color color);
+    void drawText(const std::string& text, float x, float y, const Font& font, SDL_Color color, FontType fontType = FontType::Regular);
+    void renderFormatted(const std::string& text, float x, float y, const Font& font, SDL_Color color);
     void renderFormattedBlock(const std::string& text, int x, int y,
-                               const FontAtlas& font, SDL_Color color, int maxWidth = 0);
-    int textHeight(const FontAtlas& font);
+                               const Font& font, SDL_Color color, int maxWidth = 0);
+    int textHeight(const Font& font);
     void renderTextBlock(const std::string& text, int x, int y,
-                         const FontAtlas& font, SDL_Color color, int maxWidth = 0);
-    std::vector<std::string> wordWrap(const std::string& text, const FontAtlas& font, int maxWidth);
+                         const Font& font, SDL_Color color, int maxWidth = 0);
+    std::vector<std::string> wordWrap(const std::string& text, const Font& font, int maxWidth);
     void drawRectOutline(const SDL_Rect* rect, Uint32 color);
 
     int width() const { return m_width; }

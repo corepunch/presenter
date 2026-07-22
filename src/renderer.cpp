@@ -34,66 +34,30 @@ void Renderer::clear(int r, int g, int b) {
 }
 
 void Renderer::drawText(const std::string& text, float x, float y,
-                        const FontAtlas& font, SDL_Color color, FontType fontType) {
+                        const Font& font, SDL_Color color, FontType fontType) {
     if (text.empty() || !m_surface) return;
-
-    const uint8_t* atlasBitmap = font.bitmapData();
-    int atlasW = font.bitmapWidth();
-    int atlasH = font.bitmapHeight();
-    if (!atlasBitmap) return;
-
-    SDL_Surface* atlasRGBA = SDL_CreateRGBSurface(0, atlasW, atlasH, 32,
-        0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
-    if (!atlasRGBA) return;
-
-    SDL_LockSurface(atlasRGBA);
-    auto* dst = static_cast<Uint32*>(atlasRGBA->pixels);
-    for (int i = 0; i < atlasW * atlasH; i++) {
-        Uint8 a = atlasBitmap[i];
-        dst[i] = (a << 24) | (0x00FFFFFF);
-    }
-    SDL_UnlockSurface(atlasRGBA);
-
-    SDL_SetSurfaceBlendMode(atlasRGBA, SDL_BLENDMODE_BLEND);
-    SDL_SetSurfaceColorMod(atlasRGBA, color.r, color.g, color.b);
 
     float curX = x;
     for (size_t i = 0; i < text.size(); i++) {
         char c = text[i];
 
-        const GlyphInfo& g = font.getGlyph(c);
-
-        if (c != ' ') {
-            SDL_Rect srcRect = {
-                static_cast<int>(g.x0 * atlasW),
-                static_cast<int>(g.y0 * atlasH),
-                g.width,
-                g.height
-            };
-            SDL_Rect dstRect = {
-                static_cast<int>(curX + g.xoffset),
-                static_cast<int>(y + g.yoffset),
-                g.width,
-                g.height
-            };
-            SDL_BlitSurface(atlasRGBA, &srcRect, m_surface, &dstRect);
-            if (fontType == FontType::Bold || fontType == FontType::BoldItalic) {
-                SDL_Rect dstBold = {dstRect.x + 1, dstRect.y, g.width, g.height};
-                SDL_BlitSurface(atlasRGBA, &srcRect, m_surface, &dstBold);
-            }
+        font.drawGlyph(m_surface, c, curX, y, color);
+        if (fontType == FontType::Bold || fontType == FontType::BoldItalic) {
+            font.drawGlyph(m_surface, c, curX + 1.0f, y, color);
         }
 
-        curX += g.xadvance;
+        // Advance
         if (i > 0) {
             curX += font.getKerning(text[i - 1], c);
         }
+        // measureString for single char to get advance
+        char buf[2] = {c, '\0'};
+        curX += font.measureString(buf);
     }
-
-    SDL_FreeSurface(atlasRGBA);
 }
 
 void Renderer::renderFormatted(const std::string& text, float x, float y,
-                                const FontAtlas& font, SDL_Color color) {
+                                const Font& font, SDL_Color color) {
     SDL_Color codeColor = {255, 255, 0, 255};
     float curX = x;
     FontType fontType = FontType::Regular;
@@ -146,7 +110,7 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
     }
 }
 
-int Renderer::textHeight(const FontAtlas& font) {
+int Renderer::textHeight(const Font& font) {
     return static_cast<int>(font.getFontSize()) + 6;
 }
 
@@ -159,7 +123,7 @@ void Renderer::drawRectOutline(const SDL_Rect* rect, Uint32 color) {
 }
 
 std::vector<std::string> Renderer::wordWrap(const std::string& text,
-                                             const FontAtlas& font, int maxWidth) {
+                                             const Font& font, int maxWidth) {
     std::vector<std::string> lines;
     if (text.empty() || maxWidth <= 0) {
         lines.push_back(text);
@@ -208,7 +172,7 @@ std::vector<std::string> Renderer::wordWrap(const std::string& text,
 }
 
 void Renderer::renderTextBlock(const std::string& text, int x, int y,
-                                const FontAtlas& font, SDL_Color color, int maxWidth) {
+                                const Font& font, SDL_Color color, int maxWidth) {
     if (maxWidth > 0) {
         auto lines = wordWrap(text, font, maxWidth);
         int lineH = textHeight(font);
@@ -222,7 +186,7 @@ void Renderer::renderTextBlock(const std::string& text, int x, int y,
 }
 
 void Renderer::renderFormattedBlock(const std::string& text, int x, int y,
-                                     const FontAtlas& font, SDL_Color color, int maxWidth) {
+                                     const Font& font, SDL_Color color, int maxWidth) {
     if (maxWidth > 0) {
         auto lines = wordWrap(text, font, maxWidth);
         int lineH = textHeight(font);
@@ -241,7 +205,7 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
                                const Slide& slide, const FontSet& fonts,
                                int w, int h) {
     int margin = 40;
-    const FontAtlas& font = fonts.get(FontType::Regular);
+    const Font& font = fonts.get(FontType::Regular);
     int th = static_cast<int>(font.getFontSize()) + 6;
     int y = margin;
     SDL_Color white = {255, 255, 255, 255};
@@ -360,8 +324,8 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
     clear(40, 40, 50);
 
     int margin = 20;
-    const FontAtlas& font = fonts.get(FontType::Regular);
-    const FontAtlas& smallFont = fonts.get(FontType::Regular);
+    const Font& font = fonts.get(FontType::Regular);
+    const Font& smallFont = fonts.get(FontType::Regular);
     int th = textHeight(smallFont);
     int y = margin;
     SDL_Color white = {255, 255, 255, 255};

@@ -3,7 +3,6 @@
 
 #include "font.h"
 #include <fstream>
-#include <stdexcept>
 #include <algorithm>
 
 const char* getFontPath(FontType type) {
@@ -17,11 +16,11 @@ const char* getFontPath(FontType type) {
     return "assets/Inter-Regular.ttf";
 }
 
-FontAtlas::~FontAtlas() {
+Font::~Font() {
     delete static_cast<stbtt_fontinfo*>(m_fontInfo);
 }
 
-bool FontAtlas::load(const std::string& ttfPath, float fontSize) {
+bool Font::load(const std::string& ttfPath, float fontSize) {
     std::ifstream file(ttfPath, std::ios::binary | std::ios::ate);
     if (!file.is_open()) return false;
 
@@ -41,119 +40,72 @@ bool FontAtlas::load(const std::string& ttfPath, float fontSize) {
     m_fontSize = fontSize;
     m_scale = stbtt_ScaleForPixelHeight(fontInfo, fontSize);
 
-    m_bitmapWidth = ATLAS_SIZE;
-    m_bitmapHeight = ATLAS_SIZE;
-    m_bitmap.resize(ATLAS_SIZE * ATLAS_SIZE, 0);
-
-    m_glyphs.resize(NUM_CHARS);
-    m_rendered.resize(NUM_CHARS, false);
-    m_cursorX = 0;
-    m_cursorY = 0;
-    m_rowHeight = 0;
-
     return true;
 }
 
-void FontAtlas::rasterizeGlyph(int index) const {
-    if (m_rendered[index]) return;
-    if (!m_fontInfo) return;
-
+void Font::drawGlyph(SDL_Surface* surface, char c, float x, float y, SDL_Color color) const {
+    if (!m_fontInfo || !surface || c == ' ') return;
     auto* fontInfo = static_cast<stbtt_fontinfo*>(m_fontInfo);
-    int codepoint = index + FIRST_CHAR;
 
     int width, height, xoff, yoff;
     uint8_t* bitmap = stbtt_GetCodepointBitmap(
-        fontInfo, m_scale, m_scale, codepoint, &width, &height, &xoff, &yoff);
+        fontInfo, m_scale, m_scale, c, &width, &height, &xoff, &yoff);
 
     if (!bitmap || width <= 0 || height <= 0) {
         stbtt_FreeBitmap(bitmap, nullptr);
-        // Store empty glyph
-        GlyphInfo& g = m_glyphs[index];
-        g.x0 = g.y0 = g.x1 = g.y1 = 0;
-        g.xadvance = 0;
-        g.width = g.height = 0;
-        g.xoffset = g.yoffset = 0;
-        m_rendered[index] = true;
         return;
     }
 
-    // Advance cursor, wrap to next row if needed
-    int padding = 1;
-    if (m_cursorX + width + padding > ATLAS_SIZE) {
-        m_cursorX = 0;
-        m_cursorY += m_rowHeight + padding;
-        m_rowHeight = 0;
-    }
-    if (m_cursorY + height + padding > ATLAS_SIZE) {
-        // Atlas full - can't render more glyphs
-        stbtt_FreeBitmap(bitmap, nullptr);
-        GlyphInfo& g = m_glyphs[index];
-        g.x0 = g.y0 = g.x1 = g.y1 = 0;
-        g.xadvance = 0;
-        g.width = g.height = 0;
-        g.xoffset = g.yoffset = 0;
-        m_rendered[index] = true;
-        return;
-    }
+    int baseX = static_cast<int>(x + xoff);
+    int baseY = static_cast<int>(y + yoff);
 
-    // Copy bitmap into atlas
-    for (int y = 0; y < height; y++) {
-        for (int x = 0; x < width; x++) {
-            int dstX = m_cursorX + x;
-            int dstY = m_cursorY + y;
-            m_bitmap[dstY * ATLAS_SIZE + dstX] = bitmap[y * width + x];
+    SDL_LockSurface(surface);
+    auto* pixels = static_cast<Uint32*>(surface->pixels);
+    int pitch = surface->pitch / 4;
+
+    for (int gy = 0; gy < height; gy++) {
+        int py = baseY + gy;
+        if (py < 0 || py >= surface->h) continue;
+        for (int gx = 0; gx < width; gx++) {
+            int px = baseX + gx;
+            if (px < 0 || px >= surface->w) continue;
+
+            uint8_t alpha = bitmap[gy * width + gx];
+            if (alpha == 0) continue;
+
+            // Blend: result = src * alpha + dst * (1 - alpha)
+            Uint32 dst = pixels[py * pitch + px];
+            Uint8 dr = dst & 0xFF;
+            Uint8 dg = (dst >> 8) & 0xFF;
+            Uint8 db = (dst >> 16) & 0xFF;
+
+            Uint8 rr = static_cast<Uint8>((color.r * alpha + dr * (255 - alpha)) / 255);
+            Uint8 rg = static_cast<Uint8>((color.g * alpha + dg * (255 - alpha)) / 255);
+            Uint8 rb = static_cast<Uint8>((color.b * alpha + db * (255 - alpha)) / 255);
+
+            pixels[py * pitch + px] = 0xFF000000 | (rb << 16) | (rg << 8) | rr;
         }
     }
 
-    // Fill in GlyphInfo with UV coords
-    GlyphInfo& g = m_glyphs[index];
-    g.x0 = static_cast<float>(m_cursorX) / static_cast<float>(ATLAS_SIZE);
-    g.y0 = static_cast<float>(m_cursorY) / static_cast<float>(ATLAS_SIZE);
-    g.x1 = static_cast<float>(m_cursorX + width) / static_cast<float>(ATLAS_SIZE);
-    g.y1 = static_cast<float>(m_cursorY + height) / static_cast<float>(ATLAS_SIZE);
-    g.width = width;
-    g.height = height;
-    g.xoffset = xoff;
-    g.yoffset = yoff;
-
-    // Get advance width
-    int advanceWidth;
-    stbtt_GetCodepointHMetrics(fontInfo, codepoint, &advanceWidth, nullptr);
-    g.xadvance = static_cast<float>(advanceWidth) * m_scale;
-
+    SDL_UnlockSurface(surface);
     stbtt_FreeBitmap(bitmap, nullptr);
-
-    // Advance cursor
-    m_cursorX += width + padding;
-    if (height > m_rowHeight) m_rowHeight = height;
-
-    m_rendered[index] = true;
 }
 
-const GlyphInfo& FontAtlas::getGlyph(char c) const {
-    int index = static_cast<int>(c) - FIRST_CHAR;
-    if (index < 0 || index >= NUM_CHARS) {
-        // Render space if not done yet
-        if (!m_rendered[0]) rasterizeGlyph(0);
-        return m_glyphs[0];
-    }
-    if (!m_rendered[index]) {
-        rasterizeGlyph(index);
-    }
-    return m_glyphs[index];
-}
-
-float FontAtlas::getKerning(char a, char b) const {
+float Font::getKerning(char a, char b) const {
     if (!m_fontInfo) return 0;
     auto* fontInfo = static_cast<stbtt_fontinfo*>(m_fontInfo);
     int kern = stbtt_GetCodepointKernAdvance(fontInfo, a, b);
     return static_cast<float>(kern) * m_scale;
 }
 
-float FontAtlas::measureString(const std::string& text) const {
+float Font::measureString(const std::string& text) const {
+    if (!m_fontInfo) return 0;
+    auto* fontInfo = static_cast<stbtt_fontinfo*>(m_fontInfo);
     float width = 0;
     for (size_t i = 0; i < text.size(); i++) {
-        width += getGlyph(text[i]).xadvance;
+        int advanceWidth;
+        stbtt_GetCodepointHMetrics(fontInfo, text[i], &advanceWidth, nullptr);
+        width += static_cast<float>(advanceWidth) * m_scale;
         if (i > 0) {
             width += getKerning(text[i - 1], text[i]);
         }
