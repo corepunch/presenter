@@ -249,7 +249,7 @@ static void renderSlideSimple(Renderer* r, SDL_Surface* surf,
     // title
     r->renderFormatted(slide.title, static_cast<float>(margin),
                 static_cast<float>(y), font, white);
-    y += th + 8;
+    // y += th - 2;
 
     // underline (centered between title and content)
     Uint32 lineColor = makeColor(surf, 100, 100, 120);
