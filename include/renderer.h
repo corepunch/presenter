@@ -32,7 +32,6 @@ public:
     void renderTextBlock(const std::string& text, int x, int y,
                          const Font& font, SDL_Color color, int maxWidth = 0);
     std::vector<std::string> wordWrap(const std::string& text, const FontVariants& fonts, int maxWidth);
-    void drawRectOutline(const SDL_Rect* rect, Uint32 color);
     void fillRect(const SDL_Rect& rect, Color color, int cornerRadius = 0);
     void drawRectOutline(const SDL_Rect& rect, Color color, int cornerRadius = 0);
 

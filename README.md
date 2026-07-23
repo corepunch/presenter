@@ -228,13 +228,61 @@ Reference a style from the presentation:
 ```
 presenter/
 ├── src/            # Source files
+│   ├── ui.cpp          # Declarative UI layout engine
+│   ├── renderer.cpp    # Slide + presenter view rendering
+│   ├── layout.cpp      # Slide part layout computation
+│   ├── image.cpp       # Image loading and scaling
+│   ├── font.cpp        # TTF font loading via stb_truetype
+│   ├── highlight.cpp   # Syntax highlighting
+│   ├── xml_parser.cpp  # XML → Presentation tree
+│   ├── style.cpp       # Theme loading + 8 built-in themes
+│   └── main.cpp        # Entry point, SDL windows, event loop
 ├── include/        # Headers
+│   ├── ui.hpp          # ui::Element, Stack, Border, Text
+│   ├── common.h        # Slide, Presentation, layout enums
+│   ├── style.h         # PresentationStyle, Color
+│   ├── font.h          # FontSet, FontVariants
+│   ├── renderer.h      # Renderer class
+│   ├── layout.h        # LayoutMetrics, SlidePart
+│   └── image.h         # ImageBuf, ImageRect
 ├── demo/           # Example presentation and styles
 ├── docs/           # DTD schemas and format spec
 ├── test/           # Test executables
 ├── assets/         # Bundled fonts (Inter, JetBrains Mono)
 ├── examples/       # Markdown-format demo
 └── CMakeLists.txt
+```
+
+## Architecture
+
+### Slide rendering (part-based)
+
+Slides use a layout-then-render pipeline. `layout.cpp` computes `SlidePart` rectangles from the slide structure; `renderer.cpp` draws each part using `Renderer::fillRect()` and `Renderer::drawRectOutline()` with theme colors — no raw `SDL_FillRect` or hardcoded RGB values.
+
+### Presenter view (ui:: widget tree)
+
+The presenter view uses a declarative **ui:: layout engine** built on composable widgets:
+
+| Class | Role |
+|-------|------|
+| `ui::Element` | Base class with `measure() → arrange() → render()` lifecycle and `margin` |
+| `ui::Stack` | Lays out children vertically or horizontally with `gap` and flex `grow` weights |
+| `ui::Border` | Draws a background, border, and rounded corners around a child, with `padding` |
+| `ui::Text` | Measures and renders word-wrapped plain or inline-formatted text |
+
+A `ui::BorderStyle` struct bundles the visual properties (background color, border color, corner radius) so card styling is defined once and shared across all cards. The whole presenter view is a widget tree:
+
+```
+Stack (root, margin = presenterMargin, gap = partGap)
+├── Border (cardStyle) → Stack
+│   ├── Text ("Slide N / M", smallFonts, dimColor)
+│   └── Text (title, baseFonts, titleColor, wrap)
+├── Border (cardStyle) → Stack (grow=1.0, fills remaining space)
+│   ├── Text ("Notes", smallFonts, dimColor)
+│   └── Text (notes, smallFonts, wrap, grow=1.0)
+└── Border (cardStyle) → Stack [shown when next slide exists]
+    ├── Text ("Next", smallFonts, dimColor)
+    └── Text (next title, smallFonts, wrap)
 ```
 
 ## Testing

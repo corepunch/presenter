@@ -332,14 +332,6 @@ int Renderer::textHeight(const Font& font) {
     return static_cast<int>(font.getFontSize()) + style().linePadding;
 }
 
-void Renderer::drawRectOutline(const SDL_Rect* rect, Uint32 color) {
-    SDL_Rect r;
-    r = SDL_Rect{rect->x, rect->y, rect->w, 1}; SDL_FillRect(m_surface, &r, color);
-    r = SDL_Rect{rect->x, rect->y + rect->h - 1, rect->w, 1}; SDL_FillRect(m_surface, &r, color);
-    r = SDL_Rect{rect->x, rect->y, 1, rect->h}; SDL_FillRect(m_surface, &r, color);
-    r = SDL_Rect{rect->x + rect->w - 1, rect->y, 1, rect->h}; SDL_FillRect(m_surface, &r, color);
-}
-
 void Renderer::fillRect(const SDL_Rect& rect, Color color, int cornerRadius) {
     if (!m_surface || rect.w <= 0 || rect.h <= 0) return;
     fillRoundedRect(m_surface, rect, cornerRadius, color.toUint32(m_surface->format));
@@ -561,9 +553,7 @@ static void renderPartHeader(Renderer* r, SDL_Surface* surf,
     r->renderFormatted(slide.title, static_cast<float>(part.rect.x + s.partPadding),
                        static_cast<float>(textY), titleV, s.titleColor.toSDLColor());
 
-    Uint32 lc = SDL_MapRGBA(surf->format, s.lineColor.r, s.lineColor.g, s.lineColor.b, s.lineColor.a);
-    SDL_Rect lineRect = {part.rect.x, part.rect.y + part.rect.h - 1, part.rect.w, 1};
-    SDL_FillRect(surf, &lineRect, lc);
+    r->fillRect({part.rect.x, part.rect.y + part.rect.h - 1, part.rect.w, 1}, s.lineColor);
 }
 
 static int codeLineCount(const std::string& code) {
@@ -703,10 +693,9 @@ static void renderPartBody(Renderer* r, SDL_Surface* surf,
         0, naturalW, naturalH, 32,
         0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
     if (!contentSurf) return;
-    SDL_FillRect(contentSurf, nullptr, s.bgColor.toUint32(contentSurf->format));
-
     SDL_Surface* savedSurface = r->surface();
     r->setSurface(contentSurf);
+    r->fillRect({0, 0, naturalW, naturalH}, s.bgColor);
     renderBodyContent(r, contentSurf, slide, fonts, titleV, 0, 0, naturalW);
     r->setSurface(savedSurface);
 
@@ -744,13 +733,12 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
         0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
     if (!childSurf) return;
 
-    SDL_FillRect(childSurf, nullptr, r->style().bgColor.toUint32(surf->format));
-
     // Save state and set up child surface
     SDL_Renderer* savedR = r->sdlRenderer();
     SDL_Surface* savedS = r->surface();
     r->setSdlRenderer(nullptr);
     r->setSurface(childSurf);
+    r->fillRect({0, 0, slotW, slotH}, r->style().bgColor);
 
     // Compute layout for the child slide at slot size
     FontVariants titleV = fonts.childTitleVariants();
@@ -795,7 +783,7 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
 
 static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
                           const SlidePart& part, ImageFit fit,
-                          int cornerRadius, Uint32 bgColor) {
+                          int cornerRadius, Uint32 bgColor, Color placeholderBg) {
     if (imagePath.empty()) return;
 
     int imgW = 0, imgH = 0, channels = 0;
@@ -863,9 +851,8 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
 
         stbi_image_free(data);
     } else {
-        Color phC = "#32323C";
         SDL_Rect ph = {part.rect.x, part.rect.y, part.rect.w, part.rect.h};
-        SDL_FillRect(surf, &ph, phC.toUint32(surf->format));
+        SDL_FillRect(surf, &ph, placeholderBg.toUint32(surf->format));
     }
 }
 
@@ -873,7 +860,7 @@ static void renderPartImage(Renderer* r, SDL_Surface* surf,
                             const Slide& slide, const SlidePart& part) {
     Uint32 bgColor = r->style().bgColor.toUint32(surf->format);
     renderImageAt(surf, slide.imagePath, part, slide.imageFit,
-                  r->style().cornerRadius, bgColor);
+                  r->style().cornerRadius, bgColor, r->style().codeBg);
 }
 
 static void renderPartCaption(Renderer* r, SDL_Surface* surf,
@@ -1009,8 +996,8 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
     SDL_Surface* surf = SDL_CreateRGBSurface(0, m_width, m_height, 32,
         0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
     if (surf) {
-        SDL_FillRect(surf, nullptr, style.bgColor.toUint32(surf->format));
         m_surface = surf;
+        fillRect({0, 0, m_width, m_height}, style.bgColor);
 
         // Compute layout metrics
         FontVariants titleV = fonts.titleVariants();
