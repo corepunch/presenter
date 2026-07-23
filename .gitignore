@@ -3,3 +3,4 @@ build/
 *.obj
 .DS_Store
 test/test_parser
+images/
