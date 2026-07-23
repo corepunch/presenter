@@ -6,7 +6,7 @@ enum class LayoutKind {
     Title,
     Section,
     HeaderBody,
-    HeaderTwoColumn,
+    Columns,
     HeaderImage
 };
 
@@ -14,8 +14,7 @@ enum class PartRole {
     FullSlide,
     Header,
     Body,
-    ColumnLeft,
-    ColumnRight,
+    Slot,
     Image,
     Caption,
     Footer
@@ -28,9 +27,7 @@ struct Rect {
 struct SlidePart {
     PartRole role;
     Rect rect;
-    int offsetX = 0;
-    int offsetY = 0;
-    uint8_t alpha = 255;
+    int childIndex = 0;
 };
 
 struct LayoutMetrics {
@@ -44,6 +41,8 @@ struct LayoutMetrics {
     float bodyLineH;
 };
 
-LayoutKind layoutFromType(SlideType type);
-LayoutKind selectLayout(const Slide& slide);
-std::vector<SlidePart> computeParts(LayoutKind kind, const Slide& slide, const LayoutMetrics& metrics);
+LayoutKind layoutFromSlide(const Slide& slide);
+std::vector<SlidePart> computeParts(LayoutKind kind, const Slide& slide,
+                                    const LayoutMetrics& metrics,
+                                    const PresentationStyle& style);
+

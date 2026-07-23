@@ -1,0 +1,39 @@
+<!--
+  Presenter Style DTD
+  ===================
+  Standalone style files referenced via <presentation style="..."> or --style= CLI flag.
+  All attributes are optional — omitted values keep the built-in default.
+
+  Example usage:
+    <presentation style="./styles/dark.xml">
+    or
+    presenter demo.xml --style=styles/light.xml
+-->
+
+<!ELEMENT style (fonts?, colors?, layout?)>
+
+<!ELEMENT fonts EMPTY>
+<!ATTLIST fonts
+    title    CDATA #IMPLIED
+    subtitle CDATA #IMPLIED
+    content  CDATA #IMPLIED
+    small    CDATA #IMPLIED>
+
+<!ELEMENT colors EMPTY>
+<!ATTLIST colors
+    bg       CDATA #IMPLIED
+    text     CDATA #IMPLIED
+    title    CDATA #IMPLIED
+    subtitle CDATA #IMPLIED
+    accent   CDATA #IMPLIED
+    dim      CDATA #IMPLIED
+    line     CDATA #IMPLIED>
+
+<!ELEMENT layout EMPTY>
+<!ATTLIST layout
+    margin          CDATA #IMPLIED
+    padding         CDATA #IMPLIED
+    gap             CDATA #IMPLIED
+    columnGap       CDATA #IMPLIED
+    linePadding     CDATA #IMPLIED
+    presenterMargin CDATA #IMPLIED>

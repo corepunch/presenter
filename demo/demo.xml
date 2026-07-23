@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
+<presentation>
+  <slide layout="title" title="Nature Portfolio">
+    <notes>Welcome everyone. Today I'm showcasing five landscape shots from the Alpine region, taken during a two-week trek in July 2026. All photos shot on a Canon R5 with the RF 24-70mm f/2.8.</notes>
+    <subtitle>Alpine Landscapes — July 2026</subtitle>
+  </slide>
+
+  <slide layout="content" title="The Route">
+    <notes>These five locations span 120km of trail. Start with the iconic Matterhorn reflection in Riffelsee at dawn, then the Aletsch glacier panorama from Eggishorn, the Engadin forest near St. Moritz, an alpine meadow at 2200m in Zermatt, and finish with the Ligurian coast near Portofino. Each slide has one photo — use the arrow keys to advance.</notes>
+    <text><b>Mountain</b> — Matterhorn reflection, Riffelsee (2800m)</text>
+    <text><b>Lake</b> — Aletsch glacier panorama, Eggishorn (2900m)</text>
+    <text><b>Forest</b> — Engadin pine forest, St. Moritz (1800m)</text>
+    <text><b>Meadow</b> — Alpine wildflowers, Zermatt valley (2200m)</text>
+    <text><b>Coast</b> — Ligurian shoreline, Portofino (sea level)</text>
+  </slide>
+
+  <slide layout="image" title="Mountain — Matterhorn at Dawn">
+    <notes>Shot at 6:15 AM — golden hour. The water was perfectly still for about 10 minutes before the wind picked up. ISO 100, f/8, 1/60s on a tripod. The reflection is razor-sharp because there was zero wind. This is the most-printed photo from the trip.</notes>
+    <image src="./images/mountain.jpg" alt="Matterhorn reflected in Riffelsee at sunrise"/>
+    <text>The Matterhorn mirrored in Riffelsee — 6:15 AM, zero wind, perfect reflection</text>
+  </slide>
+
+  <slide layout="columns" gap="24" title="Ice and Forest">
+    <notes>Left: the Aletsch glacier is the largest in the Alps at 23km long. Shot from Eggishorn at 11 AM with polarizing filter to cut glare. Right: Engadin pine forest at 5 PM with low-angle sun creating long shadows. Two completely different moods — glacial ice vs warm forest floor.</notes>
+    <slide slot="left">
+      <image src="./images/lake.jpg" alt="Aletsch glacier"/>
+      <text><b>Aletsch Glacier</b> — 23km, largest in the Alps</text>
+    </slide>
+    <slide slot="right">
+      <image src="./images/forest.jpg" alt="Engadin pine forest"/>
+      <text><b>Engadin Forest</b> — old-growth stone pines at 1800m</text>
+    </slide>
+  </slide>
+
+  <slide layout="columns" cols="3" gap="16" title="From Alps to Sea">
+    <notes>Three perspectives from the last day of the trek. Left: alpine meadow at 2200m with blooming wildflowers in late July. Center: the Ligurian coast near Portofino at golden hour. Right: back to the Matterhorn at sunset with alpenglow — the mountain turns pink for about 8 minutes.</notes>
+    <slide slot="left">
+      <image src="./images/meadow.jpg" alt="Alpine meadow"/>
+      <text>Alpine meadow, 2200m</text>
+    </slide>
+    <slide slot="center">
+      <image src="./images/coast.jpg" alt="Ligurian coast"/>
+      <text>Ligurian coast at sunset</text>
+    </slide>
+    <slide slot="right">
+      <image src="./images/mountain.jpg" alt="Matterhorn alpenglow"/>
+      <text>Matterhorn alpenglow</text>
+    </slide>
+  </slide>
+</presentation>

@@ -74,7 +74,7 @@ When generating XML presentation files:
 1. **Always include the DOCTYPE declaration:**
    ```xml
    <?xml version="1.0" encoding="UTF-8"?>
-   <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/docs/presentation.dtd">
+   <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
    ```
 
 2. **Refer to the format spec** at `https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html` for layout details, examples, and best practices.
@@ -88,7 +88,7 @@ When generating XML presentation files:
 1. Add enum value to `SlideLayout` in `include/common.h`
 2. Add layout handling in `src/layout.cpp` (compute bounds)
 3. Add rendering in `src/renderer.cpp` (draw to SDL)
-4. Add DTD attribute value in `docs/presentation.dtd`
+4. Add DTD attribute value in `schemas/presentation.dtd`
 5. Test with a sample XML slide
 
 ### Modifying slide styles

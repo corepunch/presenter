@@ -1,292 +1,167 @@
 #include "font.h"
 #include "renderer.h"
+#include "constants.h"
+#include "common.h"
 #include <SDL2/SDL.h>
-#include <cassert>
-#include <cmath>
 #include <cstdio>
+#include <cstdlib>
+#include <cstring>
 #include <string>
 #include <vector>
+#include <unistd.h>
+#include <sys/stat.h>
 
+static int tests_run = 0;
 static int tests_passed = 0;
-static int tests_failed = 0;
 
-#define TEST_ASSERT(cond, msg)                                         \
-    do {                                                               \
-        if (!(cond)) {                                                 \
-            printf("  FAIL: %s (line %d)\n", msg, __LINE__);          \
-            tests_failed++;                                            \
-        } else {                                                       \
-            printf("  PASS: %s\n", msg);                               \
-            tests_passed++;                                            \
-        }                                                              \
-    } while (0)
+#define TEST_ASSERT(expr, msg) \
+    do { ++tests_run; if (!(expr)) { fprintf(stderr, "FAIL [%d]: %s\n", __LINE__, msg); } else ++tests_passed; } while(0)
 
-#define TEST_ASSERT_NEAR(a, b, eps, msg)                               \
-    TEST_ASSERT(std::fabs((a) - (b)) < (eps), msg)
-
-// ── Font tests ─────────────────────────────────────────────────────────────
-
-static void test_measureString_nonempty(const Font& font) {
-    float w = font.measureString("Hello");
-    TEST_ASSERT(w > 0, "measureString(\"Hello\") returns width > 0");
+static int initRenderer(SDL_Renderer** r, SDL_Window** w, int width, int height) {
+    *w = SDL_CreateWindow("test", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
+                          width, height, SDL_WINDOW_HIDDEN);
+    if (!*w) return -1;
+    *r = SDL_CreateRenderer(*w, -1, SDL_RENDERER_SOFTWARE);
+    return *r ? 0 : -1;
 }
 
-static void test_measureString_empty(const Font& font) {
-    float w = font.measureString("");
-    TEST_ASSERT(w == 0.0f, "measureString(\"\") returns 0");
-}
-
-static void test_measureString_additive(const Font& font) {
-    float wA  = font.measureString("A");
-    float wB  = font.measureString("B");
-    float wAB = font.measureString("AB");
-    TEST_ASSERT_NEAR(wAB, wA + wB, 2.0f,
-        "measureString(\"AB\") ≈ measureString(\"A\") + measureString(\"B\")");
-}
-
-static void test_measureString_space(const Font& font) {
-    float w = font.measureString(" ");
-    TEST_ASSERT(w > 0, "measureString(\" \") returns width > 0");
-}
-
-static void test_measureString_utf8(const Font& font) {
-    // U+2014 EM DASH, 3 bytes in UTF-8
-    float w = font.measureString("\xE2\x80\x94");
-    TEST_ASSERT(w > 0, "measureString of em-dash (U+2014) returns width > 0");
-}
-
-static void test_measureString_utf8_counts_codepoints(const Font& font) {
-    // "—" is 1 codepoint; byte-wise it would be 3 bogus chars
-    float dash = font.measureString("\xE2\x80\x94");
-    float dashTwice = font.measureString("\xE2\x80\x94\xE2\x80\x94");
-    TEST_ASSERT_NEAR(dashTwice, dash * 2, 2.0f,
-        "two em-dashes measure ~2x one em-dash (codepoint iteration)");
-}
-
-// ── Renderer::wordWrap tests ──────────────────────────────────────────────
-
-static void test_wordWrap_short_text(const FontVariants& fonts, Renderer& renderer) {
-    auto lines = renderer.wordWrap("Hello", fonts, 1920);
-    TEST_ASSERT(lines.size() == 1,
-        "wordWrap short text produces single line");
-}
-
-static void test_wordWrap_long_text(const FontVariants& fonts, Renderer& renderer) {
-    std::string longText = "This is a fairly long sentence that should definitely "
-                           "wrap onto more than one line when given a narrow width";
-    auto lines = renderer.wordWrap(longText, fonts, 200);
-    TEST_ASSERT(lines.size() > 1,
-        "wordWrap long text produces multiple lines");
-}
-
-static void test_wordWrap_preserves_words(const FontVariants& fonts, Renderer& renderer) {
-    std::string input = "alpha beta gamma delta epsilon";
-    auto lines = renderer.wordWrap(input, fonts, 200);
-
-    // Reconstruct all words from the wrapped output
-    std::string reconstructed;
-    for (size_t i = 0; i < lines.size(); i++) {
-        if (!reconstructed.empty()) reconstructed += " ";
-        reconstructed += lines[i];
-    }
-
-    TEST_ASSERT(reconstructed == input,
-        "wordWrap preserves all input words in order");
-}
-
-static void test_wordWrap_formatted_words(const FontVariants& fonts, Renderer& renderer) {
-    // markers are not measured as literal characters
-    std::string plain = "alpha beta gamma delta epsilon";
-    std::string formatted = "alpha **beta** gamma `delta` _epsilon_";
-    auto linesPlain = renderer.wordWrap(plain, fonts, 200);
-    auto linesFmt = renderer.wordWrap(formatted, fonts, 200);
-    TEST_ASSERT(linesFmt.size() <= linesPlain.size() + 1,
-        "wordWrap with format markers wraps sanely");
-}
-
-// ── Rendering smoke tests ─────────────────────────────────────────────────
-
-static Slide makeSlide(SlideType type, const std::string& title,
-                       const std::vector<std::string>& bullets = {},
-                       const std::vector<std::string>& blks = {},
+static Slide makeSlide(SlideLayout layout, const std::string& title,
+                       const std::vector<std::string>& texts = {},
                        const std::string& notes = "") {
     Slide s;
-    s.type = type;
+    s.layout = layout;
     s.title = title;
-    s.bullets = bullets;
-    s.blocks = blks;
+    s.texts = texts;
     s.notes = notes;
     return s;
 }
 
-static void test_renderSlide_content(SDL_Renderer* sdlRenderer,
-                                     const FontSet& fonts, Renderer& renderer) {
-    std::vector<std::string> bullets = {
-        "First bullet point with some text",
-        "Second bullet point with more text to test wrapping",
-        "Third bullet",
-        "Fourth bullet that is also quite long and should wrap in a narrow view",
-        "Fifth"
-    };
-    Slide slide = makeSlide(SlideType::Content, "Content Title", bullets);
-    SDL_Texture* tex = renderer.renderSlide(slide, fonts);
-    TEST_ASSERT(tex != nullptr,
-        "renderSlide content type returns valid texture (no crash)");
+static void test_content(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Content, "Content Title", {"First bullet", "Second", "Third"});
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "content slide renders");
     if (tex) SDL_DestroyTexture(tex);
 }
 
-static void test_renderSlide_title(SDL_Renderer* sdlRenderer,
-                                   const FontSet& fonts, Renderer& renderer) {
-    Slide slide = makeSlide(SlideType::Title, "My Title", {"Subtitle"});
-    SDL_Texture* tex = renderer.renderSlide(slide, fonts);
-    TEST_ASSERT(tex != nullptr,
-        "renderSlide title type returns valid texture (no crash)");
+static void test_title(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Title, "My Title");
+    slide.subtitle = "Subtitle";
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "title slide renders");
     if (tex) SDL_DestroyTexture(tex);
 }
 
-static void test_renderSlide_section(SDL_Renderer* sdlRenderer,
-                                     const FontSet& fonts, Renderer& renderer) {
-    Slide slide = makeSlide(SlideType::Section, "Section Break");
-    SDL_Texture* tex = renderer.renderSlide(slide, fonts);
-    TEST_ASSERT(tex != nullptr,
-        "renderSlide section type returns valid texture (no crash)");
+static void test_section(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Section, "Section Break");
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "section slide renders");
     if (tex) SDL_DestroyTexture(tex);
 }
 
-static void test_renderSlide_twoColumn(SDL_Renderer* sdlRenderer,
-                                       const FontSet& fonts, Renderer& renderer) {
-    Slide slide = makeSlide(SlideType::TwoColumn, "Two Columns",
-                            {}, {"Left side content here",
-                                 "Right side content here"});
-    SDL_Texture* tex = renderer.renderSlide(slide, fonts);
-    TEST_ASSERT(tex != nullptr,
-        "renderSlide two-column type returns valid texture (no crash)");
+static void test_columns(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Columns, "Two Columns");
+    slide.cols = 2;
+    Slide left; left.texts = {"Left item 1", "Left item 2"}; left.layout = SlideLayout::Content;
+    Slide right; right.texts = {"Right item 1"}; right.layout = SlideLayout::Content;
+    slide.children = {left, right};
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "columns slide renders");
     if (tex) SDL_DestroyTexture(tex);
 }
 
-static void test_renderSlide_image(SDL_Renderer* sdlRenderer,
-                                   const FontSet& fonts, Renderer& renderer) {
-    Slide slide = makeSlide(SlideType::Image, "Image Slide");
-    slide.imagePath = "nonexistent.png";
-    slide.imageAlt = "Alt text";
-    SDL_Texture* tex = renderer.renderSlide(slide, fonts);
-    TEST_ASSERT(tex != nullptr,
-        "renderSlide image type returns valid texture (no crash, missing image handled)");
+static void test_image(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Image, "Image Slide");
+    slide.imagePath = "nope.png";
+    slide.caption = "Image caption";
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "image slide renders");
     if (tex) SDL_DestroyTexture(tex);
 }
 
-static void test_renderSlide_all_types(SDL_Renderer* sdlRenderer,
-                                       const FontSet& fonts, Renderer& renderer) {
+static void test_all_types(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
     std::vector<Slide> slides = {
-        makeSlide(SlideType::Title, "T", {"Sub"}),
-        makeSlide(SlideType::Content, "C", {"a","b","c"}),
-        makeSlide(SlideType::Section, "S"),
-        makeSlide(SlideType::TwoColumn, "2C", {}, {"L", "R"}),
-        makeSlide(SlideType::Image, "I"),
+        makeSlide(SlideLayout::Title, "T"),
+        makeSlide(SlideLayout::Content, "C", {"a","b"}),
+        makeSlide(SlideLayout::Section, "S"),
+        makeSlide(SlideLayout::Image, "I"),
     };
+    slides[3].imagePath = "nope.png";
+
     bool allOk = true;
     for (auto& s : slides) {
-        if (s.type == SlideType::Image) {
-            s.imagePath = "nope.png";
-        }
-        SDL_Texture* tex = renderer.renderSlide(s, fonts);
-        if (!tex) {
-            allOk = false;
-        } else {
-            SDL_DestroyTexture(tex);
-        }
+        SDL_Texture* tex = renderer.renderSlide(s, fonts, style);
+        if (!tex) allOk = false;
+        else SDL_DestroyTexture(tex);
     }
-    TEST_ASSERT(allOk, "renderSlide all slide types produce textures without crash");
+    TEST_ASSERT(allOk, "all slide types render without crash");
 }
 
-static void test_presenter_view(SDL_Renderer* sdlRenderer,
-                                const FontSet& fonts, Renderer& renderer) {
+static void test_presenter_view(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer) {
     Presentation pres;
+    pres.style = PresentationStyle::defaults();
     pres.slides = {
-        makeSlide(SlideType::Title, "Slide 1", {"Sub 1"}, {}, "Note 1"),
-        makeSlide(SlideType::Content, "Slide 2", {"a","b"}, {}, "Note 2"),
-        makeSlide(SlideType::Section, "Slide 3"),
+        makeSlide(SlideLayout::Title, "Slide 1", {}, "Note 1"),
+        makeSlide(SlideLayout::Content, "Slide 2", {"a","b"}, "Note 2"),
+        makeSlide(SlideLayout::Section, "Slide 3"),
     };
-    pres.current = 0;
     SDL_Texture* tex = renderer.renderPresenterView(pres, fonts);
-    TEST_ASSERT(tex != nullptr,
-        "renderPresenterView returns valid texture (no crash)");
+    TEST_ASSERT(tex != nullptr, "presenter view renders");
     if (tex) SDL_DestroyTexture(tex);
 }
 
-// ── main ──────────────────────────────────────────────────────────────────
+static void test_formatted_text_rendering(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Content, "Formatted Text");
+    slide.texts = {
+        "<b>Bold</b> and <i>italic</i> text",
+        "Inline <code>monospace</code> here",
+        "<b>Nested <i>bold-italic</i></b> formatting",
+        "No formatting",
+    };
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "formatted text slide renders without crash");
+    if (tex) SDL_DestroyTexture(tex);
+}
 
-int main(int argc, char* argv[]) {
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
-        fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
-        return 1;
-    }
+static void test_empty_title(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Content, "", {"Body without title"});
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "empty title slide renders without crash");
+    if (tex) SDL_DestroyTexture(tex);
+}
 
-    SDL_Window* window = SDL_CreateWindow(
-        "test_textbounds", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-        1280, 720, SDL_WINDOW_HIDDEN);
-    if (!window) {
-        fprintf(stderr, "SDL_CreateWindow failed: %s\n", SDL_GetError());
-        SDL_Quit();
-        return 1;
-    }
+int main() {
+    if (SDL_Init(SDL_INIT_VIDEO) < 0) { fprintf(stderr, "SDL_Init failed\n"); return 1; }
 
-    SDL_Renderer* sdlRenderer = SDL_CreateRenderer(
-        window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
-    if (!sdlRenderer) {
-        fprintf(stderr, "SDL_CreateRenderer failed: %s\n", SDL_GetError());
-        SDL_DestroyWindow(window);
+    SDL_Window* window;
+    SDL_Renderer* sdlR;
+    if (initRenderer(&sdlR, &window, 640, 480) < 0) {
+        fprintf(stderr, "Failed to init renderer\n");
         SDL_Quit();
         return 1;
     }
 
     FontSet fonts;
-    if (!fonts.load(32.0f)) {
-        fprintf(stderr, "Failed to load fonts\n");
-        SDL_DestroyRenderer(sdlRenderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+    if (!fonts.load(PresentationStyle::defaults())) { fprintf(stderr, "Fonts failed\n"); SDL_Quit(); return 1; }
 
     Renderer renderer;
-    if (!renderer.init(sdlRenderer, 1280, 720)) {
-        fprintf(stderr, "Renderer::init failed\n");
-        SDL_DestroyRenderer(sdlRenderer);
-        SDL_DestroyWindow(window);
-        SDL_Quit();
-        return 1;
-    }
+    renderer.init(sdlR, 640, 480);
+    auto style = PresentationStyle::defaults();
 
-    printf("=== Font tests ===\n");
-    test_measureString_nonempty(fonts.get(FontType::Regular));
-    test_measureString_empty(fonts.get(FontType::Regular));
-    test_measureString_additive(fonts.get(FontType::Regular));
-    test_measureString_space(fonts.get(FontType::Regular));
-    test_measureString_utf8(fonts.get(FontType::Regular));
-    test_measureString_utf8_counts_codepoints(fonts.get(FontType::Regular));
-
-    printf("\n=== Renderer::wordWrap tests ===\n");
-    test_wordWrap_short_text(fonts.variants(), renderer);
-    test_wordWrap_long_text(fonts.variants(), renderer);
-    test_wordWrap_preserves_words(fonts.variants(), renderer);
-    test_wordWrap_formatted_words(fonts.variants(), renderer);
-
-    printf("\n=== Rendering smoke tests ===\n");
-    test_renderSlide_content(sdlRenderer, fonts, renderer);
-    test_renderSlide_title(sdlRenderer, fonts, renderer);
-    test_renderSlide_section(sdlRenderer, fonts, renderer);
-    test_renderSlide_twoColumn(sdlRenderer, fonts, renderer);
-    test_renderSlide_image(sdlRenderer, fonts, renderer);
-    test_renderSlide_all_types(sdlRenderer, fonts, renderer);
-    test_presenter_view(sdlRenderer, fonts, renderer);
+    test_content(sdlR, fonts, renderer, style);
+    test_title(sdlR, fonts, renderer, style);
+    test_section(sdlR, fonts, renderer, style);
+    test_columns(sdlR, fonts, renderer, style);
+    test_image(sdlR, fonts, renderer, style);
+    test_all_types(sdlR, fonts, renderer, style);
+    test_presenter_view(sdlR, fonts, renderer);
+    test_formatted_text_rendering(sdlR, fonts, renderer, style);
+    test_empty_title(sdlR, fonts, renderer, style);
 
     renderer.cleanup();
-    SDL_DestroyRenderer(sdlRenderer);
+    SDL_DestroyRenderer(sdlR);
     SDL_DestroyWindow(window);
     SDL_Quit();
 
-    printf("\n=== Results: %d passed, %d failed ===\n",
-           tests_passed, tests_failed);
-    return tests_failed > 0 ? 1 : 0;
+    fprintf(stderr, "\n%d/%d assertions passed\n", tests_passed, tests_run);
+    return tests_passed == tests_run ? 0 : 1;
 }

@@ -1,4 +1,5 @@
 #pragma once
+#include "style.h"
 #include <string>
 #include <vector>
 #include <cstdint>
@@ -11,35 +12,41 @@ enum class FontType {
     Monospace
 };
 
-enum class SlideType {
-    Title,       // Large centered title + subtitle
-    Content,     // Title + bullet points
-    Image,       // Title + image + optional caption
-    Section,     // Section divider (centered, medium-large text)
-    TwoColumn    // Title + left/right text columns
+enum class SlideLayout {
+    Title,    // Centered title + optional subtitle
+    Content,  // Title + vertical stack of text/images (default)
+    Image,    // Title + full-width image + caption
+    Columns,  // Title + horizontal slots with child slides
+    Section,  // Centered title only (divider)
+    Blank     // No header, children fill full area
 };
 
 enum class ImageFit {
-    Fit,         // scale = min(sx, sy), centered (default)
-    Fill         // scale = max(sx, sy), center-crop
+    Fit,   // scale = min(sx, sy), centered (default)
+    Fill   // scale = max(sx, sy), center-crop
 };
 
 struct Slide {
-    SlideType type = SlideType::Title;
+    SlideLayout layout = SlideLayout::Content;
+    std::string slot;       // "left", "right", "0", "1", ... (for Columns parent)
     std::string title;
     std::string subtitle;
-    std::vector<std::string> bullets;
+    std::vector<std::string> texts;  // bullet points / captions
+    std::string notes;
     std::string imagePath;
     std::string imageAlt;
-    std::vector<std::string> blocks;  // content blocks separated by ---
-    std::string notes;  // presenter-only
-    bool layoutSpecified = false;
+    std::string caption;      // used only by layout="image"
     ImageFit imageFit = ImageFit::Fit;
+    int cols = 2;             // column count for layout="columns"
+    int gap = 24;             // gap between slots (pixels)
+
+    std::vector<Slide> children;  // recursively nested slides
 };
 
 struct Presentation {
     std::vector<Slide> slides;
     int current = 0;
+    PresentationStyle style;
 
     bool empty() const { return slides.empty(); }
     int size() const { return static_cast<int>(slides.size()); }

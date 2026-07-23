@@ -10,8 +10,7 @@
 #include <string>
 
 static void printUsage(const char* prog) {
-    printf("Usage: %s <presentation.md> [--size N]\n", prog);
-    printf("  --size   Font size in pixels (default: %d)\n", static_cast<int>(FONT_SIZE_BASE));
+    printf("Usage: %s <presentation.xml> [--style <style.xml>]\n", prog);
 }
 
 int main(int argc, char* argv[]) {
@@ -20,21 +19,27 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    std::string mdPath = argv[1];
-    float fontSize = FONT_SIZE_BASE;
+    std::string xmlPath = argv[1];
+    std::string stylePath;
 
     for (int i = 2; i < argc; i++) {
-        if (std::string(argv[i]) == "--size" && i + 1 < argc) {
-            fontSize = static_cast<float>(std::atoi(argv[++i]));
+        if (std::string(argv[i]) == "--style" && i + 1 < argc) {
+            stylePath = argv[++i];
         }
     }
 
-    Presentation pres = parseMarkdown(mdPath);
+    Presentation pres = parseXml(xmlPath);
     if (pres.empty()) {
-        fprintf(stderr, "Error: no slides found in %s\n", mdPath.c_str());
+        fprintf(stderr, "Error: no slides found in %s\n", xmlPath.c_str());
         return 1;
     }
-    printf("Loaded %d slides from %s\n", pres.size(), mdPath.c_str());
+
+    // Override style from CLI
+    if (!stylePath.empty()) {
+        pres.style = PresentationStyle::load(stylePath);
+    }
+
+    printf("Loaded %d slides from %s\n", pres.size(), xmlPath.c_str());
 
     if (SDL_Init(SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
@@ -42,12 +47,14 @@ int main(int argc, char* argv[]) {
     }
 
     FontSet fonts;
-    if (!fonts.load(fontSize)) {
+    if (!fonts.load(pres.style)) {
         fprintf(stderr, "Failed to load fonts\n");
         SDL_Quit();
         return 1;
     }
-    printf("Loaded fonts at %.0fpx\n", fontSize);
+    printf("Loaded fonts (title:%.0f subtitle:%.0f content:%.0f small:%.0f)\n",
+           pres.style.titleFontSize, pres.style.subtitleFontSize,
+           pres.style.contentFontSize, pres.style.smallFontSize);
 
     // Audience window
     SDL_Window* audienceWindow = SDL_CreateWindow(
@@ -172,7 +179,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (needsRender) {
-            SDL_Texture* audienceTex = audienceRend.renderSlide(pres.currentSlide(), fonts, pres.current + 1, pres.size());
+            SDL_Texture* audienceTex = audienceRend.renderSlide(pres.currentSlide(), fonts, pres.style, pres.current + 1, pres.size());
             SDL_Texture* presenterTex = presenterRend.renderPresenterView(pres, fonts);
 
             // Render audience

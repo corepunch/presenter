@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<style>
+  <fonts title="48" subtitle="28" content="24" small="16"/>
+  <colors bg="#1E1E28" text="#C8C8D2" title="#FFFFFF" subtitle="#A0A0B0" accent="#FFCC00" dim="#8C8C9B" line="#646478"/>
+  <layout margin="40" padding="20" gap="12" columnGap="24" linePadding="6" presenterMargin="20"/>
+</style>

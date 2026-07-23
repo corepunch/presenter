@@ -58,26 +58,35 @@ struct FontVariants {
 };
 
 struct FontSet {
-    std::array<Font, 5> fonts;       // base size
-    std::array<Font, 5> titleFonts;  // base * FONT_SIZE_TITLE_SCALE
-    std::array<Font, 5> smallFonts;  // base * FONT_SIZE_SMALL_SCALE
+    std::array<Font, 5> fonts;          // content size
+    std::array<Font, 5> titleFonts;     // title size
+    std::array<Font, 5> subtitleFonts;  // subtitle size
+    std::array<Font, 5> smallFonts;     // small size
     Font fallback;
     Font titleFallback;
+    Font subtitleFallback;
     Font smallFallback;
 
-    bool load(float baseSize) {
-        return loadGroup(fonts, fallback, baseSize)
-            && loadGroup(titleFonts, titleFallback, baseSize * FONT_SIZE_TITLE_SCALE)
-            && loadGroup(smallFonts, smallFallback, baseSize * FONT_SIZE_SMALL_SCALE);
+    bool load(float contentSize, float titleSize, float subtitleSize, float smallSize) {
+        return loadGroup(fonts, fallback, contentSize)
+            && loadGroup(titleFonts, titleFallback, titleSize)
+            && loadGroup(subtitleFonts, subtitleFallback, subtitleSize)
+            && loadGroup(smallFonts, smallFallback, smallSize);
+    }
+
+    bool load(const struct PresentationStyle& style) {
+        return load(style.contentFontSize, style.titleFontSize,
+                    style.subtitleFontSize, style.smallFontSize);
     }
 
     const Font& get(FontType type) const {
         return fonts[static_cast<int>(type)];
     }
 
-    FontVariants variants() const      { return makeVariants(fonts); }
-    FontVariants titleVariants() const { return makeVariants(titleFonts); }
-    FontVariants smallVariants() const { return makeVariants(smallFonts); }
+    FontVariants variants() const         { return makeVariants(fonts); }
+    FontVariants titleVariants() const    { return makeVariants(titleFonts); }
+    FontVariants subtitleVariants() const { return makeVariants(subtitleFonts); }
+    FontVariants smallVariants() const    { return makeVariants(smallFonts); }
 
 private:
     static bool loadGroup(std::array<Font, 5>& group, Font& fb, float size) {

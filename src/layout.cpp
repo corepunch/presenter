@@ -1,136 +1,125 @@
 #include "layout.h"
-#include "constants.h"
+#include <algorithm>
 
-LayoutKind layoutFromType(SlideType type) {
-    switch (type) {
-        case SlideType::Title:      return LayoutKind::Title;
-        case SlideType::Section:    return LayoutKind::Section;
-        case SlideType::Content:    return LayoutKind::HeaderBody;
-        case SlideType::TwoColumn:  return LayoutKind::HeaderTwoColumn;
-        case SlideType::Image:      return LayoutKind::HeaderImage;
+LayoutKind layoutFromSlide(const Slide& slide) {
+    switch (slide.layout) {
+        case SlideLayout::Title:   return LayoutKind::Title;
+        case SlideLayout::Section: return LayoutKind::Section;
+        case SlideLayout::Columns: return LayoutKind::Columns;
+        case SlideLayout::Image:   return LayoutKind::HeaderImage;
+        case SlideLayout::Blank:   return LayoutKind::HeaderBody;
+        case SlideLayout::Content:
+        default:
+            if (!slide.imagePath.empty()) return LayoutKind::HeaderImage;
+            return LayoutKind::HeaderBody;
     }
-    return LayoutKind::HeaderBody;
 }
 
-LayoutKind selectLayout(const Slide& slide) {
-    if (slide.layoutSpecified) {
-        return layoutFromType(slide.type);
-    }
-
-    // Two blocks → two-column (before/after or side-by-side)
-    if (slide.blocks.size() >= 2 && slide.imagePath.empty()) {
-        return LayoutKind::HeaderTwoColumn;
-    }
-
-    bool hasImage = !slide.imagePath.empty();
-    if (hasImage) {
-        return LayoutKind::HeaderImage;
-    }
-
-    bool hasContent = !slide.blocks.empty()
-        || !slide.bullets.empty()
-        || !slide.subtitle.empty();
-    if (!hasContent) {
-        return LayoutKind::Section;
-    }
-
-    return LayoutKind::HeaderBody;
-}
-
-std::vector<SlidePart> computeParts(LayoutKind kind, const Slide& slide, const LayoutMetrics& metrics) {
+std::vector<SlidePart> computeParts(LayoutKind kind, const Slide& slide,
+                                    const LayoutMetrics& metrics,
+                                    const PresentationStyle& s) {
     std::vector<SlidePart> parts;
-    int margin = SLIDE_MARGIN;
-    int contentW = metrics.slideW - 2 * margin;
+    int contentW = metrics.slideW - 2 * s.slideMargin;
 
     switch (kind) {
-        case LayoutKind::Title: {
-            SlidePart full;
-            full.role = PartRole::FullSlide;
-            full.rect = {margin, 0, contentW, metrics.slideH};
-            parts.push_back(full);
-            break;
-        }
+        case LayoutKind::Title:
         case LayoutKind::Section: {
             SlidePart full;
             full.role = PartRole::FullSlide;
-            full.rect = {margin, 0, contentW, metrics.slideH};
+            full.rect = {s.slideMargin, 0, contentW, metrics.slideH};
             parts.push_back(full);
             break;
         }
         case LayoutKind::HeaderBody: {
-            int headerH = static_cast<int>(metrics.titleLineH) + 2 * PART_PADDING;
+            int headerH = static_cast<int>(metrics.titleLineH) + 2 * s.partPadding;
             SlidePart header;
             header.role = PartRole::Header;
-            header.rect = {margin, 0, contentW, headerH};
+            header.rect = {s.slideMargin, 0, contentW, headerH};
             parts.push_back(header);
 
-            int bodyY = headerH + PART_GAP;
-            int footerH = metrics.bodyLineH + PART_PADDING;
-            int bodyH = metrics.slideH - bodyY - footerH - PART_PADDING;
+            int bodyY = headerH + s.partGap;
+            int footerH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
+            int bodyH = metrics.slideH - bodyY - footerH - s.partPadding;
             SlidePart body;
             body.role = PartRole::Body;
-            body.rect = {margin, bodyY, contentW, bodyH};
+            body.rect = {s.slideMargin, bodyY, contentW, bodyH};
             parts.push_back(body);
 
             SlidePart footer;
             footer.role = PartRole::Footer;
-            footer.rect = {margin, metrics.slideH - footerH, contentW, footerH};
+            footer.rect = {s.slideMargin, metrics.slideH - footerH, contentW, footerH};
             parts.push_back(footer);
             break;
         }
-        case LayoutKind::HeaderTwoColumn: {
-            int headerH = static_cast<int>(metrics.titleLineH) + 2 * PART_PADDING;
+        case LayoutKind::Columns: {
+            int headerH = static_cast<int>(metrics.titleLineH) + 2 * s.partPadding;
             SlidePart header;
             header.role = PartRole::Header;
-            header.rect = {margin, 0, contentW, headerH};
+            header.rect = {s.slideMargin, 0, contentW, headerH};
             parts.push_back(header);
 
-            int bodyY = headerH + PART_GAP;
-            int footerH = metrics.bodyLineH + PART_PADDING;
-            int bodyH = metrics.slideH - bodyY - footerH - PART_PADDING;
-            int colW = (contentW - COLUMN_GAP) / 2;
+            int bodyY = headerH + s.partGap;
+            int footerH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
+            int bodyH = metrics.slideH - bodyY - footerH - s.partPadding;
 
-            SlidePart left;
-            left.role = PartRole::ColumnLeft;
-            left.rect = {margin, bodyY, colW, bodyH};
-            parts.push_back(left);
+            int nCols = std::max(1, slide.cols);
+            int gap = slide.gap > 0 ? slide.gap : s.columnGap;
+            int nSlots = static_cast<int>(slide.children.size());
+            int nRows = (nSlots + nCols - 1) / nCols;
+            int nGapsH = nCols - 1;
+            int nGapsV = nRows - 1;
+            int colW = (contentW - nGapsH * gap) / nCols;
+            int rowH = (bodyH - nGapsV * gap) / std::max(1, nRows);
 
-            SlidePart right;
-            right.role = PartRole::ColumnRight;
-            right.rect = {margin + colW + COLUMN_GAP, bodyY, colW, bodyH};
-            parts.push_back(right);
+            for (int i = 0; i < nSlots; i++) {
+                int col = i % nCols;
+                int row = i / nCols;
+                SlidePart slot;
+                slot.role = PartRole::Slot;
+                slot.childIndex = i;
+                slot.rect = {
+                    s.slideMargin + col * (colW + gap),
+                    bodyY + row * (rowH + gap),
+                    colW,
+                    rowH
+                };
+                parts.push_back(slot);
+            }
 
             SlidePart footer;
             footer.role = PartRole::Footer;
-            footer.rect = {margin, metrics.slideH - footerH, contentW, footerH};
+            footer.rect = {s.slideMargin, metrics.slideH - footerH, contentW, footerH};
             parts.push_back(footer);
             break;
         }
         case LayoutKind::HeaderImage: {
-            int headerH = static_cast<int>(metrics.titleLineH) + 2 * PART_PADDING;
-            SlidePart header;
-            header.role = PartRole::Header;
-            header.rect = {margin, 0, contentW, headerH};
-            parts.push_back(header);
+            int headerH = slide.title.empty() ? 0 : static_cast<int>(metrics.titleLineH) + 2 * s.partPadding;
+            int gapAbove = headerH > 0 ? s.partGap : 0;
+            if (!slide.title.empty()) {
+                SlidePart header;
+                header.role = PartRole::Header;
+                header.rect = {s.slideMargin, 0, contentW, headerH};
+                parts.push_back(header);
+            }
 
-            int footerH = metrics.bodyLineH + PART_PADDING;
-            int captionH = static_cast<int>(metrics.bodyLineH) + PART_PADDING;
-            int imageAreaY = headerH + PART_GAP;
-            int imageAreaH = metrics.slideH - imageAreaY - captionH - footerH - 2 * PART_PADDING;
+            int footerH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
+            int captionH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
+            int imageAreaY = headerH + gapAbove;
+            int imageAreaH = metrics.slideH - imageAreaY - s.partGap - captionH - footerH;
 
             SlidePart image;
             image.role = PartRole::Image;
-            image.rect = {margin, imageAreaY, contentW, imageAreaH};
+            image.rect = {s.slideMargin, imageAreaY, contentW, imageAreaH};
             parts.push_back(image);
 
             SlidePart caption;
             caption.role = PartRole::Caption;
-            caption.rect = {margin, imageAreaY + imageAreaH + PART_GAP, contentW, captionH};
+            caption.rect = {s.slideMargin, imageAreaY + imageAreaH + s.partGap, contentW, captionH};
             parts.push_back(caption);
 
             SlidePart footer;
             footer.role = PartRole::Footer;
-            footer.rect = {margin, metrics.slideH - footerH, contentW, footerH};
+            footer.rect = {s.slideMargin, metrics.slideH - footerH, contentW, footerH};
             parts.push_back(footer);
             break;
         }

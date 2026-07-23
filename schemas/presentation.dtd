@@ -1,0 +1,252 @@
+<!--
+  Presenter DTD – recursive slide composition format
+  ====================================================
+
+  Design principles:
+  - <slide> is the universal composable container, recursively nestable
+  - Default flow is vertical (elements stack top-to-bottom)
+  - layout="columns" enables horizontal layout via slot-tagged child slides
+  - Each element (text, image, child slide) renders independently;
+    the parent layout engine sizes and positions rendered results
+  - No special "before-after" type – it's just columns with two child slides
+  - Slide heading is a title="" attribute on <slide>
+  - Inline formatting in text: <b>bold</b>, <i>italic</i>, <code>code</code>
+
+  Comparison to PPTX/OOXML:
+  - PPTX uses <p:spTree> with explicitly positioned <p:sp> shapes
+  - Presenter uses recursive <slide> with semantic layout="..." instead of px coordinates
+  - PPTX placeholders map to our slot="left|right|..." attribute
+
+  Examples:
+  --------
+
+  Title slide:
+    <slide layout="title" title="Q4 Product Roadmap">
+      <notes>Welcome the team</notes>
+      <subtitle>Engineering Team — July 2026</subtitle>
+    </slide>
+
+  Content slide:
+    <slide layout="content" title="Recent Wins">
+      <notes>Highlight the performance gains</notes>
+      <text><b>50%</b> latency reduction — dashboards respond instantly</text>
+      <text>Zero mobile crashes for 2 weeks (was <b>#1</b> support ticket)</text>
+      <text>SAML 2.0 SSO unblocked enterprise deal</text>
+    </slide>
+
+  Section divider:
+    <slide layout="section" title="What We Shipped"/>
+
+  Single image with caption:
+    <slide layout="image" title="System Architecture">
+      <notes>Walk through the diagram</notes>
+      <image src="./images/arch.png" alt="Architecture diagram"/>
+      <text>Current state after Q3 migration</text>
+    </slide>
+
+  Before/after (two images side by side):
+    <slide layout="columns" gap="24" title="Dashboard: Before and After">
+      <notes>Left = old (3 clicks), right = new (1 click)</notes>
+      <slide slot="left">
+        <image src="./before.png" alt="Old dashboard"/>
+        <text><b>Before:</b> 3 clicks to find a report</text>
+      </slide>
+      <slide slot="right">
+        <image src="./after.png" alt="New dashboard"/>
+        <text><b>After:</b> Reports one click from home</text>
+      </slide>
+    </slide>
+
+  Two-column text:
+    <slide layout="columns" gap="24" title="Q1 Priorities">
+      <slide slot="left" title="This Quarter">
+        <text>Dark mode rollout (most-requested feature)</text>
+        <text>Real-time collaboration on dashboards</text>
+      </slide>
+      <slide slot="right" title="Backlog">
+        <text>CLI v2 with plugin system</text>
+        <text>Self-hosted option for enterprise</text>
+      </slide>
+    </slide>
+
+  Image + bullet list side by side:
+    <slide layout="columns" title="Feature Overview">
+      <slide slot="left">
+        <image src="./screenshot.png"/>
+      </slide>
+      <slide slot="right">
+        <text><b>Faster</b> — loads in under 200ms</text>
+        <text><b>Simpler</b> — 3 clicks to export to PDF</text>
+        <text><b>Accessible</b> — WCAG 2.1 AA compliant</text>
+      </slide>
+    </slide>
+
+  Three-way comparison:
+    <slide layout="columns" cols="3" gap="16" title="Font Rendering Options">
+      <slide slot="0" title="Bitmap">
+        <image src="./bitmap.png"/>
+        <text>Sharp at 1x, blurry scaled</text>
+      </slide>
+      <slide slot="1" title="SDF">
+        <image src="./sdf.png"/>
+        <text>Crisp at any scale</text>
+      </slide>
+      <slide slot="2" title="MSDF">
+        <image src="./msdf.png"/>
+        <text>Crisp + sharp corners</text>
+      </slide>
+    </slide>
+
+  Grid gallery (2x2):
+    <slide layout="columns" cols="2" gap="12" title="Screenshots">
+      <slide slot="0"><image src="./1.png"/></slide>
+      <slide slot="1"><image src="./2.png"/></slide>
+      <slide slot="2"><image src="./3.png"/></slide>
+      <slide slot="3"><image src="./4.png"/></slide>
+    </slide>
+
+  Recursive nesting:
+    <slide layout="columns" title="Deep Comparison">
+      <slide slot="left">
+        <!-- Left side is itself a vertical stack -->
+        <image src="./before.png"/>
+        <text>Before the refactor</text>
+      </slide>
+      <slide slot="right">
+        <!-- Right side has its own columns -->
+        <slide layout="columns" gap="16">
+          <slide slot="left">
+            <text>Metric A: <b>2x</b> faster</text>
+            <text>Metric B: <b>40%</b> less memory</text>
+          </slide>
+          <slide slot="right">
+            <image src="./chart.png"/>
+          </slide>
+        </slide>
+      </slide>
+    </slide>
+-->
+
+<!-- ===== Root ===== -->
+
+<!ELEMENT presentation (style?, slide+)>
+<!ATTLIST presentation
+    style CDATA #IMPLIED>
+<!--
+  @style  Path to an external style file (e.g. "./styles/light.xml").
+          Overrides any inline <style> element. See schemas/style.dtd.
+          Can also be overridden via CLI: presenter slides.xml --style=theme.xml
+-->
+
+<!-- ===== Inline style (or standalone style file, see schemas/style.dtd) ===== -->
+
+<!ELEMENT style (fonts?, colors?, layout?)>
+
+<!ELEMENT fonts EMPTY>
+<!ATTLIST fonts
+    title    CDATA #IMPLIED
+    subtitle CDATA #IMPLIED
+    content  CDATA #IMPLIED
+    small    CDATA #IMPLIED>
+
+<!ELEMENT colors EMPTY>
+<!ATTLIST colors
+    bg       CDATA #IMPLIED
+    text     CDATA #IMPLIED
+    title    CDATA #IMPLIED
+    subtitle CDATA #IMPLIED
+    accent   CDATA #IMPLIED
+    dim      CDATA #IMPLIED
+    line     CDATA #IMPLIED>
+
+<!ELEMENT layout EMPTY>
+<!ATTLIST layout
+    margin          CDATA #IMPLIED
+    padding         CDATA #IMPLIED
+    gap             CDATA #IMPLIED
+    columnGap       CDATA #IMPLIED
+    linePadding     CDATA #IMPLIED
+    presenterMargin CDATA #IMPLIED>
+
+<!-- ===== Slide ===== -->
+
+<!ELEMENT slide (notes?, subtitle?, (text | image | slide)*)>
+<!ATTLIST slide
+    layout (title | section | content | columns | image | blank) #IMPLIED
+    title  CDATA                        #IMPLIED
+    slot   NMTOKEN                      #IMPLIED
+    cols   CDATA                        #IMPLIED
+    gap    CDATA                        #IMPLIED
+    fit    (fit | fill)                 #IMPLIED>
+
+<!--
+  @layout  How the layout engine arranges children within this slide.
+           Default: "content" (vertical stack of children).
+           "columns" — children with @slot are arranged horizontally.
+           "title"  — centered title + subtitle, no content area.
+           "section" — centered title only, no content area.
+           "image"  — full-width image + caption text below.
+           "blank"  — no header, children fill the full slide area.
+
+  @title   Slide heading. Rendered prominently according to the layout type.
+           For layout="title" and "section", displayed large and centered.
+           For child slides inside layout="columns", renders as a sub-heading
+           within that slot.
+
+  @slot    Placement hint when parent is layout="columns".
+           Named:  "left", "right", "center", "top", "bottom", "fill"
+           Numeric: "0", "1", "2", ... (grid position, wraps by @cols)
+           Omitted: default vertical stack position in parent flow.
+
+  @cols    Number of columns when layout="columns". Default: 2.
+           Slots wrap: "0"→col0, "1"→col1, "2"→col0-row2, "3"→col1-row2, etc.
+
+  @gap     Gap between columns/slots in pixels. Default: 24.
+
+  @fit     Image scaling: "fit" (contain, default) or "fill" (cover, crop).
+           Applies to <image> children and slides with layout="image".
+-->
+
+<!-- ===== Content elements ===== -->
+
+<!ELEMENT text (#PCDATA)>
+<!--
+  Text block with inline formatting tags:
+  <b>bold</b>, <i>italic</i>, <code>code</code>
+
+  Lines starting with ## render as sub-headings in the block.
+-->
+
+<!ELEMENT image EMPTY>
+<!ATTLIST image
+    src CDATA   #REQUIRED
+    alt CDATA   #IMPLIED>
+<!--
+  @src  Path to image file, relative to the XML file's directory.
+  @alt  Accessible description.
+-->
+
+<!-- ===== Metadata ===== -->
+
+<!ELEMENT notes (#PCDATA)>
+<!-- Presenter-only notes. Never shown on the audience display. -->
+
+<!ELEMENT subtitle (#PCDATA)>
+<!-- Secondary heading. Used only with layout="title" (rendered below the title attribute). -->
+
+<!-- ===== Global style ===== -->
+
+<!ELEMENT style EMPTY>
+<!ATTLIST style
+    font        CDATA   #IMPLIED
+    fontSize    CDATA   #IMPLIED
+    bgColor     CDATA   #IMPLIED
+    textColor   CDATA   #IMPLIED
+    accentColor CDATA   #IMPLIED>
+<!--
+  @font         Font family name (e.g. "Inter").
+  @fontSize     Base font size in pixels (default: 24).
+  @bgColor      Background color as #RRGGBB (default: #1E1E28).
+  @textColor    Default text color as #RRGGBB (default: #C8C8D2).
+  @accentColor  Accent color for highlights (default: #FFCC00).
+-->

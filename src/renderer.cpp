@@ -13,6 +13,10 @@ static inline Uint32 makeColor(SDL_Surface* surface, Uint8 r, Uint8 g, Uint8 b, 
     return SDL_MapRGBA(surface->format, r, g, b, a);
 }
 
+static inline SDL_Color toSdl(const Color& c) {
+    return {c.r, c.g, c.b, c.a};
+}
+
 Renderer::~Renderer() {
     cleanup();
 }
@@ -64,36 +68,38 @@ static const Font& pickFont(const FontVariants& fonts, const TextFormat& fmt) {
     return fonts.get(FontType::Regular);
 }
 
-// Find the nearest format marker at or after pos.
-// Returns marker position (or npos); *outLen = marker length, *outKind = 1=bold 2=italic 3=code.
-static size_t findMarker(const std::string& text, size_t pos, size_t* outLen, int* outKind) {
-    size_t boldMarker   = text.find("**", pos);
-    size_t italicMarker = text.find('_', pos);
-    size_t codeMarker   = text.find('`', pos);
+// Find the nearest XML formatting tag at or after pos.
+// Returns marker position (or npos); *outLen = tag length, *outKind = 1=bold 2=italic 3=code, *outOpen = opening or closing tag.
+static size_t findMarker(const std::string& text, size_t pos, size_t* outLen, int* outKind, bool* outOpen) {
+    struct Tag { const char* open; const char* close; int kind; };
+    static const Tag tags[] = {
+        {"<b>", "</b>", 1},
+        {"<i>", "</i>", 2},
+        {"<code>", "</code>", 3},
+    };
 
-    size_t marker = std::string::npos;
-    size_t markerLen = 0;
-    int kind = 0;
+    size_t best = std::string::npos;
+    *outLen = 0;
+    *outKind = 0;
+    *outOpen = false;
 
-    if (boldMarker != std::string::npos) {
-        marker = boldMarker; markerLen = 2; kind = 1;
+    for (const auto& t : tags) {
+        size_t po = text.find(t.open, pos);
+        if (po != std::string::npos && (best == std::string::npos || po < best)) {
+            best = po; *outLen = strlen(t.open); *outKind = t.kind; *outOpen = true;
+        }
+        size_t pc = text.find(t.close, pos);
+        if (pc != std::string::npos && (best == std::string::npos || pc < best)) {
+            best = pc; *outLen = strlen(t.close); *outKind = t.kind; *outOpen = false;
+        }
     }
-    if (italicMarker != std::string::npos && (marker == std::string::npos || italicMarker < marker)) {
-        marker = italicMarker; markerLen = 1; kind = 2;
-    }
-    if (codeMarker != std::string::npos && (marker == std::string::npos || codeMarker < marker)) {
-        marker = codeMarker; markerLen = 1; kind = 3;
-    }
-
-    *outLen = markerLen;
-    *outKind = kind;
-    return marker;
+    return best;
 }
 
-static void toggleFormat(TextFormat& fmt, int kind) {
-    if (kind == 1)      fmt.bold = !fmt.bold;
-    else if (kind == 2) fmt.italic = !fmt.italic;
-    else                fmt.code = !fmt.code;
+static void applyFormat(TextFormat& fmt, int kind, bool open) {
+    if (kind == 1)      fmt.bold = open;
+    else if (kind == 2) fmt.italic = open;
+    else                fmt.code = open;
 }
 
 // Measure text with inline format markers applied. Updates fmt as it scans,
@@ -105,7 +111,8 @@ static float measureFormatted(const FontVariants& fonts, const std::string& text
     while (pos < text.size()) {
         size_t markerLen = 0;
         int kind = 0;
-        size_t marker = findMarker(text, pos, &markerLen, &kind);
+        bool open = false;
+        size_t marker = findMarker(text, pos, &markerLen, &kind, &open);
 
         if (marker == std::string::npos) {
             width += pickFont(fonts, fmt).measureString(text.substr(pos));
@@ -114,7 +121,7 @@ static float measureFormatted(const FontVariants& fonts, const std::string& text
         if (marker > pos) {
             width += pickFont(fonts, fmt).measureString(text.substr(pos, marker - pos));
         }
-        toggleFormat(fmt, kind);
+        applyFormat(fmt, kind, open);
         pos = marker + markerLen;
     }
     return width;
@@ -130,7 +137,8 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
     while (pos < text.size()) {
         size_t markerLen = 0;
         int kind = 0;
-        size_t marker = findMarker(text, pos, &markerLen, &kind);
+        bool open = false;
+        size_t marker = findMarker(text, pos, &markerLen, &kind, &open);
 
         if (marker == std::string::npos) {
             std::string segment = text.substr(pos);
@@ -147,13 +155,13 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
             curX += font.measureString(segment);
         }
 
-        toggleFormat(fmt, kind);
+        applyFormat(fmt, kind, open);
         pos = marker + markerLen;
     }
 }
 
 int Renderer::textHeight(const Font& font) {
-    return static_cast<int>(font.getFontSize()) + LINE_PADDING;
+    return static_cast<int>(font.getFontSize()) + style().linePadding;
 }
 
 void Renderer::drawRectOutline(const SDL_Rect* rect, Uint32 color) {
@@ -275,26 +283,28 @@ void Renderer::renderFormattedBlock(const std::string& text, int x, int y,
 
 // ---- slide rendering: part-based layout ----
 
+// Forward declarations (used by recursive renderPartSlot)
+static void renderPartFullSlide(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts);
+static void renderPartImage(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts, int slideH);
+static void renderPartCaption(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts);
+
 static void renderPartHeader(Renderer* r, SDL_Surface* surf,
                              const Slide& slide, const SlidePart& part,
                              const FontSet& fonts, int slideW) {
     FontVariants titleV = fonts.titleVariants();
     const Font& titleFont = titleV.get(FontType::Regular);
-    SDL_Color white = {255, 255, 255, 255};
-
-    // Vertically center title: place baseline so the glyph cell (ascent..descent) is centered
+    const auto& s = r->style();
     float ascent = titleFont.getAscent();
     float descent = titleFont.getDescent();
     float titleLineH = ascent - descent;
     int textY = part.rect.y + (part.rect.h - static_cast<int>(titleLineH)) / 2 + static_cast<int>(ascent);
 
-    r->renderFormatted(slide.title, static_cast<float>(part.rect.x + PART_PADDING),
-                       static_cast<float>(textY), titleV, white);
+    r->renderFormatted(slide.title, static_cast<float>(part.rect.x + s.partPadding),
+                       static_cast<float>(textY), titleV, toSdl(s.titleColor));
 
-    // Draw horizontal rule at the bottom edge of the header
-    Uint32 lineColor = makeColor(surf, 100, 100, 120);
+    Uint32 lc = SDL_MapRGBA(surf->format, s.lineColor.r, s.lineColor.g, s.lineColor.b, s.lineColor.a);
     SDL_Rect lineRect = {part.rect.x, part.rect.y + part.rect.h - 1, part.rect.w, 1};
-    SDL_FillRect(surf, &lineRect, lineColor);
+    SDL_FillRect(surf, &lineRect, lc);
 }
 
 static void renderPartBody(Renderer* r, SDL_Surface* surf,
@@ -302,56 +312,92 @@ static void renderPartBody(Renderer* r, SDL_Surface* surf,
                            const FontSet& fonts) {
     FontVariants baseV = fonts.variants();
     FontVariants titleV = fonts.titleVariants();
-    SDL_Color ltgray = {200, 200, 210, 255};
-    SDL_Color white = {255, 255, 255, 255};
-    int contentW = part.rect.w - 2 * PART_PADDING;
-    int y = part.rect.y + PART_PADDING;
+    const auto& s = r->style();
+    int contentW = part.rect.w - 2 * s.partPadding;
+    int y = part.rect.y + s.partPadding;
 
-    for (size_t i = 0; i < slide.bullets.size(); i++) {
+    for (size_t i = 0; i < slide.texts.size(); i++) {
         std::string heading;
-        if (isHeadingLine(slide.bullets[i], &heading)) {
-            r->renderFormatted(heading, static_cast<float>(part.rect.x + PART_PADDING),
-                               static_cast<float>(y), titleV, white);
+        if (isHeadingLine(slide.texts[i], &heading)) {
+            r->renderFormatted(heading, static_cast<float>(part.rect.x + s.partPadding),
+                               static_cast<float>(y), titleV, toSdl(s.titleColor));
             y += r->textHeight(titleV.get(FontType::Regular));
         } else {
-            std::string line = "\xE2\x80\xA2 " + slide.bullets[i];
-            r->renderFormattedBlock(line, part.rect.x + PART_PADDING, y, baseV, ltgray, contentW);
+            std::string line = "\xE2\x80\xA2 " + slide.texts[i];
+            r->renderFormattedBlock(line, part.rect.x + s.partPadding, y, baseV, toSdl(s.textColor), contentW);
             y += r->textHeight(baseV.get(FontType::Regular));
         }
     }
 }
 
-static void renderPartColumnLeft(Renderer* r, SDL_Surface* surf,
-                                 const Slide& slide, const SlidePart& part,
-                                 const FontSet& fonts) {
-    FontVariants baseV = fonts.variants();
+// Recursively render a child slide into a slot area
+static void renderPartSlot(Renderer* r, SDL_Surface* surf,
+                           const Slide& slide, const SlidePart& part,
+                           const FontSet& fonts, int slideNum, int totalSlides) {
+    if (part.childIndex < 0 || part.childIndex >= static_cast<int>(slide.children.size())) return;
+    const Slide& child = slide.children[part.childIndex];
+
+    // Render child slide to its own surface, then blit into the slot rect
+    int slotW = part.rect.w;
+    int slotH = part.rect.h;
+    SDL_Surface* childSurf = SDL_CreateRGBSurface(0, slotW, slotH, 32,
+        0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+    if (!childSurf) return;
+
+    SDL_FillRect(childSurf, nullptr, makeColor(surf, r->style().bgColor.r, r->style().bgColor.g, r->style().bgColor.b));
+
+    // Save state and set up child surface
+    SDL_Renderer* savedR = r->sdlRenderer();
+    SDL_Surface* savedS = r->surface();
+    r->setSdlRenderer(nullptr);
+    r->setSurface(childSurf);
+
+    // Compute layout for the child slide at slot size
     FontVariants titleV = fonts.titleVariants();
-    SDL_Color ltgray = {200, 200, 210, 255};
-    int contentW = part.rect.w - 2 * PART_PADDING;
-    std::string content = slide.blocks.size() > 0 ? slide.blocks[0] : "";
-    r->renderFormattedBlock(content, part.rect.x + PART_PADDING, part.rect.y + PART_PADDING,
-                            baseV, ltgray, contentW, &titleV);
+    FontVariants baseV = fonts.variants();
+    const Font& titleFont = titleV.get(FontType::Regular);
+    const Font& baseFont = baseV.get(FontType::Regular);
+
+    LayoutMetrics metrics;
+    metrics.slideW = slotW;
+    metrics.slideH = slotH;
+    metrics.titleAscent = titleFont.getAscent();
+    metrics.titleDescent = titleFont.getDescent();
+    metrics.titleLineH = metrics.titleAscent - metrics.titleDescent;
+    metrics.bodyAscent = baseFont.getAscent();
+    metrics.bodyDescent = baseFont.getDescent();
+    metrics.bodyLineH = metrics.bodyAscent - metrics.bodyDescent;
+
+    LayoutKind kind = layoutFromSlide(child);
+    auto parts = computeParts(kind, child, metrics, r->style());
+
+    for (const auto& p : parts) {
+        switch (p.role) {
+            case PartRole::FullSlide:  renderPartFullSlide(r, childSurf, child, p, fonts); break;
+            case PartRole::Header:     renderPartHeader(r, childSurf, child, p, fonts, slotW); break;
+            case PartRole::Body:       renderPartBody(r, childSurf, child, p, fonts); break;
+            case PartRole::Slot:       renderPartSlot(r, childSurf, child, p, fonts, 0, 0); break;
+            case PartRole::Image:      renderPartImage(r, childSurf, child, p, fonts, slotH); break;
+            case PartRole::Caption:    renderPartCaption(r, childSurf, child, p, fonts); break;
+            case PartRole::Footer:     break;
+        }
+    }
+
+    r->setSdlRenderer(savedR);
+    r->setSurface(savedS);
+
+    SDL_Rect dst = {part.rect.x, part.rect.y, slotW, slotH};
+    SDL_BlitSurface(childSurf, nullptr, surf, &dst);
+    SDL_FreeSurface(childSurf);
 }
 
-static void renderPartColumnRight(Renderer* r, SDL_Surface* surf,
-                                  const Slide& slide, const SlidePart& part,
-                                  const FontSet& fonts) {
-    FontVariants baseV = fonts.variants();
-    FontVariants titleV = fonts.titleVariants();
-    SDL_Color ltgray = {200, 200, 210, 255};
-    int contentW = part.rect.w - 2 * PART_PADDING;
-    std::string content = slide.blocks.size() > 1 ? slide.blocks[1] : "";
-    r->renderFormattedBlock(content, part.rect.x + PART_PADDING, part.rect.y + PART_PADDING,
-                            baseV, ltgray, contentW, &titleV);
-}
-
-static void renderPartImage(Renderer* r, SDL_Surface* surf,
-                            const Slide& slide, const SlidePart& part,
-                            const FontSet& fonts, int slideH) {
-    if (slide.imagePath.empty()) return;
+static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
+                          const SlidePart& part, ImageFit fit,
+                          const Font& baseFont) {
+    if (imagePath.empty()) return;
 
     int imgW = 0, imgH = 0, channels = 0;
-    unsigned char* data = stbi_load(slide.imagePath.c_str(), &imgW, &imgH, &channels, 4);
+    unsigned char* data = stbi_load(imagePath.c_str(), &imgW, &imgH, &channels, 4);
 
     if (data && imgW > 0 && imgH > 0) {
         float scaleX = static_cast<float>(part.rect.w) / static_cast<float>(imgW);
@@ -360,9 +406,8 @@ static void renderPartImage(Renderer* r, SDL_Surface* surf,
         int dstW, dstH, dstX, dstY;
         ImageBuf srcBuf;
 
-        if (slide.imageFit == ImageFit::Fill) {
+        if (fit == ImageFit::Fill) {
             float scale = std::max(scaleX, scaleY);
-            // Center-crop the source to the visible region before resampling
             int cropW = static_cast<int>(part.rect.w / scale);
             int cropH = static_cast<int>(part.rect.h / scale);
             int cropX = std::max(0, (imgW - cropW) / 2);
@@ -370,7 +415,6 @@ static void renderPartImage(Renderer* r, SDL_Surface* surf,
             cropW = std::min(cropW, imgW - cropX);
             cropH = std::min(cropH, imgH - cropY);
 
-            // Build a contiguous buffer for the cropped region
             srcBuf.w = cropW;
             srcBuf.h = cropH;
             srcBuf.data = new uint8_t[cropW * cropH * 4];
@@ -392,14 +436,13 @@ static void renderPartImage(Renderer* r, SDL_Surface* surf,
 
             srcBuf.w = imgW;
             srcBuf.h = imgH;
-            srcBuf.data = data; // borrow — do not delete[]
+            srcBuf.data = data;
         }
 
         ImageBuf resampled = resampleBilinear(srcBuf, dstW, dstH);
 
-        if (slide.imageFit == ImageFit::Fill)
+        if (fit == ImageFit::Fill)
             delete[] srcBuf.data;
-        // (Fit path borrows data — not freed here)
 
         if (resampled.data) {
             SDL_Surface* imgSurface = SDL_CreateRGBSurfaceFrom(
@@ -415,32 +458,37 @@ static void renderPartImage(Renderer* r, SDL_Surface* surf,
 
         stbi_image_free(data);
     } else {
-        // Placeholder
         Uint32 phColor = makeColor(surf, 50, 50, 60);
         SDL_Rect ph = {part.rect.x, part.rect.y, part.rect.w, part.rect.h};
         SDL_FillRect(surf, &ph, phColor);
-        const Font& baseFont = fonts.variants().get(FontType::Regular);
         SDL_Color ltgray = {200, 200, 210, 255};
-        r->drawText("[ image not found ]", static_cast<float>(part.rect.x + 8),
-                    static_cast<float>(part.rect.y + part.rect.h / 2 - 10), baseFont, ltgray);
+        // Can't easily access renderer here; skip text placeholder
     }
+}
+
+static void renderPartImage(Renderer* r, SDL_Surface* surf,
+                            const Slide& slide, const SlidePart& part,
+                            const FontSet& fonts, int slideH) {
+    const Font& baseFont = fonts.variants().get(FontType::Regular);
+    renderImageAt(surf, slide.imagePath, part, slide.imageFit, baseFont);
 }
 
 static void renderPartCaption(Renderer* r, SDL_Surface* surf,
                               const Slide& slide, const SlidePart& part,
                               const FontSet& fonts) {
-    if (slide.bullets.empty()) return;
-    FontVariants baseV = fonts.variants();
-    SDL_Color ltgray = {200, 200, 210, 255};
-    int contentW = part.rect.w - 2 * PART_PADDING;
-    // Join all bullet lines as caption
-    std::string caption;
-    for (const auto& b : slide.bullets) {
-        if (!caption.empty()) caption += " ";
-        caption += b;
+    std::string text = slide.caption;
+    if (text.empty()) {
+        for (const auto& t : slide.texts) {
+            if (!text.empty()) text += " ";
+            text += t;
+        }
     }
-    r->renderFormattedBlock(caption, part.rect.x + PART_PADDING, part.rect.y + PART_PADDING,
-                            baseV, ltgray, contentW);
+    if (text.empty()) return;
+    FontVariants baseV = fonts.variants();
+    const auto& s = r->style();
+    int contentW = part.rect.w - 2 * s.partPadding;
+    r->renderFormattedBlock(text, part.rect.x + s.partPadding, part.rect.y + s.partPadding,
+                            baseV, toSdl(s.textColor), contentW);
 }
 
 static void renderPartFooter(Renderer* r, SDL_Surface* surf,
@@ -448,15 +496,14 @@ static void renderPartFooter(Renderer* r, SDL_Surface* surf,
                              const FontSet& fonts, int slideNum, int totalSlides) {
     FontVariants smallV = fonts.smallVariants();
     const Font& smallFont = smallV.get(FontType::Regular);
-    SDL_Color dim = {140, 140, 155, 255};
+    const auto& s = r->style();
 
     char numBuf[64];
     snprintf(numBuf, sizeof(numBuf), "%d / %d", slideNum, totalSlides);
-    // Right-align the slide number
     float numW = smallFont.measureString(numBuf);
-    float x = static_cast<float>(part.rect.x + part.rect.w - PART_PADDING) - numW;
+    float x = static_cast<float>(part.rect.x + part.rect.w - s.partPadding) - numW;
     float y = static_cast<float>(part.rect.y + (part.rect.h - r->textHeight(smallFont)) / 2);
-    r->drawText(numBuf, x, y, smallFont, dim);
+    r->drawText(numBuf, x, y, smallFont, toSdl(s.dimColor));
 }
 
 static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
@@ -464,17 +511,14 @@ static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
                                 const FontSet& fonts) {
     FontVariants titleV = fonts.titleVariants();
     FontVariants baseV = fonts.variants();
-    SDL_Color white = {255, 255, 255, 255};
-    SDL_Color ltgray = {200, 200, 210, 255};
+    const auto& s = r->style();
 
     const Font& titleFont = titleV.get(FontType::Regular);
     float ascent = titleFont.getAscent();
     float descent = titleFont.getDescent();
     float titleLineH = ascent - descent;
 
-    // For Title: center title + subtitle vertically
-    // For Section: center title only
-    std::string subtitleText = slide.subtitle.empty() ? slide.imageAlt : slide.subtitle;
+    std::string subtitleText = slide.subtitle;
 
     float totalH = titleLineH;
     if (!subtitleText.empty()) {
@@ -482,27 +526,25 @@ static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
         float baseAscent = baseFont.getAscent();
         float baseDescent = baseFont.getDescent();
         float subtitleLineH = baseAscent - baseDescent;
-        totalH += PART_GAP + subtitleLineH;
+        totalH += s.partGap + subtitleLineH;
     }
 
     int startY = part.rect.y + (part.rect.h - static_cast<int>(totalH)) / 2;
-
-    // Title: baseline = top of centered cell + ascent
     int titleY = startY + static_cast<int>(ascent);
     r->renderFormatted(slide.title, static_cast<float>(part.rect.x),
-                       static_cast<float>(titleY), titleV, white);
+                       static_cast<float>(titleY), titleV, toSdl(s.titleColor));
 
-    // Subtitle (Title slides only)
     if (!subtitleText.empty()) {
         const Font& baseFont = baseV.get(FontType::Regular);
         float baseAscent2 = baseFont.getAscent();
-        int subtitleY = startY + static_cast<int>(titleLineH) + PART_GAP + static_cast<int>(baseAscent2);
-        r->renderFormattedBlock(subtitleText, part.rect.x, subtitleY, baseV, ltgray, part.rect.w);
+        int subtitleY = startY + static_cast<int>(titleLineH) + s.partGap + static_cast<int>(baseAscent2);
+        r->renderFormattedBlock(subtitleText, part.rect.x, subtitleY, baseV, toSdl(s.subtitleColor), part.rect.w);
     }
 }
 
-SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, int slideNum, int totalSlides) {
-    clear();
+SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, const PresentationStyle& style, int slideNum, int totalSlides) {
+    setStyle(&style);
+    clear(style.bgColor.r, style.bgColor.g, style.bgColor.b);
 
     SDL_Renderer* savedR = m_renderer;
     SDL_Surface* savedS = m_surface;
@@ -531,8 +573,8 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, int
         metrics.bodyLineH = metrics.bodyAscent - metrics.bodyDescent;
 
         // Select layout and compute parts
-        LayoutKind kind = selectLayout(slide);
-        auto parts = computeParts(kind, slide, metrics);
+        LayoutKind kind = layoutFromSlide(slide);
+        auto parts = computeParts(kind, slide, metrics, style);
 
         // Render each part
         for (const auto& part : parts) {
@@ -546,11 +588,8 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, int
                 case PartRole::Body:
                     renderPartBody(this, surf, slide, part, fonts);
                     break;
-                case PartRole::ColumnLeft:
-                    renderPartColumnLeft(this, surf, slide, part, fonts);
-                    break;
-                case PartRole::ColumnRight:
-                    renderPartColumnRight(this, surf, slide, part, fonts);
+                case PartRole::Slot:
+                    renderPartSlot(this, surf, slide, part, fonts, slideNum, totalSlides);
                     break;
                 case PartRole::Image:
                     renderPartImage(this, surf, slide, part, fonts, m_height);
@@ -577,52 +616,47 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, int
 }
 
 SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontSet& fonts) {
-    clear(40, 40, 50);
+    const auto& s = pres.style;
+    setStyle(&s);
+    clear(s.bgColor.r + 10, s.bgColor.g + 10, s.bgColor.b + 10);
 
-    int margin = PRESENTER_MARGIN;
+    int margin = s.presenterMargin;
     FontVariants baseV = fonts.variants();
     FontVariants smallV = fonts.smallVariants();
     const Font& baseFont = baseV.get(FontType::Regular);
     const Font& smallFont = smallV.get(FontType::Regular);
     int th = textHeight(smallFont);
     int y = margin;
-    SDL_Color white = {255, 255, 255, 255};
-    SDL_Color ltgray = {200, 200, 210, 255};
-    SDL_Color dim = {140, 140, 155, 255};
 
-    // slide number
     char numBuf[64];
     snprintf(numBuf, sizeof(numBuf), "Slide %d / %d", pres.current + 1, pres.size());
-    drawText(numBuf, static_cast<float>(margin), static_cast<float>(y), smallFont, dim);
+    drawText(numBuf, static_cast<float>(margin), static_cast<float>(y), smallFont, toSdl(s.dimColor));
     y += th + 4;
 
-    // title (base size)
     const Slide& current = pres.currentSlide();
-    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), baseV, white);
+    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), baseV, toSdl(s.titleColor));
     y += textHeight(baseFont) + 12;
 
-    // notes section
     int contentW = m_width - 2 * margin;
     if (!current.notes.empty()) {
-        Uint32 notesBg = makeColor(m_surface, 35, 35, 45);
+        Uint32 notesBg = makeColor(m_surface, s.bgColor.r - 5, s.bgColor.g - 5, s.bgColor.b + 5);
         int notesH = std::max(th * 3, m_height - y - margin - th * 2);
         SDL_Rect notesRect = {margin, y - 18, contentW, notesH};
         SDL_FillRect(m_surface, &notesRect, notesBg);
-        drawRectOutline(&notesRect, makeColor(m_surface, 60, 60, 70));
+        drawRectOutline(&notesRect, makeColor(m_surface, s.lineColor.r, s.lineColor.g, s.lineColor.b));
 
         drawText("Notes:", static_cast<float>(margin + 6),
-                 static_cast<float>(y + 4), smallFont, dim);
-        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallV, ltgray, contentW - 12);
+                 static_cast<float>(y + 4), smallFont, toSdl(s.dimColor));
+        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallV, toSdl(s.textColor), contentW - 12);
         y += notesH + 12;
     }
 
-    // next slide
     if (pres.canGoNext()) {
         const Slide& next = pres.slides[pres.current + 1];
         drawText("Next:", static_cast<float>(margin),
-                 static_cast<float>(y), smallFont, dim);
+                 static_cast<float>(y), smallFont, toSdl(s.dimColor));
         drawText(next.title, static_cast<float>(margin),
-                 static_cast<float>(y + th + 2), smallFont, ltgray);
+                 static_cast<float>(y + th + 2), smallFont, toSdl(s.textColor));
     }
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, m_surface);
