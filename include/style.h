@@ -1,4 +1,5 @@
 #pragma once
+#include "constants.h"
 #include <SDL2/SDL.h>
 #include <string>
 #include <vector>
@@ -31,11 +32,11 @@ struct PresentationStyle {
     std::string name = "Dark";
 
     // Font sizes in pixels
-    float titleFontSize = 48.0f;
-    float subtitleFontSize = 28.0f;
-    float contentFontSize = 28.0f;
-    float smallFontSize = 20.0f;
-    float childTitleFontSize = 36.0f;
+    float titleFontSize = FONT_TITLE_SIZE;
+    float subtitleFontSize = FONT_SUBTITLE_SIZE;
+    float contentFontSize = FONT_CONTENT_SIZE;
+    float smallFontSize = FONT_SMALL_SIZE;
+    float childTitleFontSize = FONT_CHILD_TITLE_SIZE;
 
     // Colors (RGBA)
     Color bgColor        = {30,  30,  40,  255};
@@ -59,12 +60,12 @@ struct PresentationStyle {
     Color codePunctuation = {171, 178, 191, 255};
 
     // Layout in pixels
-    int slideMargin     = 40;
-    int partPadding     = 20;
-    int partGap         = 12;
-    int columnGap       = 24;
-    int linePadding     = 6;
-    int presenterMargin = 20;
+    int slideMargin     = SLIDE_MARGIN;
+    int partPadding     = PART_PADDING;
+    int partGap         = PART_GAP;
+    int columnGap       = COLUMN_GAP;
+    int linePadding     = LINE_PADDING;
+    int presenterMargin = PRESENTER_MARGIN;
     int cornerRadius    = 12;
 
     void applyXmlElement(const void* el);  // tinyxml2::XMLElement*

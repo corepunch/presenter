@@ -7,6 +7,13 @@
 // multiple of the base font size.
 #define FONT_SIZE_TITLE_SCALE 2.0f
 
+// Per-role font sizes (pixels)
+#define FONT_TITLE_SIZE 72.0f
+#define FONT_SUBTITLE_SIZE 48.0f
+#define FONT_CONTENT_SIZE 32.0f
+#define FONT_SMALL_SIZE 24.0f
+#define FONT_CHILD_TITLE_SIZE 48.0f
+
 // Presenter-view secondary text renders at this multiple of the base size.
 #define FONT_SIZE_SMALL_SCALE 0.7f
 
@@ -17,5 +24,5 @@
 
 // Part-based layout constants
 #define PART_PADDING 20
-#define PART_GAP 12
+#define PART_GAP 24
 #define COLUMN_GAP 24
