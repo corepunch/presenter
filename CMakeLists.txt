@@ -16,6 +16,7 @@ add_executable(presenter
     src/layout.cpp
     src/image.cpp
     src/highlight.cpp
+    src/ui.cpp
 )
 
 target_include_directories(presenter PRIVATE
@@ -37,6 +38,7 @@ add_executable(test_textbounds
     src/layout.cpp
     src/image.cpp
     src/highlight.cpp
+    src/ui.cpp
 )
 
 target_include_directories(test_textbounds PRIVATE

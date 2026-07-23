@@ -7,6 +7,7 @@
 #include "layout.h"
 #include "image.h"
 #include "highlight.h"
+#include "ui.hpp"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -337,6 +338,17 @@ void Renderer::drawRectOutline(const SDL_Rect* rect, Uint32 color) {
     r = SDL_Rect{rect->x, rect->y + rect->h - 1, rect->w, 1}; SDL_FillRect(m_surface, &r, color);
     r = SDL_Rect{rect->x, rect->y, 1, rect->h}; SDL_FillRect(m_surface, &r, color);
     r = SDL_Rect{rect->x + rect->w - 1, rect->y, 1, rect->h}; SDL_FillRect(m_surface, &r, color);
+}
+
+void Renderer::fillRect(const SDL_Rect& rect, Color color, int cornerRadius) {
+    if (!m_surface || rect.w <= 0 || rect.h <= 0) return;
+    fillRoundedRect(m_surface, rect, cornerRadius, color.toUint32(m_surface->format));
+}
+
+void Renderer::drawRectOutline(const SDL_Rect& rect, Color color, int cornerRadius) {
+    if (!m_surface || rect.w <= 0 || rect.h <= 0) return;
+    drawRoundedRectOutline(
+        m_surface, rect, cornerRadius, color.toUint32(m_surface->format));
 }
 
 std::vector<std::string> Renderer::wordWrap(const std::string& text,
@@ -1072,46 +1084,83 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
 SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontSet& fonts) {
     const auto& s = pres.style;
     setStyle(&s);
-    clear(s.bgColor.r + 10, s.bgColor.g + 10, s.bgColor.b + 10);
-
-    int margin = s.presenterMargin;
-    FontVariants baseV = fonts.variants();
-    FontVariants smallV = fonts.smallVariants();
-    const Font& baseFont = baseV.get(FontType::Regular);
-    const Font& smallFont = smallV.get(FontType::Regular);
-    int th = textHeight(smallFont);
-    int y = margin;
+    clear(s.bgColor.r, s.bgColor.g, s.bgColor.b);
 
     char numBuf[64];
     snprintf(numBuf, sizeof(numBuf), "Slide %d / %d", pres.current + 1, pres.size());
-    drawText(numBuf, static_cast<float>(margin), static_cast<float>(y), smallFont, s.dimColor.toSDLColor());
-    y += th + 4;
 
     const Slide& current = pres.currentSlide();
-    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), baseV, s.titleColor.toSDLColor());
-    y += textHeight(baseFont) + 12;
+    FontVariants baseFonts = fonts.variants();
+    FontVariants smallFonts = fonts.smallVariants();
+    int cardPadding = std::max(8, s.partPadding / 2);
 
-    int contentW = m_width - 2 * margin;
-    if (!current.notes.empty()) {
-        Uint32 notesBg = Color(s.bgColor.r - 5, s.bgColor.g - 5, s.bgColor.b + 5).toUint32(m_surface->format);
-        int notesH = std::max(th * 3, m_height - y - margin - th * 2);
-        SDL_Rect notesRect = {margin, y - 18, contentW, notesH};
-        fillRoundedRect(m_surface, notesRect, s.cornerRadius, notesBg);
-        drawRoundedRectOutline(m_surface, notesRect, s.cornerRadius, s.lineColor.toUint32(m_surface->format));
+    auto root = std::make_unique<ui::Stack>();
+    root->margin = ui::Thickness(s.presenterMargin);
+    root->gap = std::max(8, s.partGap);
 
-        drawText("Notes:", static_cast<float>(margin + 6),
-                 static_cast<float>(y + 4), smallFont, s.dimColor.toSDLColor());
-        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallV, s.textColor.toSDLColor(), contentW - 12);
-        y += notesH + 12;
-    }
+    auto header = std::make_unique<ui::Stack>();
+    header->gap = std::max(2, s.linePadding / 2);
+    header->add(std::make_unique<ui::Text>(
+        numBuf, smallFonts, s.dimColor));
+    auto title = std::make_unique<ui::Text>(
+        current.title, baseFonts, s.titleColor);
+    title->wrap = true;
+    header->add(std::move(title));
+
+    auto headerCard = std::make_unique<ui::Border>(std::move(header));
+    headerCard->padding = ui::Thickness(cardPadding);
+    headerCard->background = s.codeBg;
+    headerCard->borderColor = s.lineColor;
+    headerCard->hasBackground = true;
+    headerCard->hasBorder = true;
+    headerCard->cornerRadius = s.cornerRadius;
+    root->add(std::move(headerCard));
+
+    auto notes = std::make_unique<ui::Stack>();
+    notes->gap = std::max(4, s.linePadding / 2);
+    notes->add(std::make_unique<ui::Text>(
+        "Notes", smallFonts, s.dimColor));
+    auto noteText = std::make_unique<ui::Text>(
+        current.notes.empty() ? "No notes for this slide." : current.notes,
+        smallFonts,
+        current.notes.empty() ? s.dimColor : s.textColor);
+    noteText->wrap = true;
+    notes->add(std::move(noteText), 1.0f);
+
+    auto notesCard = std::make_unique<ui::Border>(std::move(notes));
+    notesCard->padding = ui::Thickness(cardPadding);
+    notesCard->background = s.codeBg;
+    notesCard->borderColor = s.lineColor;
+    notesCard->hasBackground = true;
+    notesCard->hasBorder = true;
+    notesCard->cornerRadius = s.cornerRadius;
+    root->add(std::move(notesCard), 1.0f);
 
     if (pres.canGoNext()) {
         const Slide& next = pres.slides[pres.current + 1];
-        drawText("Next:", static_cast<float>(margin),
-                 static_cast<float>(y), smallFont, s.dimColor.toSDLColor());
-        drawText(next.title, static_cast<float>(margin),
-                 static_cast<float>(y + th + 2), smallFont, s.textColor.toSDLColor());
+        auto nextSlide = std::make_unique<ui::Stack>();
+        nextSlide->gap = std::max(2, s.linePadding / 2);
+        nextSlide->add(std::make_unique<ui::Text>(
+            "Next", smallFonts, s.dimColor));
+        auto nextTitle = std::make_unique<ui::Text>(
+            next.title, smallFonts, s.textColor);
+        nextTitle->wrap = true;
+        nextSlide->add(std::move(nextTitle));
+
+        auto nextCard = std::make_unique<ui::Border>(std::move(nextSlide));
+        nextCard->padding = ui::Thickness(cardPadding);
+        nextCard->background = s.codeBg;
+        nextCard->borderColor = s.lineColor;
+        nextCard->hasBackground = true;
+        nextCard->hasBorder = true;
+        nextCard->cornerRadius = s.cornerRadius;
+        root->add(std::move(nextCard));
     }
+
+    ui::LayoutContext context{*this};
+    root->measure(context, {m_width, m_height});
+    root->arrange(context, {0, 0, m_width, m_height});
+    root->render(context);
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, m_surface);
     return texture;

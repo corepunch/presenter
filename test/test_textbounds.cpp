@@ -1,6 +1,7 @@
 #include "font.h"
 #include "renderer.h"
 #include "layout.h"
+#include "ui.hpp"
 #include "constants.h"
 #include "common.h"
 #include <SDL2/SDL.h>
@@ -110,6 +111,48 @@ static void test_presenter_view(SDL_Renderer* sdlRenderer, const FontSet& fonts,
     SDL_Texture* tex = renderer.renderPresenterView(pres, fonts);
     TEST_ASSERT(tex != nullptr, "presenter view renders");
     if (tex) SDL_DestroyTexture(tex);
+}
+
+class FixedElement final : public ui::Element {
+public:
+    FixedElement(int width, int height) : m_size{width, height} {}
+
+protected:
+    ui::Size measureOverride(ui::LayoutContext&, ui::Size) override {
+        return m_size;
+    }
+
+private:
+    ui::Size m_size;
+};
+
+static void test_vertical_stack_grow(Renderer& renderer) {
+    ui::LayoutContext context{renderer};
+    ui::Stack stack;
+    stack.margin = ui::Thickness(10);
+    stack.gap = 5;
+
+    auto header = std::make_unique<FixedElement>(100, 30);
+    FixedElement* headerPtr = header.get();
+    stack.add(std::move(header));
+
+    auto notes = std::make_unique<FixedElement>(100, 80);
+    FixedElement* notesPtr = notes.get();
+    stack.add(std::move(notes), 1.0f);
+
+    auto next = std::make_unique<FixedElement>(100, 40);
+    FixedElement* nextPtr = next.get();
+    stack.add(std::move(next));
+
+    stack.measure(context, {300, 200});
+    stack.arrange(context, {0, 0, 300, 200});
+
+    TEST_ASSERT(headerPtr->layoutSlot().height == 30,
+                "vertical stack preserves fixed header height");
+    TEST_ASSERT(notesPtr->layoutSlot().height == 100,
+                "vertical stack gives remaining height to grow child");
+    TEST_ASSERT(nextPtr->layoutSlot().y == 150,
+                "vertical stack keeps trailing child inside final bounds");
 }
 
 static void test_formatted_text_rendering(SDL_Renderer* sdlRenderer, const FontSet& fonts, Renderer& renderer, const PresentationStyle& style) {
@@ -246,6 +289,7 @@ int main() {
     test_image(sdlR, fonts, renderer, style);
     test_all_types(sdlR, fonts, renderer, style);
     test_presenter_view(sdlR, fonts, renderer);
+    test_vertical_stack_grow(renderer);
     test_formatted_text_rendering(sdlR, fonts, renderer, style);
     test_empty_title(sdlR, fonts, renderer, style);
     test_body_vertical_centering(sdlR, fonts, renderer, style);
