@@ -63,12 +63,28 @@ Override the theme at runtime:
 
 ## Slide Format
 
-Presentations are XML files with a `<presentation>` root containing `<slide>` children. See `docs/presentation.dtd` for the full schema and `docs/SLIDE_FORMAT.md` for a detailed guide with examples.
+Presentations are XML files with a `<presentation>` root containing `<slide>` children.
+
+- **Full format reference**: [docs/SLIDE_FORMAT.md](https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html) — detailed guide with examples for all layouts
+- **DTD schema**: [docs/presentation.dtd](https://corepunch.github.io/presenter/docs/presentation.dtd) — formal XML validation
+
+### DOCTYPE Declaration
+
+Include the DTD in your presentation files for validation:
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/docs/presentation.dtd">
+<presentation>
+  ...
+</presentation>
+```
 
 ### Quick Example
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/docs/presentation.dtd">
 <presentation>
   <slide layout="title">
     <title>My Talk</title>
@@ -77,12 +93,16 @@ Presentations are XML files with a `<presentation>` root containing `<slide>` ch
 
   <slide layout="content">
     <title>Key Points</title>
-    <text>**Bold** point one</text>
+    <text><b>Bold</b> point one</text>
     <text>Point two</text>
     <text>Point three</text>
   </slide>
 </presentation>
 ```
+
+### For AI Agents
+
+When generating presentations, refer to the [Slide Format Reference](https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html) for the complete specification. Always include the DOCTYPE declaration pointing to `https://corepunch.github.io/presenter/docs/presentation.dtd`.
 
 ## Layouts
 

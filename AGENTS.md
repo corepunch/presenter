@@ -67,6 +67,20 @@ clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2 tinyx
 - Build artifacts in `build/` (gitignored)
 - Fonts bundled in `assets/` (Inter family + JetBrains Mono)
 
+## Generating Presentations
+
+When generating XML presentation files:
+
+1. **Always include the DOCTYPE declaration:**
+   ```xml
+   <?xml version="1.0" encoding="UTF-8"?>
+   <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/docs/presentation.dtd">
+   ```
+
+2. **Refer to the format spec** at `https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html` for layout details, examples, and best practices.
+
+3. Use `<b>`, `<i>`, `<code>` for inline formatting — not markdown `**bold**` or `` `code` ``.
+
 ## Common Tasks
 
 ### Adding a new layout type
