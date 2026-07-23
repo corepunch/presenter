@@ -13,6 +13,20 @@ static void printUsage(const char* prog) {
     printf("Usage: %s <presentation.xml> [--style <style.xml>]\n", prog);
 }
 
+using ThemeIterator = std::vector<PresentationStyle>::const_iterator;
+
+static ThemeIterator switchTheme(Presentation& pres, FontSet& fonts,
+                                  ThemeIterator current, int direction) {
+    const auto& themes = PresentationStyle::builtInThemes();
+    ThemeIterator next = current + direction;
+    if (next >= themes.end()) next = themes.begin();
+    if (next < themes.begin()) next = themes.end() - 1;
+    pres.style = *next;
+    fonts.load(pres.style);
+    printf("Theme: %s\n", pres.style.name.c_str());
+    return next;
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         printUsage(argv[0]);
@@ -37,6 +51,12 @@ int main(int argc, char* argv[]) {
     // Override style from CLI
     if (!stylePath.empty()) {
         pres.style = PresentationStyle::load(stylePath);
+    }
+
+    const auto& themes = PresentationStyle::builtInThemes();
+    auto currentTheme = themes.begin();
+    for (auto it = themes.begin(); it != themes.end(); ++it) {
+        if (it->name == pres.style.name) { currentTheme = it; break; }
     }
 
     printf("Loaded %d slides from %s\n", pres.size(), xmlPath.c_str());
@@ -110,6 +130,9 @@ int main(int argc, char* argv[]) {
     bool audienceFullscreen = false;
 
     printf("Controls: Right/Space/Enter = next, Left/Backspace = prev, Home/End = first/last, F5 = fullscreen toggle, Escape = quit\n");
+    printf("          Shift+Left/Right = switch theme\n");
+    printf("Theme: %s (%d/%zu)\n", pres.style.name.c_str(),
+           static_cast<int>(currentTheme - themes.begin()) + 1, themes.size());
 
     while (running) {
         SDL_Event event;
@@ -121,6 +144,15 @@ int main(int argc, char* argv[]) {
             case SDL_KEYDOWN:
                 switch (event.key.keysym.sym) {
                 case SDLK_RIGHT:
+                    if (event.key.keysym.mod & KMOD_SHIFT) {
+                        currentTheme = switchTheme(pres, fonts, currentTheme, +1);
+                        needsRender = true;
+                    } else if (pres.canGoNext()) {
+                        pres.next();
+                        needsRender = true;
+                        printf("Slide %d/%d\n", pres.current + 1, pres.size());
+                    }
+                    break;
                 case SDLK_SPACE:
                 case SDLK_RETURN:
                     if (pres.canGoNext()) {
@@ -130,6 +162,15 @@ int main(int argc, char* argv[]) {
                     }
                     break;
                 case SDLK_LEFT:
+                    if (event.key.keysym.mod & KMOD_SHIFT) {
+                        currentTheme = switchTheme(pres, fonts, currentTheme, -1);
+                        needsRender = true;
+                    } else if (pres.canGoPrev()) {
+                        pres.prev();
+                        needsRender = true;
+                        printf("Slide %d/%d\n", pres.current + 1, pres.size());
+                    }
+                    break;
                 case SDLK_BACKSPACE:
                     if (pres.canGoPrev()) {
                         pres.prev();

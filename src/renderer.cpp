@@ -703,7 +703,7 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
     SDL_Surface* surf = SDL_CreateRGBSurface(0, m_width, m_height, 32,
         0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
     if (surf) {
-        SDL_FillRect(surf, nullptr, makeColor(surf, 30, 30, 40));
+        SDL_FillRect(surf, nullptr, makeColor(surf, style.bgColor.r, style.bgColor.g, style.bgColor.b));
         m_surface = surf;
 
         // Compute layout metrics

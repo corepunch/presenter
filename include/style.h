@@ -1,12 +1,30 @@
 #pragma once
 #include <string>
+#include <vector>
+#include <cstdio>
 
 struct Color {
     unsigned char r = 0, g = 0, b = 0, a = 255;
-    // No SDL dependency here — callers convert to SDL_Color explicitly
+
+    Color() = default;
+    Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a = 255)
+        : r(r), g(g), b(b), a(a) {}
+
+    // Implicit conversion from "#rrggbb" hex string
+    Color(const char* hex) {
+        if (!hex || hex[0] != '#') return;
+        unsigned int ri, gi, bi;
+        if (std::sscanf(hex, "#%02x%02x%02x", &ri, &gi, &bi) == 3) {
+            r = static_cast<unsigned char>(ri);
+            g = static_cast<unsigned char>(gi);
+            b = static_cast<unsigned char>(bi);
+        }
+    }
 };
 
 struct PresentationStyle {
+    std::string name = "Dark";
+
     // Font sizes in pixels
     float titleFontSize = 48.0f;
     float subtitleFontSize = 28.0f;
@@ -46,4 +64,5 @@ struct PresentationStyle {
 
     static PresentationStyle defaults();
     static PresentationStyle load(const std::string& xmlPath);
+    static const std::vector<PresentationStyle>& builtInThemes();
 };
