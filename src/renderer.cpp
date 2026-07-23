@@ -412,14 +412,13 @@ static void renderCodeBlock(Renderer* r, SDL_Surface* surf,
 // ---- slide rendering: part-based layout ----
 
 // Forward declarations (used by recursive renderPartSlot)
-static void renderPartFullSlide(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts);
+static void renderPartFullSlide(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts, const FontVariants& titleV);
 static void renderPartImage(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts, int slideH);
 static void renderPartCaption(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts);
 
 static void renderPartHeader(Renderer* r, SDL_Surface* surf,
                              const Slide& slide, const SlidePart& part,
-                             const FontSet& fonts, int slideW) {
-    FontVariants titleV = fonts.titleVariants();
+                             const FontVariants& titleV, int slideW) {
     const Font& titleFont = titleV.get(FontType::Regular);
     const auto& s = r->style();
     float ascent = titleFont.getAscent();
@@ -437,9 +436,8 @@ static void renderPartHeader(Renderer* r, SDL_Surface* surf,
 
 static void renderPartBody(Renderer* r, SDL_Surface* surf,
                            const Slide& slide, const SlidePart& part,
-                           const FontSet& fonts) {
+                           const FontSet& fonts, const FontVariants& titleV) {
     FontVariants baseV = fonts.variants();
-    FontVariants titleV = fonts.titleVariants();
     const auto& s = r->style();
     int contentW = part.rect.w - 2 * s.partPadding;
     int y = part.rect.y + s.partPadding;
@@ -495,7 +493,7 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
     r->setSurface(childSurf);
 
     // Compute layout for the child slide at slot size
-    FontVariants titleV = fonts.titleVariants();
+    FontVariants titleV = fonts.childTitleVariants();
     FontVariants baseV = fonts.variants();
     const Font& titleFont = titleV.get(FontType::Regular);
     const Font& baseFont = baseV.get(FontType::Regular);
@@ -515,9 +513,9 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
 
     for (const auto& p : parts) {
         switch (p.role) {
-            case PartRole::FullSlide:  renderPartFullSlide(r, childSurf, child, p, fonts); break;
-            case PartRole::Header:     renderPartHeader(r, childSurf, child, p, fonts, slotW); break;
-            case PartRole::Body:       renderPartBody(r, childSurf, child, p, fonts); break;
+            case PartRole::FullSlide:  renderPartFullSlide(r, childSurf, child, p, fonts, titleV); break;
+            case PartRole::Header:     renderPartHeader(r, childSurf, child, p, titleV, slotW); break;
+            case PartRole::Body:       renderPartBody(r, childSurf, child, p, fonts, titleV); break;
             case PartRole::Slot:       renderPartSlot(r, childSurf, child, p, fonts, 0, 0); break;
             case PartRole::Image:      renderPartImage(r, childSurf, child, p, fonts, slotH); break;
             case PartRole::Caption:    renderPartCaption(r, childSurf, child, p, fonts); break;
@@ -648,8 +646,7 @@ static void renderPartFooter(Renderer* r, SDL_Surface* surf,
 
 static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
                                 const Slide& slide, const SlidePart& part,
-                                const FontSet& fonts) {
-    FontVariants titleV = fonts.titleVariants();
+                                const FontSet& fonts, const FontVariants& titleV) {
     FontVariants baseV = fonts.variants();
     const auto& s = r->style();
 
@@ -720,13 +717,13 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
         for (const auto& part : parts) {
             switch (part.role) {
                 case PartRole::FullSlide:
-                    renderPartFullSlide(this, surf, slide, part, fonts);
+                    renderPartFullSlide(this, surf, slide, part, fonts, titleV);
                     break;
                 case PartRole::Header:
-                    renderPartHeader(this, surf, slide, part, fonts, m_width);
+                    renderPartHeader(this, surf, slide, part, titleV, m_width);
                     break;
                 case PartRole::Body:
-                    renderPartBody(this, surf, slide, part, fonts);
+                    renderPartBody(this, surf, slide, part, fonts, titleV);
                     break;
                 case PartRole::Slot:
                     renderPartSlot(this, surf, slide, part, fonts, slideNum, totalSlides);

@@ -58,35 +58,40 @@ struct FontVariants {
 };
 
 struct FontSet {
-    std::array<Font, 5> fonts;          // content size
-    std::array<Font, 5> titleFonts;     // title size
-    std::array<Font, 5> subtitleFonts;  // subtitle size
-    std::array<Font, 5> smallFonts;     // small size
+    std::array<Font, 5> fonts;             // content size
+    std::array<Font, 5> titleFonts;        // title size
+    std::array<Font, 5> subtitleFonts;     // subtitle size
+    std::array<Font, 5> smallFonts;        // small size
+    std::array<Font, 5> childTitleFonts;   // child slide title size
     Font fallback;
     Font titleFallback;
     Font subtitleFallback;
     Font smallFallback;
+    Font childTitleFallback;
 
-    bool load(float contentSize, float titleSize, float subtitleSize, float smallSize) {
+    bool load(float contentSize, float titleSize, float subtitleSize, float smallSize, float childTitleSize) {
         return loadGroup(fonts, fallback, contentSize)
             && loadGroup(titleFonts, titleFallback, titleSize)
             && loadGroup(subtitleFonts, subtitleFallback, subtitleSize)
-            && loadGroup(smallFonts, smallFallback, smallSize);
+            && loadGroup(smallFonts, smallFallback, smallSize)
+            && loadGroup(childTitleFonts, childTitleFallback, childTitleSize);
     }
 
     bool load(const struct PresentationStyle& style) {
         return load(style.contentFontSize, style.titleFontSize,
-                    style.subtitleFontSize, style.smallFontSize);
+                    style.subtitleFontSize, style.smallFontSize,
+                    style.childTitleFontSize);
     }
 
     const Font& get(FontType type) const {
         return fonts[static_cast<int>(type)];
     }
 
-    FontVariants variants() const         { return makeVariants(fonts); }
-    FontVariants titleVariants() const    { return makeVariants(titleFonts); }
-    FontVariants subtitleVariants() const { return makeVariants(subtitleFonts); }
-    FontVariants smallVariants() const    { return makeVariants(smallFonts); }
+    FontVariants variants() const          { return makeVariants(fonts); }
+    FontVariants titleVariants() const     { return makeVariants(titleFonts); }
+    FontVariants subtitleVariants() const  { return makeVariants(subtitleFonts); }
+    FontVariants smallVariants() const     { return makeVariants(smallFonts); }
+    FontVariants childTitleVariants() const { return makeVariants(childTitleFonts); }
 
 private:
     static bool loadGroup(std::array<Font, 5>& group, Font& fb, float size) {

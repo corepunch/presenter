@@ -35,6 +35,7 @@ struct PresentationStyle {
     float subtitleFontSize = 28.0f;
     float contentFontSize = 28.0f;
     float smallFontSize = 20.0f;
+    float childTitleFontSize = 36.0f;
 
     // Colors (RGBA)
     Color bgColor        = {30,  30,  40,  255};
