@@ -151,7 +151,7 @@ int main(int argc, char* argv[]) {
                     } else if (pres.canGoNext()) {
                         pres.next();
                         needsRender = true;
-                        printf("Slide %d/%d\n", pres.current + 1, pres.size());
+
                     }
                     break;
                 case SDLK_SPACE:
@@ -159,7 +159,7 @@ int main(int argc, char* argv[]) {
                     if (pres.canGoNext()) {
                         pres.next();
                         needsRender = true;
-                        printf("Slide %d/%d\n", pres.current + 1, pres.size());
+
                     }
                     break;
                 case SDLK_LEFT:
@@ -169,14 +169,14 @@ int main(int argc, char* argv[]) {
                     } else if (pres.canGoPrev()) {
                         pres.prev();
                         needsRender = true;
-                        printf("Slide %d/%d\n", pres.current + 1, pres.size());
+
                     }
                     break;
                 case SDLK_BACKSPACE:
                     if (pres.canGoPrev()) {
                         pres.prev();
                         needsRender = true;
-                        printf("Slide %d/%d\n", pres.current + 1, pres.size());
+
                     }
                     break;
                 case SDLK_HOME:
