@@ -7,6 +7,16 @@ struct ImageBuf {
     int w = 0, h = 0;
 };
 
+struct ImageRect {
+    int x = 0, y = 0, w = 0, h = 0;
+};
+
+// Scale an image to fit entirely inside an area without changing its aspect
+// ratio. The result is centered horizontally and aligned to the area's bottom,
+// giving adjacent images a shared lower edge for captions.
+ImageRect fitImageToArea(int srcW, int srcH,
+                         int areaX, int areaY, int areaW, int areaH);
+
 // Resample src into a new heap-allocated ImageBuf of size (dstW x dstH).
 // Uses bilinear interpolation; for downscaling by more than 2x each step
 // the image is halved iteratively (mipmap-style) until the ratio is <=2,

@@ -21,6 +21,7 @@ static const AttrEntry STYLE_ATTRS[] = {
     {"fonts", "title",    parseAttr<&PresentationStyle::titleFontSize,    atof>},
     {"fonts", "subtitle", parseAttr<&PresentationStyle::subtitleFontSize, atof>},
     {"fonts", "content",  parseAttr<&PresentationStyle::contentFontSize,  atof>},
+    {"fonts", "bullet",  parseAttr<&PresentationStyle::bulletFontSize,  atof>},
     {"fonts", "small",    parseAttr<&PresentationStyle::smallFontSize,    atof>},
     // colors — Color has implicit constructor from "const char*"
     {"colors", "bg",       [](PresentationStyle& s, const char* v) { s.bgColor = v; }},
@@ -38,6 +39,7 @@ static const AttrEntry STYLE_ATTRS[] = {
     {"layout", "linePadding",     parseAttr<&PresentationStyle::linePadding,     atoi>},
     {"layout", "presenterMargin", parseAttr<&PresentationStyle::presenterMargin, atoi>},
     {"layout", "cornerRadius",    parseAttr<&PresentationStyle::cornerRadius,    atoi>},
+    {"layout", "bulletGap",       parseAttr<&PresentationStyle::bulletGap,       atoi>},
 };
 
 void PresentationStyle::applyXmlElement(const void* el) {
@@ -119,7 +121,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#FF79C6", "#8BE9FD", "#F1FA8C",
             "#6272A4", "#BD93F9", "#FFB86C",
             "#F8F8F2",
-            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, 12),
+            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, CORNER_RADIUS),
         // 2. Monokai (dark)
         makeTheme("Monokai",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
@@ -129,7 +131,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#F92672", "#66D9EF", "#E6DB74",
             "#75715E", "#AE81FF", "#FD971F",
             "#F8F8F2",
-            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, 12),
+            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, CORNER_RADIUS),
         // 3. Solarized Dark
         makeTheme("Solarized Dark",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
@@ -139,7 +141,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#CB4B16", "#2AA198", "#B58900",
             "#586E75", "#6C71C4", "#D33682",
             "#93A1A1",
-            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, 12),
+            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, CORNER_RADIUS),
         // 4. GitHub Light
         makeTheme("GitHub Light",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
@@ -149,7 +151,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#D73A49", "#005CC5", "#032F62",
             "#6A737D", "#005CC5", "#0550AE",
             "#24292E",
-            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, 12),
+            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, CORNER_RADIUS),
         // 5. Solarized Light
         makeTheme("Solarized Light",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
@@ -159,7 +161,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#CB4B16", "#2AA198", "#B58900",
             "#93A1A1", "#6C71C4", "#D33682",
             "#586E75",
-            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, 12),
+            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, CORNER_RADIUS),
         // 6. Nord
         makeTheme("Nord",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
@@ -169,7 +171,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#BF616A", "#A3BE8C", "#EBCB8B",
             "#4C566A", "#B48EAD", "#D08770",
             "#D8DEE9",
-            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, 12),
+            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, CORNER_RADIUS),
         // 7. Sunset
         makeTheme("Sunset",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
@@ -179,7 +181,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#FF6B6B", "#FFA500", "#FFD700",
             "#8B7355", "#FF8C42", "#FF4500",
             "#E8D5C4",
-            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, 12),
+            SLIDE_MARGIN, PART_PADDING, PART_GAP, COLUMN_GAP, LINE_PADDING, PRESENTER_MARGIN, CORNER_RADIUS),
         // 8. Arc
         makeTheme("Arc",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
@@ -189,7 +191,7 @@ const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
             "#E06C75", "#98C379", "#E5C07B",
             "#545862", "#C678DD", "#D19A66",
             "#C8CCD4",
-            40, 20, 12, 24, 6, 20, 12)
+            40, 20, 12, 24, 6, 20, CORNER_RADIUS)
     };
     return themes;
 }

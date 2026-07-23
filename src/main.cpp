@@ -72,10 +72,10 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
         return 1;
     }
-    printf("Loaded fonts (title:%.0f subtitle:%.0f content:%.0f small:%.0f childTitle:%.0f)\n",
+    printf("Loaded fonts (title:%.0f subtitle:%.0f content:%.0f bullet:%.0f small:%.0f childTitle:%.0f)\n",
            pres.style.titleFontSize, pres.style.subtitleFontSize,
-           pres.style.contentFontSize, pres.style.smallFontSize,
-           pres.style.childTitleFontSize);
+           pres.style.contentFontSize, pres.style.bulletFontSize,
+           pres.style.smallFontSize, pres.style.childTitleFontSize);
 
     // Audience window
     SDL_Window* audienceWindow = SDL_CreateWindow(

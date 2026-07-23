@@ -1,8 +1,11 @@
 #include "font.h"
 #include "renderer.h"
+#include "layout.h"
 #include "constants.h"
 #include "common.h"
 #include <SDL2/SDL.h>
+#include <algorithm>
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -129,6 +132,95 @@ static void test_empty_title(SDL_Renderer* sdlRenderer, const FontSet& fonts, Re
     if (tex) SDL_DestroyTexture(tex);
 }
 
+static void test_body_vertical_centering(SDL_Renderer*, const FontSet& fonts,
+                                         Renderer& renderer, const PresentationStyle& style) {
+    Slide slide = makeSlide(SlideLayout::Content, "Centered",
+                            {"First item", "Second item", "Third item"});
+    SDL_Texture* tex = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(tex != nullptr, "centered body slide renders");
+    if (tex) SDL_DestroyTexture(tex);
+
+    const Font& titleFont = fonts.titleVariants().get(FontType::Regular);
+    const Font& bodyFont = fonts.variants().get(FontType::Regular);
+    LayoutMetrics metrics = {
+        renderer.width(), renderer.height(),
+        titleFont.getAscent(), titleFont.getDescent(),
+        titleFont.getAscent() - titleFont.getDescent(),
+        bodyFont.getAscent(), bodyFont.getDescent(),
+        bodyFont.getAscent() - bodyFont.getDescent()
+    };
+    auto parts = computeParts(LayoutKind::HeaderBody, slide, metrics, style);
+    const Rect& body = parts[1].rect;
+    Uint32 bg = style.bgColor.toUint32(renderer.surface()->format);
+    auto* pixels = static_cast<Uint32*>(renderer.surface()->pixels);
+    int pitch = renderer.surface()->pitch / 4;
+    int minY = body.y + body.h;
+    int maxY = body.y;
+    for (int y = body.y; y < body.y + body.h; ++y) {
+        for (int x = body.x; x < body.x + body.w; ++x) {
+            if (pixels[y * pitch + x] != bg) {
+                minY = std::min(minY, y);
+                maxY = std::max(maxY, y);
+            }
+        }
+    }
+    int bodyCenter = body.y + body.h / 2;
+    int inkCenter = (minY + maxY) / 2;
+    TEST_ASSERT(minY <= maxY, "body text produces visible pixels");
+    TEST_ASSERT(std::abs(inkCenter - bodyCenter) <= 20, "body text is vertically centered");
+}
+
+static void test_oversized_body_is_scaled_inside_bounds(SDL_Renderer*,
+                                                        const FontSet& fonts,
+                                                        Renderer& renderer,
+                                                        const PresentationStyle& style) {
+    Slide slide;
+    slide.layout = SlideLayout::Content;
+    slide.title = "Scaled code";
+    CodeBlock first;
+    first.lang = "cpp";
+    CodeBlock second;
+    second.lang = "cpp";
+    for (int i = 0; i < 18; ++i) {
+        first.code += "int first_value = 123456789;\n";
+        second.code += "int second_value = 987654321;\n";
+    }
+    slide.codeBlocks = {first, second};
+
+    SDL_Texture* texture = renderer.renderSlide(slide, fonts, style);
+    TEST_ASSERT(texture != nullptr, "oversized body renders after scaling");
+    if (texture) SDL_DestroyTexture(texture);
+
+    const Font& titleFont = fonts.titleVariants().get(FontType::Regular);
+    const Font& bodyFont = fonts.variants().get(FontType::Regular);
+    LayoutMetrics metrics = {
+        renderer.width(), renderer.height(),
+        titleFont.getAscent(), titleFont.getDescent(),
+        titleFont.getAscent() - titleFont.getDescent(),
+        bodyFont.getAscent(), bodyFont.getDescent(),
+        bodyFont.getAscent() - bodyFont.getDescent()
+    };
+    auto parts = computeParts(LayoutKind::HeaderBody, slide, metrics, style);
+    const Rect& body = parts[1].rect;
+    const Rect& footer = parts[2].rect;
+    Uint32 bg = style.bgColor.toUint32(renderer.surface()->format);
+    auto* pixels = static_cast<Uint32*>(renderer.surface()->pixels);
+    int pitch = renderer.surface()->pitch / 4;
+    bool gapIsClear = true;
+    for (int y = body.y + body.h; y < footer.y && gapIsClear; ++y) {
+        // The right-aligned slide number's glyph ascent can reach slightly
+        // above the footer rectangle, so inspect the left half where only
+        // overflowing body content could produce ink.
+        for (int x = body.x; x < body.x + body.w / 2; ++x) {
+            if (pixels[y * pitch + x] != bg) {
+                gapIsClear = false;
+                break;
+            }
+        }
+    }
+    TEST_ASSERT(gapIsClear, "scaled body does not overflow into footer gap");
+}
+
 int main() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) { fprintf(stderr, "SDL_Init failed\n"); return 1; }
 
@@ -156,6 +248,8 @@ int main() {
     test_presenter_view(sdlR, fonts, renderer);
     test_formatted_text_rendering(sdlR, fonts, renderer, style);
     test_empty_title(sdlR, fonts, renderer, style);
+    test_body_vertical_centering(sdlR, fonts, renderer, style);
+    test_oversized_body_is_scaled_inside_bounds(sdlR, fonts, renderer, style);
 
     renderer.cleanup();
     SDL_DestroyRenderer(sdlR);

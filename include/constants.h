@@ -11,6 +11,7 @@
 #define FONT_TITLE_SIZE 72.0f
 #define FONT_SUBTITLE_SIZE 48.0f
 #define FONT_CONTENT_SIZE 32.0f
+#define FONT_BULLET_SIZE 48.0f
 #define FONT_SMALL_SIZE 24.0f
 #define FONT_CHILD_TITLE_SIZE 48.0f
 
@@ -26,3 +27,5 @@
 #define PART_PADDING 20
 #define PART_GAP 24
 #define COLUMN_GAP 24
+#define BULLET_GAP 24
+#define CORNER_RADIUS 24

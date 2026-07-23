@@ -35,73 +35,117 @@ void Renderer::clear(int r, int g, int b) {
     SDL_FillRect(m_surface, nullptr, Color(r, g, b).toUint32(m_surface->format));
 }
 
-static void setPixel(SDL_Surface* surf, int x, int y, Uint32 color) {
+static void blendPixel(SDL_Surface* surf, int x, int y, Uint32 color, float coverage) {
     if (x < 0 || x >= surf->w || y < 0 || y >= surf->h) return;
+    coverage = std::max(0.0f, std::min(1.0f, coverage));
+    if (coverage <= 0.0f) return;
+
     auto* pixels = static_cast<Uint32*>(surf->pixels);
-    pixels[y * (surf->pitch / 4) + x] = color;
+    Uint32& dst = pixels[y * (surf->pitch / 4) + x];
+    if (coverage >= 1.0f) {
+        dst = color;
+        return;
+    }
+
+    Uint8 sr, sg, sb, sa;
+    Uint8 dr, dg, db, da;
+    SDL_GetRGBA(color, surf->format, &sr, &sg, &sb, &sa);
+    SDL_GetRGBA(dst, surf->format, &dr, &dg, &db, &da);
+
+    float alpha = coverage * (static_cast<float>(sa) / 255.0f);
+    Uint8 rr = static_cast<Uint8>(std::lround(sr * alpha + dr * (1.0f - alpha)));
+    Uint8 rg = static_cast<Uint8>(std::lround(sg * alpha + dg * (1.0f - alpha)));
+    Uint8 rb = static_cast<Uint8>(std::lround(sb * alpha + db * (1.0f - alpha)));
+    Uint8 ra = static_cast<Uint8>(std::lround(255.0f * (alpha + (da / 255.0f) * (1.0f - alpha))));
+    dst = SDL_MapRGBA(surf->format, rr, rg, rb, ra);
 }
 
-static void setPixelAlpha(SDL_Surface* surf, int x, int y, Uint8 a) {
-    if (x < 0 || x >= surf->w || y < 0 || y >= surf->h) return;
-    auto* pixels = static_cast<Uint32*>(surf->pixels);
-    Uint32& p = pixels[y * (surf->pitch / 4) + x];
-    p = (p & 0x00FFFFFF) | (static_cast<Uint32>(a) << 24);
+// Estimate the area of a pixel covered by a rounded rectangle using a regular
+// 4x4 sub-pixel grid. Straight edges remain exact; only arc pixels are blended.
+static float roundedRectCoverage(int width, int height, int radius, int x, int y) {
+    if (width <= 0 || height <= 0 || x < 0 || y < 0 || x >= width || y >= height) return 0.0f;
+    int rad = std::min(radius, std::min(width, height) / 2);
+    if (rad <= 0) return 1.0f;
+
+    constexpr int samplesPerAxis = 4;
+    int covered = 0;
+    for (int sy = 0; sy < samplesPerAxis; ++sy) {
+        float py = static_cast<float>(y) + (static_cast<float>(sy) + 0.5f) / samplesPerAxis;
+        for (int sx = 0; sx < samplesPerAxis; ++sx) {
+            float px = static_cast<float>(x) + (static_cast<float>(sx) + 0.5f) / samplesPerAxis;
+            float cx = std::max(static_cast<float>(rad),
+                                std::min(px, static_cast<float>(width - rad)));
+            float cy = std::max(static_cast<float>(rad),
+                                std::min(py, static_cast<float>(height - rad)));
+            float dx = px - cx;
+            float dy = py - cy;
+            if (dx * dx + dy * dy <= static_cast<float>(rad * rad)) ++covered;
+        }
+    }
+    return static_cast<float>(covered) / static_cast<float>(samplesPerAxis * samplesPerAxis);
 }
 
 static void fillRoundedRect(SDL_Surface* surf, SDL_Rect r, int radius, Uint32 color) {
     int rad = std::min(radius, std::min(r.w, r.h) / 2);
     if (rad <= 0) { SDL_FillRect(surf, &r, color); return; }
 
-    for (int y = 0; y < r.h; y++) {
-        int inset = 0;
-        if (y < rad) {
-            float dy = static_cast<float>(rad - y - 1);
-            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
-        } else if (y >= r.h - rad) {
-            float dy = static_cast<float>(y - (r.h - rad));
-            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
+    SDL_Rect horizontal = {r.x + rad, r.y, r.w - 2 * rad, r.h};
+    SDL_Rect vertical = {r.x, r.y + rad, r.w, r.h - 2 * rad};
+    if (horizontal.w > 0) SDL_FillRect(surf, &horizontal, color);
+    if (vertical.h > 0) SDL_FillRect(surf, &vertical, color);
+
+    for (int y = 0; y < rad; ++y) {
+        for (int x = 0; x < rad; ++x) {
+            float coverage = roundedRectCoverage(r.w, r.h, rad, x, y);
+            blendPixel(surf, r.x + x, r.y + y, color, coverage);
+            blendPixel(surf, r.x + r.w - 1 - x, r.y + y, color, coverage);
+            blendPixel(surf, r.x + x, r.y + r.h - 1 - y, color, coverage);
+            blendPixel(surf, r.x + r.w - 1 - x, r.y + r.h - 1 - y, color, coverage);
         }
-        SDL_Rect row = {r.x + inset, r.y + y, r.w - 2 * inset, 1};
-        if (row.w > 0) SDL_FillRect(surf, &row, color);
     }
 }
 
 static void drawRoundedRectOutline(SDL_Surface* surf, SDL_Rect r, int radius, Uint32 color) {
     int rad = std::min(radius, std::min(r.w, r.h) / 2);
-    if (rad <= 0) return;
-
-    for (int y = 0; y < r.h; y++) {
-        int inset = 0;
-        if (y < rad) {
-            float dy = static_cast<float>(rad - y - 1);
-            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
-        } else if (y >= r.h - rad) {
-            float dy = static_cast<float>(y - (r.h - rad));
-            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
-        }
-        setPixel(surf, r.x + inset, r.y + y, color);
-        setPixel(surf, r.x + r.w - 1 - inset, r.y + y, color);
+    if (r.w <= 0 || r.h <= 0) return;
+    if (rad <= 0) {
+        SDL_Rect top = {r.x, r.y, r.w, 1};
+        SDL_Rect bottom = {r.x, r.y + r.h - 1, r.w, 1};
+        SDL_Rect left = {r.x, r.y, 1, r.h};
+        SDL_Rect right = {r.x + r.w - 1, r.y, 1, r.h};
+        SDL_FillRect(surf, &top, color);
+        SDL_FillRect(surf, &bottom, color);
+        SDL_FillRect(surf, &left, color);
+        SDL_FillRect(surf, &right, color);
+        return;
     }
-    for (int x = r.x + rad; x < r.x + r.w - rad; x++) {
-        setPixel(surf, x, r.y, color);
-        setPixel(surf, x, r.y + r.h - 1, color);
+
+    int innerW = r.w - 2;
+    int innerH = r.h - 2;
+    int innerRad = std::max(0, rad - 1);
+    for (int y = 0; y < r.h; ++y) {
+        for (int x = 0; x < r.w; ++x) {
+            bool nearEdge = y < 2 || y >= r.h - 2 ||
+                            x < rad + 1 || x >= r.w - rad - 1;
+            if (!nearEdge) continue;
+            float outer = roundedRectCoverage(r.w, r.h, rad, x, y);
+            float inner = roundedRectCoverage(innerW, innerH, innerRad, x - 1, y - 1);
+            blendPixel(surf, r.x + x, r.y + y, color, std::max(0.0f, outer - inner));
+        }
     }
 }
 
-static void maskImageCorners(SDL_Surface* surf, SDL_Rect r, int radius) {
+static void maskImageCorners(SDL_Surface* surf, SDL_Rect r, int radius, Uint32 bgColor) {
     int rad = std::min(radius, std::min(r.w, r.h) / 2);
     if (rad <= 0) return;
 
-    for (int y = 0; y < rad; y++) {
-        int inset = rad;
-        float dyTop = static_cast<float>(rad - y - 1);
-        inset = rad - static_cast<int>(std::sqrt(rad * rad - dyTop * dyTop));
-
-        for (int x = 0; x < inset; x++) {
-            setPixelAlpha(surf, r.x + x, r.y + y, 0);
-            setPixelAlpha(surf, r.x + r.w - 1 - x, r.y + y, 0);
-            setPixelAlpha(surf, r.x + x, r.y + r.h - 1 - y, 0);
-            setPixelAlpha(surf, r.x + r.w - 1 - x, r.y + r.h - 1 - y, 0);
+    for (int y = 0; y < rad; ++y) {
+        for (int x = 0; x < rad; ++x) {
+            float outside = 1.0f - roundedRectCoverage(r.w, r.h, rad, x, y);
+            blendPixel(surf, r.x + x, r.y + y, bgColor, outside);
+            blendPixel(surf, r.x + r.w - 1 - x, r.y + y, bgColor, outside);
+            blendPixel(surf, r.x + x, r.y + r.h - 1 - y, bgColor, outside);
+            blendPixel(surf, r.x + r.w - 1 - x, r.y + r.h - 1 - y, bgColor, outside);
         }
     }
 }
@@ -485,8 +529,12 @@ static void renderCodeBlock(Renderer* r, SDL_Surface* surf,
 
 // Forward declarations (used by recursive renderPartSlot)
 static void renderPartFullSlide(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts, const FontVariants& titleV);
-static void renderPartImage(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts, int slideH);
+static void renderPartImage(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part);
 static void renderPartCaption(Renderer* r, SDL_Surface* surf, const Slide& slide, const SlidePart& part, const FontSet& fonts);
+static void centerImageCaptionStack(Renderer* r, const Slide& slide,
+                                    const FontSet& fonts,
+                                    std::vector<SlidePart>& parts,
+                                    int availableBottom);
 
 static void renderPartHeader(Renderer* r, SDL_Surface* surf,
                              const Slide& slide, const SlidePart& part,
@@ -506,40 +554,168 @@ static void renderPartHeader(Renderer* r, SDL_Surface* surf,
     SDL_FillRect(surf, &lineRect, lc);
 }
 
+static int codeLineCount(const std::string& code) {
+    int lines = 1;
+    for (char ch : code) if (ch == '\n') ++lines;
+    return lines;
+}
+
+static int codeNaturalWidth(const CodeBlock& cb, const Font& font, int padding) {
+    int width = 0;
+    size_t start = 0;
+    while (true) {
+        size_t newline = cb.code.find('\n', start);
+        std::string line = newline == std::string::npos
+            ? cb.code.substr(start)
+            : cb.code.substr(start, newline - start);
+        width = std::max(width, static_cast<int>(std::ceil(font.measureString(line))));
+        if (newline == std::string::npos) break;
+        start = newline + 1;
+    }
+    return width + 2 * padding;
+}
+
+static int measureBodyHeight(Renderer* r, const Slide& slide,
+                             const FontSet& fonts, const FontVariants& titleV,
+                             int contentW) {
+    FontVariants bulletV = fonts.bulletVariants();
+    const auto& s = r->style();
+    const Font& titleFont = titleV.get(FontType::Regular);
+    const Font& bulletFont = bulletV.get(FontType::Regular);
+    const Font& monoFont = fonts.get(FontType::Monospace);
+    int titleLineH = r->textHeight(titleFont);
+    int bulletLineH = r->textHeight(bulletFont);
+    int monoLineH = static_cast<int>(monoFont.getAscent() - monoFont.getDescent()) + s.linePadding;
+    int codePad = std::max(8, s.partPadding / 2);
+
+    int contentH = 0;
+    bool hasContent = false;
+    for (const auto& text : slide.texts) {
+        if (hasContent) contentH += s.bulletGap;
+        std::string heading;
+        if (isHeadingLine(text, &heading)) {
+            contentH += titleLineH;
+        } else {
+            std::string line = "\xE2\x80\xA2 " + text;
+            contentH += static_cast<int>(r->wordWrap(line, bulletV, contentW).size()) * bulletLineH;
+        }
+        hasContent = true;
+    }
+    for (const auto& cb : slide.codeBlocks) {
+        if (hasContent) contentH += s.partGap;
+        contentH += codeLineCount(cb.code) * monoLineH + 2 * codePad;
+        hasContent = true;
+    }
+    return contentH;
+}
+
+static void renderBodyContent(Renderer* r, SDL_Surface* surf,
+                              const Slide& slide, const FontSet& fonts,
+                              const FontVariants& titleV,
+                              int contentX, int contentY, int contentW) {
+    FontVariants bulletV = fonts.bulletVariants();
+    const auto& s = r->style();
+    const Font& titleFont = titleV.get(FontType::Regular);
+    const Font& bulletFont = bulletV.get(FontType::Regular);
+    const Font& monoFont = fonts.get(FontType::Monospace);
+    int titleLineH = r->textHeight(titleFont);
+    int bulletLineH = r->textHeight(bulletFont);
+    int monoLineH = static_cast<int>(monoFont.getAscent() - monoFont.getDescent()) + s.linePadding;
+    int codePad = std::max(8, s.partPadding / 2);
+    int y = contentY;
+    bool renderedContent = false;
+
+    for (size_t i = 0; i < slide.texts.size(); i++) {
+        if (renderedContent) y += s.bulletGap;
+        std::string heading;
+        if (isHeadingLine(slide.texts[i], &heading)) {
+            r->renderFormatted(heading, static_cast<float>(contentX),
+                               static_cast<float>(y) + titleFont.getAscent(),
+                               titleV, s.titleColor.toSDLColor());
+            y += titleLineH;
+        } else {
+            std::string line = "\xE2\x80\xA2 " + slide.texts[i];
+            int wrappedLines = static_cast<int>(r->wordWrap(line, bulletV, contentW).size());
+            r->renderFormattedBlock(line, contentX,
+                                    y + static_cast<int>(bulletFont.getAscent()),
+                                    bulletV, s.textColor.toSDLColor(), contentW);
+            y += wrappedLines * bulletLineH;
+        }
+        renderedContent = true;
+    }
+
+    for (const auto& cb : slide.codeBlocks) {
+        if (renderedContent) y += s.partGap;
+        int blockH = codeLineCount(cb.code) * monoLineH + 2 * codePad;
+
+        renderCodeBlock(r, surf, cb, monoFont,
+                        contentX, y, contentW, blockH);
+        y += blockH;
+        renderedContent = true;
+    }
+}
+
 static void renderPartBody(Renderer* r, SDL_Surface* surf,
                            const Slide& slide, const SlidePart& part,
                            const FontSet& fonts, const FontVariants& titleV) {
-    FontVariants baseV = fonts.variants();
     const auto& s = r->style();
-    int contentW = part.rect.w - 2 * s.partPadding;
-    int y = part.rect.y + s.partPadding;
-
-    for (size_t i = 0; i < slide.texts.size(); i++) {
-        std::string heading;
-        if (isHeadingLine(slide.texts[i], &heading)) {
-            r->renderFormatted(heading, static_cast<float>(part.rect.x + s.partPadding),
-                               static_cast<float>(y), titleV, s.titleColor.toSDLColor());
-            y += r->textHeight(titleV.get(FontType::Regular));
-        } else {
-            std::string line = "\xE2\x80\xA2 " + slide.texts[i];
-            r->renderFormattedBlock(line, part.rect.x + s.partPadding, y, baseV, s.textColor.toSDLColor(), contentW);
-            y += r->textHeight(baseV.get(FontType::Regular));
-        }
-    }
+    int contentW = std::max(0, part.rect.w - 2 * s.partPadding);
+    int availableH = std::max(0, part.rect.h - 2 * s.partPadding);
+    if (contentW == 0 || availableH == 0) return;
 
     const Font& monoFont = fonts.get(FontType::Monospace);
-    for (const auto& cb : slide.codeBlocks) {
-        size_t lines = 1;
-        for (char ch : cb.code) if (ch == '\n') lines++;
-        int lineH = static_cast<int>(monoFont.getAscent() - monoFont.getDescent()) + s.linePadding;
-        int pad = std::max(8, s.partPadding / 2);
-        int blockH = static_cast<int>(lines) * lineH + 2 * pad;
+    int codePad = std::max(8, s.partPadding / 2);
+    int naturalW = contentW;
+    for (const auto& cb : slide.codeBlocks)
+        naturalW = std::max(naturalW, codeNaturalWidth(cb, monoFont, codePad));
 
-        renderCodeBlock(r, surf, cb, monoFont,
-                        part.rect.x + s.partPadding, y,
-                        contentW, blockH);
-        y += blockH + s.partGap;
+    int naturalH = measureBodyHeight(r, slide, fonts, titleV, naturalW);
+    if (naturalH <= 0) return;
+
+    Rect available = {
+        part.rect.x + s.partPadding,
+        part.rect.y + s.partPadding,
+        contentW,
+        availableH
+    };
+    Rect placement = computeImageCaptionStack(
+        available, naturalW, naturalH, 0, 0, ImageFit::Fit).image;
+
+    if (placement.w == naturalW && placement.h == naturalH) {
+        renderBodyContent(r, surf, slide, fonts, titleV,
+                          placement.x, placement.y, naturalW);
+        return;
     }
+
+    SDL_Surface* contentSurf = SDL_CreateRGBSurface(
+        0, naturalW, naturalH, 32,
+        0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+    if (!contentSurf) return;
+    SDL_FillRect(contentSurf, nullptr, s.bgColor.toUint32(contentSurf->format));
+
+    SDL_Surface* savedSurface = r->surface();
+    r->setSurface(contentSurf);
+    renderBodyContent(r, contentSurf, slide, fonts, titleV, 0, 0, naturalW);
+    r->setSurface(savedSurface);
+
+    ImageBuf source = {
+        static_cast<uint8_t*>(contentSurf->pixels),
+        contentSurf->w,
+        contentSurf->h
+    };
+    ImageBuf scaled = resampleBilinear(source, placement.w, placement.h);
+    if (scaled.data) {
+        SDL_Surface* scaledSurf = SDL_CreateRGBSurfaceFrom(
+            scaled.data, scaled.w, scaled.h, 32, scaled.w * 4,
+            0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+        if (scaledSurf) {
+            SDL_Rect destination = {placement.x, placement.y, placement.w, placement.h};
+            SDL_BlitSurface(scaledSurf, nullptr, surf, &destination);
+            SDL_FreeSurface(scaledSurf);
+        }
+        delete[] scaled.data;
+    }
+    SDL_FreeSurface(contentSurf);
 }
 
 // Recursively render a child slide into a slot area
@@ -582,6 +758,8 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
 
     LayoutKind kind = layoutFromSlide(child);
     auto parts = computeParts(kind, child, metrics, r->style());
+    if (kind == LayoutKind::HeaderImage)
+        centerImageCaptionStack(r, child, fonts, parts, slotH);
 
     for (const auto& p : parts) {
         switch (p.role) {
@@ -589,7 +767,7 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
             case PartRole::Header:     renderPartHeader(r, childSurf, child, p, titleV, slotW); break;
             case PartRole::Body:       renderPartBody(r, childSurf, child, p, fonts, titleV); break;
             case PartRole::Slot:       renderPartSlot(r, childSurf, child, p, fonts, 0, 0); break;
-            case PartRole::Image:      renderPartImage(r, childSurf, child, p, fonts, slotH); break;
+            case PartRole::Image:      renderPartImage(r, childSurf, child, p); break;
             case PartRole::Caption:    renderPartCaption(r, childSurf, child, p, fonts); break;
             case PartRole::Footer:     break;
         }
@@ -605,7 +783,7 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
 
 static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
                           const SlidePart& part, ImageFit fit,
-                          const Font& baseFont, int cornerRadius) {
+                          int cornerRadius, Uint32 bgColor) {
     if (imagePath.empty()) return;
 
     int imgW = 0, imgH = 0, channels = 0;
@@ -640,11 +818,13 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
             dstX = part.rect.x;
             dstY = part.rect.y;
         } else {
-            float scale = std::min(scaleX, scaleY);
-            dstW = static_cast<int>(imgW * scale);
-            dstH = static_cast<int>(imgH * scale);
-            dstX = part.rect.x + (part.rect.w - dstW) / 2;
-            dstY = part.rect.y + (part.rect.h - dstH) / 2;
+            ImageRect placement = fitImageToArea(
+                imgW, imgH,
+                part.rect.x, part.rect.y, part.rect.w, part.rect.h);
+            dstW = placement.w;
+            dstH = placement.h;
+            dstX = placement.x;
+            dstY = placement.y;
 
             srcBuf.w = imgW;
             srcBuf.h = imgH;
@@ -663,7 +843,7 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
             if (imgSurface) {
                 SDL_Rect dstRect = {dstX, dstY, dstW, dstH};
                 SDL_BlitSurface(imgSurface, nullptr, surf, &dstRect);
-                maskImageCorners(surf, dstRect, cornerRadius);
+                maskImageCorners(surf, dstRect, cornerRadius, bgColor);
                 SDL_FreeSurface(imgSurface);
             }
             delete[] resampled.data;
@@ -678,10 +858,10 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
 }
 
 static void renderPartImage(Renderer* r, SDL_Surface* surf,
-                            const Slide& slide, const SlidePart& part,
-                            const FontSet& fonts, int slideH) {
-    const Font& baseFont = fonts.variants().get(FontType::Regular);
-    renderImageAt(surf, slide.imagePath, part, slide.imageFit, baseFont, r->style().cornerRadius);
+                            const Slide& slide, const SlidePart& part) {
+    Uint32 bgColor = r->style().bgColor.toUint32(surf->format);
+    renderImageAt(surf, slide.imagePath, part, slide.imageFit,
+                  r->style().cornerRadius, bgColor);
 }
 
 static void renderPartCaption(Renderer* r, SDL_Surface* surf,
@@ -700,6 +880,60 @@ static void renderPartCaption(Renderer* r, SDL_Surface* surf,
     int contentW = part.rect.w - 2 * s.partPadding;
     r->renderFormattedBlock(text, part.rect.x + s.partPadding, part.rect.y + s.partPadding,
                             baseV, s.textColor.toSDLColor(), contentW);
+}
+
+static std::string captionText(const Slide& slide) {
+    if (!slide.caption.empty()) return slide.caption;
+
+    std::string text;
+    for (const auto& line : slide.texts) {
+        if (!text.empty()) text += " ";
+        text += line;
+    }
+    return text;
+}
+
+static void centerImageCaptionStack(Renderer* r, const Slide& slide,
+                                    const FontSet& fonts,
+                                    std::vector<SlidePart>& parts,
+                                    int availableBottom) {
+    SlidePart* image = nullptr;
+    SlidePart* caption = nullptr;
+    for (auto& part : parts) {
+        if (part.role == PartRole::Image) image = &part;
+        if (part.role == PartRole::Caption) caption = &part;
+    }
+    if (!image || !caption) return;
+
+    const auto& s = r->style();
+    std::string text = captionText(slide);
+    int captionH = 0;
+    if (!text.empty()) {
+        FontVariants baseV = fonts.variants();
+        int contentW = std::max(1, image->rect.w - 2 * s.partPadding);
+        int lineCount = static_cast<int>(r->wordWrap(text, baseV, contentW).size());
+        captionH = lineCount * r->textHeight(baseV.get(FontType::Regular)) + s.partPadding;
+    }
+
+    int sourceW = 0;
+    int sourceH = 0;
+    int channels = 0;
+    if (slide.imagePath.empty() ||
+        !stbi_info(slide.imagePath.c_str(), &sourceW, &sourceH, &channels)) {
+        sourceW = std::max(1, image->rect.w);
+        sourceH = std::max(1, availableBottom - image->rect.y - captionH);
+    }
+
+    Rect available = {
+        image->rect.x,
+        image->rect.y,
+        image->rect.w,
+        std::max(0, availableBottom - image->rect.y)
+    };
+    ImageCaptionStack stack = computeImageCaptionStack(
+        available, sourceW, sourceH, captionH, s.partGap, slide.imageFit);
+    image->rect = stack.image;
+    caption->rect = stack.caption;
 }
 
 static void renderPartFooter(Renderer* r, SDL_Surface* surf,
@@ -785,6 +1019,16 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
         // Select layout and compute parts
         LayoutKind kind = layoutFromSlide(slide);
         auto parts = computeParts(kind, slide, metrics, style);
+        if (kind == LayoutKind::HeaderImage) {
+            int availableBottom = m_height;
+            for (const auto& part : parts) {
+                if (part.role == PartRole::Footer) {
+                    availableBottom = part.rect.y;
+                    break;
+                }
+            }
+            centerImageCaptionStack(this, slide, fonts, parts, availableBottom);
+        }
 
         // Render each part
         for (const auto& part : parts) {
@@ -802,7 +1046,7 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
                     renderPartSlot(this, surf, slide, part, fonts, slideNum, totalSlides);
                     break;
                 case PartRole::Image:
-                    renderPartImage(this, surf, slide, part, fonts, m_height);
+                    renderPartImage(this, surf, slide, part);
                     break;
                 case PartRole::Caption:
                     renderPartCaption(this, surf, slide, part, fonts);

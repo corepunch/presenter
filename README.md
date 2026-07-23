@@ -2,6 +2,8 @@
 
 A lightweight presentation renderer for AI agents. It reads XML slide definitions, lays out text and images, and renders them via SDL2 into two windows: an audience display and a presenter view with notes.
 
+**Generate presentations for sprint demos, daily standups, or project updates** — produce slides directly from git history, issue trackers, or structured data. For details on the XML slide format, see the [skill definition](skills/presentation.md).
+
 ## Use Cases
 
 **AI agents generating presentations** — the primary use case. An agent creates XML slide files from structured data (git history, project status, sprint summaries) and optionally captures screenshots of app states to embed as rich visual content. The result is a polished presentation combining text, images, and before/after comparisons.
@@ -11,6 +13,14 @@ Typical workflow:
 2. Agent captures screenshots of the app: `./build/presenter scene.xml --screenshot=slides/scene.png`
 3. Agent references screenshots in image slides for before/after demos
 4. Presenter renders the final deck to screen or captures to file
+
+### Hypothetical scenarios
+
+**1. Competitor landscape report.** You need to brief your team on 5 rival products in 10 minutes. An agent fetches each competitor's homepage, extracts their pricing, positioning, and key features, scrapes their hero screenshots, and assembles a structured deck — title slide per competitor, side-by-side comparison table, and screenshot-backed talking points. What would take a human 2 hours is a single prompt.
+
+**2. Conference talk from a blog series.** You wrote 4 blog posts about a technical deep-dive and got asked to give a talk on it tomorrow. An agent pulls the articles, rewrites verbose prose into bullet-pointed slides, pulls inline diagrams as standalone images, and produces a presenter-ready deck with speaker notes drawn from the original post intros. No copy-pasting, no slide design.
+
+**3. Product launch recap from social media.** Your team shipped a feature and reactions are flying across Twitter, Reddit, and HN. An agent scrapes the top threads, pulls quote-worthy praise, downloads screenshots of the best reactions, and weaves them into a "launch recap" deck — timeline slide, highlight quotes, sentiment summary, and a closing slide with follow-up actions. Ready for the all-hands meeting in minutes.
 
 ## Features
 

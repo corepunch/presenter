@@ -1,6 +1,46 @@
 #include "layout.h"
 #include <algorithm>
 
+ImageCaptionStack computeImageCaptionStack(const Rect& available,
+                                           int imageW, int imageH,
+                                           int captionH, int gap,
+                                           ImageFit fit) {
+    ImageCaptionStack result;
+    result.caption = {available.x, available.y, available.w, std::max(0, captionH)};
+
+    if (available.w <= 0 || available.h <= 0 || imageW <= 0 || imageH <= 0) {
+        return result;
+    }
+
+    int stackGap = captionH > 0 ? std::max(0, gap) : 0;
+    int maxImageH = std::max(0, available.h - captionH - stackGap);
+    if (maxImageH == 0) {
+        result.caption.y = available.y + std::max(0, (available.h - captionH) / 2);
+        return result;
+    }
+
+    int renderedW = available.w;
+    int renderedH = maxImageH;
+    if (fit == ImageFit::Fit) {
+        float scaleX = static_cast<float>(available.w) / static_cast<float>(imageW);
+        float scaleY = static_cast<float>(maxImageH) / static_cast<float>(imageH);
+        float scale = std::min(scaleX, scaleY);
+        renderedW = std::max(1, std::min(available.w, static_cast<int>(imageW * scale)));
+        renderedH = std::max(1, std::min(maxImageH, static_cast<int>(imageH * scale)));
+    }
+
+    int stackH = renderedH + stackGap + captionH;
+    int stackY = available.y + std::max(0, (available.h - stackH) / 2);
+    result.image = {
+        available.x + (available.w - renderedW) / 2,
+        stackY,
+        renderedW,
+        renderedH
+    };
+    result.caption.y = stackY + renderedH + stackGap;
+    return result;
+}
+
 LayoutKind layoutFromSlide(const Slide& slide) {
     switch (slide.layout) {
         case SlideLayout::Title:   return LayoutKind::Title;

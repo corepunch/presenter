@@ -41,8 +41,19 @@ struct LayoutMetrics {
     float bodyLineH;
 };
 
+struct ImageCaptionStack {
+    Rect image;
+    Rect caption;
+};
+
 LayoutKind layoutFromSlide(const Slide& slide);
 std::vector<SlidePart> computeParts(LayoutKind kind, const Slide& slide,
                                     const LayoutMetrics& metrics,
                                     const PresentationStyle& style);
 
+// Lay out an image and its caption as one vertical stack, centered within
+// the available body rectangle. captionH includes any desired text padding.
+ImageCaptionStack computeImageCaptionStack(const Rect& available,
+                                           int imageW, int imageH,
+                                           int captionH, int gap,
+                                           ImageFit fit);

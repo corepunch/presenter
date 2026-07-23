@@ -3,6 +3,25 @@
 #include <cmath>
 #include <cstring>
 
+ImageRect fitImageToArea(int srcW, int srcH,
+                         int areaX, int areaY, int areaW, int areaH) {
+    if (srcW <= 0 || srcH <= 0 || areaW <= 0 || areaH <= 0)
+        return {};
+
+    float scaleX = static_cast<float>(areaW) / static_cast<float>(srcW);
+    float scaleY = static_cast<float>(areaH) / static_cast<float>(srcH);
+    float scale = std::min(scaleX, scaleY);
+
+    int width = std::max(1, std::min(areaW, static_cast<int>(srcW * scale)));
+    int height = std::max(1, std::min(areaH, static_cast<int>(srcH * scale)));
+    return {
+        areaX + (areaW - width) / 2,
+        areaY + areaH - height,
+        width,
+        height
+    };
+}
+
 // Single bilinear pass: resample src into a freshly-allocated dst of (dstW x dstH).
 static ImageBuf bilinearPass(const ImageBuf& src, int dstW, int dstH) {
     ImageBuf dst;

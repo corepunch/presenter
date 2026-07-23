@@ -61,26 +61,30 @@ struct FontSet {
     std::array<Font, 5> fonts;             // content size
     std::array<Font, 5> titleFonts;        // title size
     std::array<Font, 5> subtitleFonts;     // subtitle size
+    std::array<Font, 5> bulletFonts;       // bullet size
     std::array<Font, 5> smallFonts;        // small size
     std::array<Font, 5> childTitleFonts;   // child slide title size
     Font fallback;
     Font titleFallback;
     Font subtitleFallback;
+    Font bulletFallback;
     Font smallFallback;
     Font childTitleFallback;
 
-    bool load(float contentSize, float titleSize, float subtitleSize, float smallSize, float childTitleSize) {
+    bool load(float contentSize, float titleSize, float subtitleSize,
+              float bulletSize, float smallSize, float childTitleSize) {
         return loadGroup(fonts, fallback, contentSize)
             && loadGroup(titleFonts, titleFallback, titleSize)
             && loadGroup(subtitleFonts, subtitleFallback, subtitleSize)
+            && loadGroup(bulletFonts, bulletFallback, bulletSize)
             && loadGroup(smallFonts, smallFallback, smallSize)
             && loadGroup(childTitleFonts, childTitleFallback, childTitleSize);
     }
 
     bool load(const struct PresentationStyle& style) {
         return load(style.contentFontSize, style.titleFontSize,
-                    style.subtitleFontSize, style.smallFontSize,
-                    style.childTitleFontSize);
+                    style.subtitleFontSize, style.bulletFontSize,
+                    style.smallFontSize, style.childTitleFontSize);
     }
 
     const Font& get(FontType type) const {
@@ -90,6 +94,7 @@ struct FontSet {
     FontVariants variants() const          { return makeVariants(fonts); }
     FontVariants titleVariants() const     { return makeVariants(titleFonts); }
     FontVariants subtitleVariants() const  { return makeVariants(subtitleFonts); }
+    FontVariants bulletVariants() const    { return makeVariants(bulletFonts); }
     FontVariants smallVariants() const     { return makeVariants(smallFonts); }
     FontVariants childTitleVariants() const { return makeVariants(childTitleFonts); }
 

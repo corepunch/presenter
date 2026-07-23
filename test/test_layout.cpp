@@ -142,6 +142,40 @@ static int test_parts_header_image() {
     ASSERT_EQ((int)parts[1].role, (int)PartRole::Image, "Image");
     ASSERT_EQ((int)parts[2].role, (int)PartRole::Caption, "Caption");
     ASSERT_EQ((int)parts[3].role, (int)PartRole::Footer, "Footer");
+    ASSERT_EQ(parts[2].rect.y,
+              parts[1].rect.y + parts[1].rect.h + defStyle.partGap,
+              "caption follows image area by configured gap");
+    return 0;
+}
+
+static int test_image_caption_stack_is_centered() {
+    fprintf(stderr, "test_image_caption_stack_is_centered...\n");
+    Rect available = {100, 200, 400, 500};
+    ImageCaptionStack stack = computeImageCaptionStack(
+        available, 1600, 900, 50, 20, ImageFit::Fit);
+
+    int stackTop = stack.image.y;
+    int stackBottom = stack.caption.y + stack.caption.h;
+    int spaceAbove = stackTop - available.y;
+    int spaceBelow = available.y + available.h - stackBottom;
+    ASSERT(std::abs(spaceAbove - spaceBelow) <= 1, "whole stack vertically centered");
+    ASSERT_EQ(stack.caption.y, stack.image.y + stack.image.h + 20,
+              "caption follows rendered image, not its maximum area");
+    ASSERT_EQ(stack.image.w, available.w, "landscape image uses available width");
+    return 0;
+}
+
+static int test_image_caption_stack_accounts_for_wrapped_caption() {
+    fprintf(stderr, "test_image_caption_stack_accounts_for_wrapped_caption...\n");
+    Rect available = {0, 0, 300, 600};
+    ImageCaptionStack oneLine = computeImageCaptionStack(
+        available, 1200, 800, 40, 16, ImageFit::Fit);
+    ImageCaptionStack twoLines = computeImageCaptionStack(
+        available, 1200, 800, 80, 16, ImageFit::Fit);
+
+    ASSERT(twoLines.image.y < oneLine.image.y,
+           "a taller caption moves the centered stack upward");
+    ASSERT_EQ(twoLines.caption.h, 80, "measured caption height is retained");
     return 0;
 }
 
@@ -153,14 +187,18 @@ int main() {
         test_parts_title(), test_parts_header_body(),
         test_parts_columns_2(), test_parts_columns_3(), test_parts_columns_grid(),
         test_parts_header_image(),
+        test_image_caption_stack_is_centered(),
+        test_image_caption_stack_accounts_for_wrapped_caption(),
     };
     const char* names[] = {
         "title", "section", "content", "image", "columns", "blank",
         "parts_title", "parts_header_body",
         "parts_columns_2", "parts_columns_3", "parts_columns_grid",
         "parts_header_image",
+        "image_caption_stack_centered",
+        "image_caption_stack_wrapped_caption",
     };
-    for (int i = 0; i < 12; ++i) {
+    for (int i = 0; i < 14; ++i) {
         if (results[i]) { ++failures; fprintf(stderr, "FAILED: %s\n", names[i]); }
         else fprintf(stderr, "PASSED: %s\n", names[i]);
     }

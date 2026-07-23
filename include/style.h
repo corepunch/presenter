@@ -35,6 +35,7 @@ struct PresentationStyle {
     float titleFontSize = FONT_TITLE_SIZE;
     float subtitleFontSize = FONT_SUBTITLE_SIZE;
     float contentFontSize = FONT_CONTENT_SIZE;
+    float bulletFontSize = FONT_BULLET_SIZE;
     float smallFontSize = FONT_SMALL_SIZE;
     float childTitleFontSize = FONT_CHILD_TITLE_SIZE;
 
@@ -66,7 +67,8 @@ struct PresentationStyle {
     int columnGap       = COLUMN_GAP;
     int linePadding     = LINE_PADDING;
     int presenterMargin = PRESENTER_MARGIN;
-    int cornerRadius    = 12;
+    int cornerRadius    = CORNER_RADIUS;
+    int bulletGap       = BULLET_GAP;
 
     void applyXmlElement(const void* el);  // tinyxml2::XMLElement*
 

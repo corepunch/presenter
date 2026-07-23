@@ -227,6 +227,24 @@ static int test_asymmetric_scale() {
     return 0;
 }
 
+static int test_fit_placement_uses_shared_bottom_edge() {
+    std::fprintf(stderr, "test_fit_placement_uses_shared_bottom_edge...\n");
+    ImageRect landscape = fitImageToArea(1600, 900, 100, 50, 400, 400);
+    ImageRect portrait = fitImageToArea(900, 1600, 100, 50, 400, 400);
+
+    int landscapeLeft = landscape.x - 100;
+    int landscapeRight = 500 - (landscape.x + landscape.w);
+    int portraitLeft = portrait.x - 100;
+    int portraitRight = 500 - (portrait.x + portrait.w);
+    ASSERT(std::abs(landscapeLeft - landscapeRight) <= 1, "landscape centered horizontally");
+    ASSERT(std::abs(portraitLeft - portraitRight) <= 1, "portrait centered horizontally");
+    ASSERT_EQ(landscape.y + landscape.h, 450, "landscape bottom aligned");
+    ASSERT_EQ(portrait.y + portrait.h, 450, "portrait bottom aligned");
+    ASSERT(landscape.w <= 400 && landscape.h <= 400, "landscape contained");
+    ASSERT(portrait.w <= 400 && portrait.h <= 400, "portrait contained");
+    return 0;
+}
+
 // ---------------------------------------------------------------------------
 
 int main() {
@@ -241,6 +259,7 @@ int main() {
         test_multistep_downscale(),
         test_alpha_preserved(),
         test_asymmetric_scale(),
+        test_fit_placement_uses_shared_bottom_edge(),
     };
     const char* names[] = {
         "invalid_input",
@@ -252,6 +271,7 @@ int main() {
         "multistep_downscale",
         "alpha_preserved",
         "asymmetric_scale",
+        "fit_placement_uses_shared_bottom_edge",
     };
     int n = sizeof(results)/sizeof(results[0]);
     for (int i = 0; i < n; ++i) {
