@@ -3,6 +3,7 @@
 #include "parser.h"
 #include "font.h"
 #include "renderer.h"
+#include "screenshot.h"
 
 #include <SDL2/SDL.h>
 #include <cstdio>
@@ -10,10 +11,53 @@
 #include <string>
 
 static void printUsage(const char* prog) {
-    printf("Usage: %s <presentation.xml> [--style <style.xml>]\n", prog);
+    printf("Usage: %s <presentation.xml> [options]\n", prog);
+    printf("  --style <style.xml>               Override the presentation style\n");
+    printf("  --slide <number>                  Select a 1-based slide for capture\n");
+    printf("  --screenshot <output.png>         Save the audience view and exit\n");
+    printf("  --presenter-screenshot <file.png> Save the presenter view and exit\n");
 }
 
 using ThemeIterator = std::vector<PresentationStyle>::const_iterator;
+
+static bool optionValue(const std::string& arg, const char* name,
+                        std::string* value) {
+    std::string prefix = std::string(name) + "=";
+    if (arg.rfind(prefix, 0) != 0) return false;
+    *value = arg.substr(prefix.size());
+    return true;
+}
+
+static bool saveRenderedView(const Presentation& pres, const FontSet& fonts,
+                             bool presenterView, const std::string& path) {
+    int width = presenterView ? 640 : 1280;
+    int height = presenterView ? 480 : 720;
+    SDL_Surface* target = SDL_CreateRGBSurfaceWithFormat(
+        0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
+    SDL_Renderer* sdlRenderer = target
+        ? SDL_CreateSoftwareRenderer(target) : nullptr;
+    if (!target || !sdlRenderer) {
+        if (sdlRenderer) SDL_DestroyRenderer(sdlRenderer);
+        if (target) SDL_FreeSurface(target);
+        return false;
+    }
+
+    Renderer renderer;
+    bool initialized = renderer.init(sdlRenderer, width, height);
+    SDL_Texture* texture = nullptr;
+    if (initialized) {
+        texture = presenterView
+            ? renderer.renderPresenterView(pres, fonts)
+            : renderer.renderSlide(pres.currentSlide(), fonts, pres.style,
+                                   pres.current + 1, pres.size());
+    }
+    bool saved = initialized && saveSurfacePng(renderer.surface(), path);
+    if (texture) SDL_DestroyTexture(texture);
+    renderer.cleanup();
+    SDL_DestroyRenderer(sdlRenderer);
+    SDL_FreeSurface(target);
+    return saved;
+}
 
 static ThemeIterator switchTheme(Presentation& pres, FontSet& fonts,
                                   ThemeIterator current, int direction) {
@@ -35,10 +79,33 @@ int main(int argc, char* argv[]) {
 
     std::string xmlPath = argv[1];
     std::string stylePath;
+    std::string screenshotPath;
+    std::string presenterScreenshotPath;
+    int selectedSlide = 1;
 
     for (int i = 2; i < argc; i++) {
-        if (std::string(argv[i]) == "--style" && i + 1 < argc) {
+        std::string arg = argv[i];
+        if (arg == "--style" && i + 1 < argc) {
             stylePath = argv[++i];
+        } else if (optionValue(arg, "--style", &stylePath)) {
+        } else if (arg == "--screenshot" && i + 1 < argc) {
+            screenshotPath = argv[++i];
+        } else if (optionValue(arg, "--screenshot", &screenshotPath)) {
+        } else if (arg == "--presenter-screenshot" && i + 1 < argc) {
+            presenterScreenshotPath = argv[++i];
+        } else if (optionValue(arg, "--presenter-screenshot",
+                               &presenterScreenshotPath)) {
+        } else if (arg == "--slide" && i + 1 < argc) {
+            selectedSlide = std::atoi(argv[++i]);
+        } else {
+            std::string slideValue;
+            if (optionValue(arg, "--slide", &slideValue)) {
+                selectedSlide = std::atoi(slideValue.c_str());
+            } else {
+                fprintf(stderr, "Unknown or incomplete option: %s\n", arg.c_str());
+                printUsage(argv[0]);
+                return 1;
+            }
         }
     }
 
@@ -52,6 +119,11 @@ int main(int argc, char* argv[]) {
     if (!stylePath.empty()) {
         pres.style = PresentationStyle::load(stylePath);
     }
+    if (selectedSlide < 1 || selectedSlide > pres.size()) {
+        fprintf(stderr, "Slide must be between 1 and %d\n", pres.size());
+        return 1;
+    }
+    pres.current = selectedSlide - 1;
 
     const auto& themes = PresentationStyle::builtInThemes();
     auto currentTheme = themes.begin();
@@ -61,7 +133,9 @@ int main(int argc, char* argv[]) {
 
     printf("Loaded %d slides from %s\n", pres.size(), xmlPath.c_str());
 
-    if (SDL_Init(SDL_INIT_VIDEO) < 0) {
+    bool captureOnly = !screenshotPath.empty() ||
+                       !presenterScreenshotPath.empty();
+    if (SDL_Init(captureOnly ? 0 : SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
@@ -76,6 +150,26 @@ int main(int argc, char* argv[]) {
            pres.style.titleFontSize, pres.style.subtitleFontSize,
            pres.style.contentFontSize, pres.style.bulletFontSize,
            pres.style.smallFontSize, pres.style.childTitleFontSize);
+
+    if (captureOnly) {
+        bool ok = true;
+        if (!screenshotPath.empty()) {
+            ok = saveRenderedView(pres, fonts, false, screenshotPath) && ok;
+            fprintf(ok ? stdout : stderr, "%s audience screenshot: %s\n",
+                    ok ? "Saved" : "Failed to save", screenshotPath.c_str());
+        }
+        if (!presenterScreenshotPath.empty()) {
+            bool presenterOk = saveRenderedView(
+                pres, fonts, true, presenterScreenshotPath);
+            ok = presenterOk && ok;
+            fprintf(presenterOk ? stdout : stderr,
+                    "%s presenter screenshot: %s\n",
+                    presenterOk ? "Saved" : "Failed to save",
+                    presenterScreenshotPath.c_str());
+        }
+        SDL_Quit();
+        return ok ? 0 : 1;
+    }
 
     // Audience window
     SDL_Window* audienceWindow = SDL_CreateWindow(
@@ -129,9 +223,11 @@ int main(int argc, char* argv[]) {
     bool running = bool(true);
     bool needsRender = true;
     bool audienceFullscreen = false;
+    bool captureAudience = false;
+    bool capturePresenter = false;
 
     printf("Controls: Right/Space/Enter = next, Left/Backspace = prev, Home/End = first/last, F5 = fullscreen toggle, Escape = quit\n");
-    printf("          Shift+Left/Right = switch theme\n");
+    printf("          Shift+Left/Right = switch theme, S = save slide, Shift+S = save presenter view\n");
     printf("Theme: %s (%d/%zu)\n", pres.style.name.c_str(),
            static_cast<int>(currentTheme - themes.begin()) + 1, themes.size());
 
@@ -198,6 +294,14 @@ int main(int argc, char* argv[]) {
                     }
                     needsRender = true;
                     break;
+                case SDLK_s:
+                    if (event.key.keysym.mod & KMOD_SHIFT) {
+                        capturePresenter = true;
+                    } else {
+                        captureAudience = true;
+                    }
+                    needsRender = true;
+                    break;
                 case SDLK_ESCAPE:
                     running = false;
                     break;
@@ -239,6 +343,25 @@ int main(int argc, char* argv[]) {
                 SDL_DestroyTexture(presenterTex);
             }
             SDL_RenderPresent(presenterRenderer);
+
+            if (captureAudience) {
+                char path[64];
+                snprintf(path, sizeof(path), "presenter-slide-%02d.png",
+                         pres.current + 1);
+                bool saved = saveSurfacePng(audienceRend.surface(), path);
+                fprintf(saved ? stdout : stderr, "%s screenshot: %s\n",
+                        saved ? "Saved" : "Failed to save", path);
+                captureAudience = false;
+            }
+            if (capturePresenter) {
+                char path[64];
+                snprintf(path, sizeof(path), "presenter-notes-%02d.png",
+                         pres.current + 1);
+                bool saved = saveSurfacePng(presenterRend.surface(), path);
+                fprintf(saved ? stdout : stderr, "%s screenshot: %s\n",
+                        saved ? "Saved" : "Failed to save", path);
+                capturePresenter = false;
+            }
 
             needsRender = false;
         }

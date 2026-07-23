@@ -17,6 +17,7 @@ add_executable(presenter
     src/image.cpp
     src/highlight.cpp
     src/ui.cpp
+    src/screenshot.cpp
 )
 
 target_include_directories(presenter PRIVATE
@@ -112,6 +113,22 @@ target_include_directories(test_highlight PRIVATE
 )
 
 set_target_properties(test_highlight PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+add_executable(test_screenshot
+    test/test_screenshot.cpp
+    src/screenshot.cpp
+)
+
+target_include_directories(test_screenshot PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${SDL2_INCLUDE_DIRS}
+)
+
+target_link_libraries(test_screenshot PRIVATE SDL2::SDL2)
+
+set_target_properties(test_screenshot PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 

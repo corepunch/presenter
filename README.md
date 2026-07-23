@@ -2,11 +2,32 @@
 
 A lightweight presentation renderer built for AI-generated decks and live screen sharing. Ask an AI agent to turn your source material into an XML presentation—including presenter notes for every slide that explain exactly what to say—then launch Presenter and get two separate windows: a clean **Presentation** canvas for the audience and a private **Presenter View** with your script.
 
+![A presenter delivering a syntax-highlighted technical talk to an impressed audience using Presenter](docs/images/presenter-live-infographic.png)
+
 Presenter works especially well with Microsoft Teams, Zoom, Google Meet, and other screen-sharing software. Choose **share this window** and select only the **Presentation** canvas. Your audience sees the slides while you read what to say for each slide from the AI-generated notes in **Presenter View**, navigate the deck, and deliver a polished presentation with little to no preparation.
 
 **Let the AI agent make the entire presentation.** Give it git history, issue-tracker data, project notes, reports, articles, or any other source material. Tell the agent to use the provided [presentation skill](skills/presentation.md), which covers research synthesis, narrative structure, visual choices, presenter notes, and the exact XML format. The agent creates the slides, chooses layouts and images, and writes presenter notes containing the talking points, explanations, transitions, and wording you should read or say during each slide. You review the result, share the canvas, and present.
 
 ![Presenter workflow: generate slides and presenter notes with AI, then share only the Presentation window while keeping Presenter View private](docs/images/presenter-ai-workflow.png)
+
+### The audience view and your private script
+
+<table>
+  <tr>
+    <td width="67%">
+      <img src="docs/images/presenter-code-slide.png" alt="Audience presentation window showing a syntax-highlighted C++ slide"/>
+    </td>
+    <td width="33%">
+      <img src="docs/images/presenter-notes-view.png" alt="Private presenter window showing slide notes and the next slide"/>
+    </td>
+  </tr>
+  <tr>
+    <td><b>Audience window</b> — clean, focused slides ready to share.</td>
+    <td><b>Presenter View</b> — notes and the next slide stay private.</td>
+  </tr>
+</table>
+
+![Presenter rendering multiple syntax-highlighted languages in one slide](docs/images/presenter-multilang-slide.png)
 
 ## Best with screen sharing
 
@@ -101,6 +122,8 @@ Override the theme at runtime:
 | Home | First slide |
 | End | Last slide |
 | F5 | Toggle audience fullscreen |
+| S | Save the audience view as PNG |
+| Shift+S | Save the presenter view as PNG |
 | Escape | Quit |
 
 ## Screenshots
@@ -108,10 +131,20 @@ Override the theme at runtime:
 Capture a slide to an image file:
 
 ```bash
-./build/presenter demo/demo.xml --screenshot=output/slide.png
+./build/presenter demo/demo.xml --slide 7 --screenshot output/slide.png
 ```
 
-This renders the current slide to a PNG and exits. Useful for:
+Capture the matching private presenter view, or both views in one run:
+
+```bash
+./build/presenter demo/demo.xml --slide 7 \
+  --screenshot output/slide.png \
+  --presenter-screenshot output/notes.png
+```
+
+These commands render headlessly to PNG and exit. Parent directories are created automatically. During a live presentation, press `S` to save the audience window as `presenter-slide-NN.png`, or `Shift+S` to save `presenter-notes-NN.png`.
+
+Useful for:
 - **Before/after demos** — capture app states and embed in image slides
 - **Documentation** — generate slide images for READMEs or wikis
 - **CI pipelines** — render presentations as part of automated reports
@@ -123,7 +156,7 @@ Example workflow for a sprint demo:
 agent generate-sprint-demo --output=scenes/sprint23.xml
 
 # 2. Capture key screenshots
-./build/presenter scenes/sprint23.xml --screenshot=slides/sprint23_title.png
+./build/presenter scenes/sprint23.xml --slide 1 --screenshot slides/sprint23_title.png
 
 # 3. Present live
 ./build/presenter scenes/sprint23.xml
