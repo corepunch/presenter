@@ -12,6 +12,7 @@ add_executable(presenter
     src/font.cpp
     src/renderer.cpp
     src/layout.cpp
+    src/image.cpp
 )
 
 target_include_directories(presenter PRIVATE
@@ -30,6 +31,7 @@ add_executable(test_textbounds
     src/font.cpp
     src/renderer.cpp
     src/layout.cpp
+    src/image.cpp
 )
 
 target_include_directories(test_textbounds PRIVATE
@@ -54,6 +56,20 @@ target_include_directories(test_layout PRIVATE
 )
 
 set_target_properties(test_layout PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+add_executable(test_image
+    test/test_image.cpp
+    src/image.cpp
+)
+
+target_include_directories(test_image PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/third_party
+)
+
+set_target_properties(test_image PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
