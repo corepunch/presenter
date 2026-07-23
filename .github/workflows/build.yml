@@ -1,0 +1,84 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libsdl2-dev libtinyxml2-dev xvfb
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: brew install sdl2 tinyxml2
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git clone --depth 1 https://github.com/Microsoft/vcpkg.git "${{ github.workspace }}\vcpkg"
+          . "${{ github.workspace }}\vcpkg\bootstrap-vcpkg.bat"
+          "${{ github.workspace }}\vcpkg\vcpkg" install sdl2 tinyxml2 --triplet x64-windows
+          echo "VCPKG_ROOT=${{ github.workspace }}\vcpkg" >> $env:GITHUB_ENV
+
+      - name: Configure CMake
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmake -B build -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"
+          else
+            cmake -B build
+          fi
+
+      - name: Build
+        shell: bash
+        run: |
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmake --build build --config Release
+          else
+            cmake --build build
+          fi
+
+      - name: Test (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          xvfb-run ./build/test_textbounds
+          ./build/test_layout
+          ./build/test_xml_parser
+          ./build/test_image
+          ./build/test_highlight
+
+      - name: Test (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          ./build/test_textbounds
+          ./build/test_layout
+          ./build/test_xml_parser
+          ./build/test_image
+          ./build/test_highlight
+
+      - name: Test (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          ./build/Release/test_textbounds.exe
+          ./build/Release/test_layout.exe
+          ./build/Release/test_xml_parser.exe
+          ./build/Release/test_image.exe
+          ./build/Release/test_highlight.exe
