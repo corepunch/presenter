@@ -20,8 +20,8 @@ Typical workflow:
 - **Inline formatting**: `<b>bold</b>`, `<i>italic</i>`, `<code>code</code>` in text blocks
 - **Image support**: PNG, JPG, JPEG, GIF, BMP with fit/fill scaling
 - **Screenshot capture**: render slides to image files for embedding in other docs
-- **Themeable**: XML style files for colors, fonts, and spacing
-- **Keyboard controls**: arrow keys, space/enter to navigate, F5 fullscreen, Escape to quit
+- **Themeable**: XML style files for colors, fonts, and spacing; 8 built-in themes switchable at runtime
+- **Keyboard controls**: arrow keys to navigate, Shift+Arrows to switch themes, F5 fullscreen, Escape to quit
 
 ## Prerequisites
 
@@ -67,6 +67,8 @@ Override the theme at runtime:
 |-----|--------|
 | Right / Space / Enter | Next slide |
 | Left / Backspace | Previous slide |
+| Shift+Right | Next built-in theme |
+| Shift+Left | Previous built-in theme |
 | Home | First slide |
 | End | Last slide |
 | F5 | Toggle audience fullscreen |
@@ -161,7 +163,20 @@ Recommended workflow:
 
 ## Theming
 
-Style files use the format defined in [schemas/style.dtd](https://corepunch.github.io/presenter/schemas/style.dtd):
+8 built-in themes ship with the presenter, switchable at runtime with `Shift+Left` / `Shift+Right`:
+
+| # | Theme | Style |
+|---|-------|-------|
+| 1 | Dracula | Dark (default) |
+| 2 | Monokai | Dark |
+| 3 | Solarized Dark | Dark |
+| 4 | GitHub Light | Light |
+| 5 | Solarized Light | Light |
+| 6 | Nord | Neutral |
+| 7 | Sunset | Warm |
+| 8 | Arc | Cool |
+
+Custom styles use the format defined in [schemas/style.dtd](https://corepunch.github.io/presenter/schemas/style.dtd):
 
 ```xml
 <style>
