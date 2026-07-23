@@ -27,8 +27,6 @@ Presenter works especially well with Microsoft Teams, Zoom, Google Meet, and oth
   </tr>
 </table>
 
-![Presenter rendering multiple syntax-highlighted languages in one slide](docs/images/presenter-multilang-slide.png)
-
 ## Best with screen sharing
 
 Presenter is designed around window sharing rather than sharing your entire desktop:
