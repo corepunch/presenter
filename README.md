@@ -1,18 +1,34 @@
 # Presenter
 
-A lightweight presentation renderer for AI agents. It reads XML slide definitions, lays out text and images, and renders them via SDL2 into two windows: an audience display and a presenter view with notes.
+A lightweight presentation renderer built for AI-generated decks and live screen sharing. Ask an AI agent to turn your source material into an XML presentation—including presenter notes for every slide that explain exactly what to say—then launch Presenter and get two separate windows: a clean **Presentation** canvas for the audience and a private **Presenter View** with your script.
 
-**Generate presentations for sprint demos, daily standups, or project updates** — produce slides directly from git history, issue trackers, or structured data. For details on the XML slide format, see the [skill definition](skills/presentation.md).
+Presenter works especially well with Microsoft Teams, Zoom, Google Meet, and other screen-sharing software. Choose **share this window** and select only the **Presentation** canvas. Your audience sees the slides while you read what to say for each slide from the AI-generated notes in **Presenter View**, navigate the deck, and deliver a polished presentation with little to no preparation.
+
+**Let the AI agent make the entire presentation.** Give it git history, issue-tracker data, project notes, reports, articles, or any other source material. The agent creates the slides, chooses layouts and images, and writes presenter notes containing the talking points, explanations, transitions, and wording you should read or say during each slide. You review the result, share the canvas, and present. For details on the XML slide format, see the [skill definition](skills/presentation.md).
+
+![Presenter workflow: generate slides and presenter notes with AI, then share only the Presentation window while keeping Presenter View private](docs/images/presenter-ai-workflow.png)
+
+## Best with screen sharing
+
+Presenter is designed around window sharing rather than sharing your entire desktop:
+
+1. Ask an AI agent to generate the XML deck and a ready-to-read script in the presenter notes for every slide.
+2. Launch it with `./build/presenter your-deck.xml`.
+3. In Teams or another meeting app, choose **Share → Window** and select **Presentation**.
+4. Keep **Presenter View** visible only to yourself and read or adapt its slide-by-slide script as you speak.
+
+This keeps controls, notes, and other desktop activity private. Because the agent can prepare both the visual deck and the narration, Presenter is ideal for sprint demos, daily standups, project updates, briefings, and last-minute talks where there is little time to build slides or rehearse.
 
 ## Use Cases
 
-**AI agents generating presentations** — the primary use case. An agent creates XML slide files from structured data (git history, project status, sprint summaries) and optionally captures screenshots of app states to embed as rich visual content. The result is a polished presentation combining text, images, and before/after comparisons.
+**AI agents generating ready-to-deliver presentations** — the primary use case. An agent creates XML slide files from structured data such as git history, project status, or sprint summaries, writes what the presenter should say in the notes for every slide, and optionally captures screenshots of app states as rich visual content. The result is a polished presentation combining text, images, before/after comparisons, and a private slide-by-slide script you can read while presenting.
 
 Typical workflow:
-1. Agent writes `scene.xml` with slides, images, and notes
-2. Agent captures screenshots of the app: `./build/presenter scene.xml --screenshot=slides/scene.png`
-3. Agent references screenshots in image slides for before/after demos
-4. Presenter renders the final deck to screen or captures to file
+
+1. Give the agent your source material and ask it to create the presentation.
+2. The agent writes `scene.xml` with slides, images, and presenter notes containing what you should say during each slide.
+3. Launch Presenter and share only the **Presentation** window in your meeting.
+4. Read from **Presenter View** and deliver the talk.
 
 ### Hypothetical scenarios
 
@@ -157,7 +173,7 @@ Recommended workflow:
 1. Write the XML slide file following the format spec
 2. Capture screenshots with `--screenshot` flag
 3. Reference screenshots in `<image>` elements with relative paths
-4. Include `<notes>` for presenter context (talking points, metrics, transitions)
+4. Include `<notes>` on every slide with a ready-to-read script: what to say, key facts to mention, and the transition to the next slide
 5. Present live or render to images
 
 ## Layouts
