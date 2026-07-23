@@ -26,6 +26,11 @@ enum class ImageFit {
     Fill   // scale = max(sx, sy), center-crop
 };
 
+struct CodeBlock {
+    std::string code;
+    std::string lang;
+};
+
 struct Slide {
     SlideLayout layout = SlideLayout::Content;
     std::string slot;       // "left", "right", "0", "1", ... (for Columns parent)
@@ -40,6 +45,7 @@ struct Slide {
     int cols = 2;             // column count for layout="columns"
     int gap = 24;             // gap between slots (pixels)
 
+    std::vector<CodeBlock> codeBlocks;
     std::vector<Slide> children;  // recursively nested slides
 };
 

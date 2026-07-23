@@ -11,6 +11,7 @@
   - No special "before-after" type – it's just columns with two child slides
   - Slide heading is a title="" attribute on <slide>
   - Inline formatting in text: <b>bold</b>, <i>italic</i>, <code>code</code>
+  - Standalone <code lang="..."> element for syntax-highlighted code blocks
 
   Comparison to PPTX/OOXML:
   - PPTX uses <p:spTree> with explicitly positioned <p:sp> shapes
@@ -170,7 +171,7 @@
 
 <!-- ===== Slide ===== -->
 
-<!ELEMENT slide (notes?, subtitle?, (text | image | slide)*)>
+<!ELEMENT slide (notes?, subtitle?, (text | image | code | slide)*)>
 <!ATTLIST slide
     layout (title | section | content | columns | image | blank) #IMPLIED
     title  CDATA                        #IMPLIED
@@ -224,6 +225,14 @@
 <!--
   @src  Path to image file, relative to the XML file's directory.
   @alt  Accessible description.
+-->
+
+<!ELEMENT code (#PCDATA)>
+<!ATTLIST code
+    lang CDATA   #IMPLIED>
+<!--
+  @lang  Language identifier for syntax highlighting (e.g. "cpp", "python").
+         When omitted, code is rendered without syntax coloring.
 -->
 
 <!-- ===== Metadata ===== -->

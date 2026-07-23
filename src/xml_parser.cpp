@@ -34,6 +34,32 @@ static const SlideAttr SLIDE_ATTRS[] = {
 
 // ---
 
+// Recursively serialize formatted text content: preserves inline tags as
+// XML markers, but outputs decoded text so &lt; &gt; inside <code> render correctly.
+static std::string serializeFormatted(tinyxml2::XMLNode* node) {
+    std::string out;
+    for (tinyxml2::XMLNode* child = node->FirstChild(); child; child = child->NextSibling()) {
+        if (auto* txt = child->ToText()) {
+            out += txt->Value();
+        } else if (auto* el = child->ToElement()) {
+            std::string name = el->Name();
+            if (name == "b" || name == "i") {
+                out += "<" + name + ">";
+                out += serializeFormatted(el);
+                out += "</" + name + ">";
+            } else if (name == "code") {
+                const char* lang = el->Attribute("lang");
+                out += "<code";
+                if (lang) out += " lang=\"" + std::string(lang) + "\"";
+                out += ">";
+                out += serializeFormatted(el);
+                out += "</code>";
+            }
+        }
+    }
+    return out;
+}
+
 static Slide parseSlideElement(tinyxml2::XMLElement* el, const std::filesystem::path& baseDir);
 
 Presentation parseXml(const std::string& filePath) {
@@ -94,18 +120,19 @@ static Slide parseSlideElement(tinyxml2::XMLElement* el, const std::filesystem::
         if (name == "notes")      { slide.notes = val; }
         else if (name == "subtitle") { slide.subtitle = val; }
         else if (name == "text")  {
-            tinyxml2::XMLPrinter printer(nullptr, true);
-            for (tinyxml2::XMLNode* child = c->FirstChild(); child; child = child->NextSibling()) {
-                child->Accept(&printer);
-            }
-            const char* formatted = printer.CStr();
-            slide.texts.push_back(formatted ? formatted : "");
+            slide.texts.push_back(serializeFormatted(c));
         }
         else if (name == "image") {
             const char* src = c->Attribute("src");
             const char* alt = c->Attribute("alt");
             if (src) slide.imagePath = (baseDir / src).lexically_normal().string();
             if (alt) slide.imageAlt = alt;
+        }
+        else if (name == "code") {
+            const char* langAttr = c->Attribute("lang");
+            std::string lang = langAttr ? langAttr : "";
+            const char* codeText = c->GetText();
+            slide.codeBlocks.push_back({codeText ? codeText : "", lang});
         }
         else if (name == "slide") {
             slide.children.push_back(parseSlideElement(c, baseDir));

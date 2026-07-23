@@ -1,0 +1,29 @@
+[config]
+line_comment=//
+block_comment_start=/*
+block_comment_end=*/
+
+[keywords]
+if else for while do switch case break continue return
+class interface enum extends implements
+public private protected
+static final abstract synchronized volatile transient native
+new this super instanceof
+try catch finally throw throws
+import package
+true false null
+assert strictfp
+
+[types]
+int long short byte char float double boolean void
+String Object Integer Long Double Boolean
+List Map Set Collection ArrayList HashMap
+Optional Stream
+
+[builtins]
+System out println print printf
+String valueOf format join
+Math abs max min sqrt pow random
+Objects requireNonNull equals
+Arrays asList copyOf sort stream
+Collections emptyList singletonList

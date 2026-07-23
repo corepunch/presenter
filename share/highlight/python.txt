@@ -1,0 +1,26 @@
+[config]
+line_comment=#
+block_comment_start="""
+block_comment_end="""
+
+[keywords]
+if elif else for while break continue return pass
+def class lambda
+import from as
+try except finally raise assert
+with yield global nonlocal
+and or not is in
+True False None
+async await
+
+[types]
+int float str bool bytes list tuple dict set
+frozenset complex range slice type object
+
+[builtins]
+print len range enumerate zip map filter sorted
+open input isinstance hasattr getattr setattr
+super isinstance issubclass
+abs all any bin chr dir divmod eval exec
+format hex id iter max min next oct ord pow
+repr reversed round sum vars

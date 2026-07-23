@@ -1,0 +1,28 @@
+[config]
+line_comment=//
+block_comment_start=/*
+block_comment_end=*/
+
+[keywords]
+if else for while do switch case break continue return goto
+class struct enum union namespace template typename using
+static const volatile mutable explicit virtual override final
+public private protected friend
+new delete this sizeof alignof noexcept decltype constexpr
+throw try catch operator
+auto register extern typedef
+static_cast dynamic_cast const_cast reinterpret_cast
+thread_local consteval constinit
+
+[types]
+int long short char float double bool void wchar_t
+int8_t int16_t int32_t int64_t
+uint8_t uint16_t uint32_t uint64_t
+size_t ssize_t ptrdiff_t nullptr_t
+string
+
+[builtins]
+std cout cin endl cerr vector map set string
+printf scanf malloc free memcpy memset strlen
+make_shared make_unique shared_ptr unique_ptr
+move forward begin end emplace_back push_back

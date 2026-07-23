@@ -6,6 +6,7 @@
 #include "renderer.h"
 #include "layout.h"
 #include "image.h"
+#include "highlight.h"
 #include <algorithm>
 #include <cstring>
 
@@ -71,11 +72,11 @@ static const Font& pickFont(const FontVariants& fonts, const TextFormat& fmt) {
 // Find the nearest XML formatting tag at or after pos.
 // Returns marker position (or npos); *outLen = tag length, *outKind = 1=bold 2=italic 3=code, *outOpen = opening or closing tag.
 static size_t findMarker(const std::string& text, size_t pos, size_t* outLen, int* outKind, bool* outOpen) {
-    struct Tag { const char* open; const char* close; int kind; };
+    struct Tag { const char* open; const char* close; int kind; bool attribs; };
     static const Tag tags[] = {
-        {"<b>", "</b>", 1},
-        {"<i>", "</i>", 2},
-        {"<code>", "</code>", 3},
+        {"<b>",    "</b>",    1, false},
+        {"<i>",    "</i>",    2, false},
+        {"<code",  "</code>", 3, true},   // <code> or <code lang="...">
     };
 
     size_t best = std::string::npos;
@@ -85,9 +86,20 @@ static size_t findMarker(const std::string& text, size_t pos, size_t* outLen, in
 
     for (const auto& t : tags) {
         size_t po = text.find(t.open, pos);
-        if (po != std::string::npos && (best == std::string::npos || po < best)) {
-            best = po; *outLen = strlen(t.open); *outKind = t.kind; *outOpen = true;
+        if (po != std::string::npos) {
+            size_t tagLen;
+            if (t.attribs) {
+                size_t gt = text.find('>', po);
+                if (gt == std::string::npos) goto tryClose;
+                tagLen = gt - po + 1;
+            } else {
+                tagLen = strlen(t.open);
+            }
+            if (po < best || best == std::string::npos) {
+                best = po; *outLen = tagLen; *outKind = t.kind; *outOpen = true;
+            }
         }
+        tryClose:
         size_t pc = text.find(t.close, pos);
         if (pc != std::string::npos && (best == std::string::npos || pc < best)) {
             best = pc; *outLen = strlen(t.close); *outKind = t.kind; *outOpen = false;
@@ -155,8 +167,55 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
             curX += font.measureString(segment);
         }
 
-        applyFormat(fmt, kind, open);
-        pos = marker + markerLen;
+        if (kind == 3 && open) {
+            std::string tag = text.substr(marker, markerLen);
+            std::string lang;
+            auto lp = tag.find("lang=\"");
+            if (lp != std::string::npos) {
+                lp += 6;
+                auto le = tag.find('"', lp);
+                if (le != std::string::npos) lang = tag.substr(lp, le - lp);
+            }
+            pos = marker + markerLen;
+
+            size_t closeLen = 0; int ck = 0; bool co = false;
+            size_t closeMarker = findMarker(text, pos, &closeLen, &ck, &co);
+            if (closeMarker != std::string::npos && ck == 3 && !co) {
+                std::string codeText = text.substr(pos, closeMarker - pos);
+                if (!lang.empty()) {
+                    LanguageSpec spec = loadLanguage(lang);
+                    auto tokens = tokenize(codeText, spec);
+                    const Font& monoFont = fonts.get(FontType::Monospace);
+                    for (const auto& tok : tokens) {
+                        std::string seg = codeText.substr(tok.start, tok.len);
+                        SDL_Color tc;
+                        switch (tok.type) {
+                            case HighlightType::Keyword:     tc = toSdl(m_style->codeKeyword);     break;
+                            case HighlightType::Type:        tc = toSdl(m_style->codeType);        break;
+                            case HighlightType::String:      tc = toSdl(m_style->codeString);      break;
+                            case HighlightType::Comment:     tc = toSdl(m_style->codeComment);     break;
+                            case HighlightType::Number:      tc = toSdl(m_style->codeNumber);      break;
+                            case HighlightType::Builtin:     tc = toSdl(m_style->codeBuiltin);     break;
+                            case HighlightType::Punctuation: tc = toSdl(m_style->codePunctuation); break;
+                            default:                         tc = toSdl(m_style->codeText);        break;
+                        }
+                        drawText(seg, curX, y, monoFont, tc);
+                        curX += monoFont.measureString(seg);
+                    }
+                } else {
+                    const Font& monoFont = fonts.get(FontType::Monospace);
+                    drawText(codeText, curX, y, monoFont, codeColor);
+                    curX += monoFont.measureString(codeText);
+                }
+                pos = closeMarker + closeLen;
+            } else {
+                // No closing tag found — just toggle code mode
+                applyFormat(fmt, kind, open);
+            }
+        } else {
+            applyFormat(fmt, kind, open);
+            pos = marker + markerLen;
+        }
     }
 }
 
@@ -281,6 +340,83 @@ void Renderer::renderFormattedBlock(const std::string& text, int x, int y,
     }
 }
 
+static void renderCodeBlock(Renderer* r, SDL_Surface* surf,
+                            const CodeBlock& cb, const Font& monoFont,
+                            int x, int y, int maxWidth, int) {
+    const auto& s = r->style();
+    if (cb.code.empty()) return;
+
+    struct LineRange { size_t start; size_t end; };
+    std::vector<LineRange> lines;
+    {
+        size_t start = 0;
+        while (start < cb.code.size()) {
+            size_t nl = cb.code.find('\n', start);
+            size_t end = (nl == std::string::npos) ? cb.code.size() : nl;
+            lines.push_back({start, end});
+            if (nl == std::string::npos) break;
+            start = nl + 1;
+        }
+        if (lines.empty()) lines.push_back({0, 0});
+    }
+
+    int lineH = static_cast<int>(monoFont.getAscent() - monoFont.getDescent()) + s.linePadding;
+    int pad = std::max(8, s.partPadding / 2);
+    int blockW = maxWidth;
+    int blockH = static_cast<int>(lines.size()) * lineH + 2 * pad;
+
+    Uint32 bg = SDL_MapRGBA(surf->format, s.codeBg.r, s.codeBg.g, s.codeBg.b, s.codeBg.a);
+    SDL_Rect bgRect = {x, y, blockW, blockH};
+    SDL_FillRect(surf, &bgRect, bg);
+
+    Uint32 brd = SDL_MapRGBA(surf->format, s.codeBorder.r, s.codeBorder.g, s.codeBorder.b, s.codeBorder.a);
+    r->drawRectOutline(&bgRect, brd);
+
+    LanguageSpec spec;
+    if (!cb.lang.empty()) spec = loadLanguage(cb.lang);
+    auto tokens = tokenize(cb.code, spec);
+
+    float ascent = monoFont.getAscent();
+    float curX0 = static_cast<float>(x + pad);
+    int curY = y + pad + static_cast<int>(ascent);
+
+    size_t tokIdx = 0;
+    for (const auto& line : lines) {
+        float curX = curX0;
+
+        while (tokIdx < tokens.size() && tokens[tokIdx].start < line.end) {
+            const auto& tok = tokens[tokIdx];
+            size_t tokEnd = tok.start + tok.len;
+            if (tokEnd <= line.start) { tokIdx++; continue; }
+
+            size_t segStart = std::max(tok.start, line.start);
+            size_t segEnd = std::min(tokEnd, line.end);
+
+            std::string text = cb.code.substr(segStart, segEnd - segStart);
+
+            SDL_Color clr;
+            switch (tok.type) {
+                case HighlightType::Keyword:     clr = toSdl(s.codeKeyword);     break;
+                case HighlightType::Type:        clr = toSdl(s.codeType);        break;
+                case HighlightType::String:      clr = toSdl(s.codeString);      break;
+                case HighlightType::Comment:     clr = toSdl(s.codeComment);     break;
+                case HighlightType::Number:      clr = toSdl(s.codeNumber);      break;
+                case HighlightType::Builtin:     clr = toSdl(s.codeBuiltin);     break;
+                case HighlightType::Punctuation: clr = toSdl(s.codePunctuation); break;
+                default:                         clr = toSdl(s.codeText);        break;
+            }
+
+            r->drawText(text, curX, static_cast<float>(curY), monoFont, clr);
+            curX += monoFont.measureString(text);
+
+            if (tokEnd <= line.end) tokIdx++;
+            else break;
+        }
+
+        curY += lineH;
+    }
+}
+
 // ---- slide rendering: part-based layout ----
 
 // Forward declarations (used by recursive renderPartSlot)
@@ -327,6 +463,20 @@ static void renderPartBody(Renderer* r, SDL_Surface* surf,
             r->renderFormattedBlock(line, part.rect.x + s.partPadding, y, baseV, toSdl(s.textColor), contentW);
             y += r->textHeight(baseV.get(FontType::Regular));
         }
+    }
+
+    const Font& monoFont = fonts.get(FontType::Monospace);
+    for (const auto& cb : slide.codeBlocks) {
+        size_t lines = 1;
+        for (char ch : cb.code) if (ch == '\n') lines++;
+        int lineH = static_cast<int>(monoFont.getAscent() - monoFont.getDescent()) + s.linePadding;
+        int pad = std::max(8, s.partPadding / 2);
+        int blockH = static_cast<int>(lines) * lineH + 2 * pad;
+
+        renderCodeBlock(r, surf, cb, monoFont,
+                        part.rect.x + s.partPadding, y,
+                        contentW, blockH);
+        y += blockH + s.partGap;
     }
 }
 

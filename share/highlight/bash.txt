@@ -1,0 +1,19 @@
+[config]
+line_comment=#
+
+[keywords]
+if then elif else fi
+for while do done
+case in esac
+function
+return break continue
+declare local export readonly
+source
+
+[types]
+
+[builtins]
+echo printf cat ls cd pwd mkdir rm cp mv
+grep sed awk find sort uniq wc head tail
+chmod chown export source
+test

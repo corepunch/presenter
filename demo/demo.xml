@@ -48,4 +48,87 @@
       <text>Matterhorn alpenglow</text>
     </slide>
   </slide>
+
+  <slide layout="section" title="Code Examples"/>
+
+  <slide layout="content" title="C++ — Syntax Highlighting">
+    <notes>Presenter now supports syntax-highlighted code blocks with lang= attribute. The monospace font and color palette make code readable on slides.</notes>
+    <code lang="cpp">#include &lt;iostream&gt;
+#include &lt;vector&gt;
+#include &lt;string&gt;
+
+int main(int argc, char** argv) {
+    std::vector&lt;std::string&gt; args(argv, argv + argc);
+
+    // Print each argument with its index
+    for (size_t i = 0; i &lt; args.size(); i++) {
+        std::cout &lt;&lt; "arg[" &lt;&lt; i &lt;&lt; "] = "
+                  &lt;&lt; args[i] &lt;&lt; "\n";
+    }
+    return 0;
+}</code>
+  </slide>
+
+  <slide layout="content" title="Python — Multiline Block">
+    <notes>Code blocks scale automatically: more lines = smaller rendering, fewer lines = larger.</notes>
+    <code lang="python">def process_images(paths, size=(800, 600)):
+    """Resize and convert a batch of images.
+    
+    Uses bilinear interpolation for high-quality
+    downscaling in multiple steps.
+    """
+    results = []
+    for p in paths:
+        img = load_image(p)
+        if img is None:
+            continue
+        img = resize(img, size)
+        results.append(img)
+    return results</code>
+  </slide>
+
+  <slide layout="content" title="Inline Code">
+    <notes>Inline code uses monospace font and different color. Single-line expressions stay inline.</notes>
+    <text>Use <code lang="cpp">std::vector&lt;int&gt;</code> for dynamic arrays in C++</text>
+    <text>Python's <code lang="python">list.append()</code> is amortized O(1)</text>
+    <text>Rust uses <code lang="rust">let mut</code> for mutable bindings</text>
+    <text>Bash scripting: <code lang="bash">grep -r "TODO" src/</code></text>
+  </slide>
+
+  <slide layout="content" title="Multiple Languages">
+    <notes>Four different languages on one slide. The lang= attribute controls which keyword set is loaded.</notes>
+    <code lang="javascript">function fibonacci(n) {
+    if (n &lt;= 1) return n;
+    let a = 0, b = 1;
+    for (let i = 2; i &lt;= n; i++) {
+        [a, b] = [b, a + b];
+    }
+    return b;
+}</code>
+    <code lang="rust">fn factorial(n: u64) -&gt; u64 {
+    match n {
+        0 | 1 =&gt; 1,
+        _ =&gt; n * factorial(n - 1),
+    }
+}</code>
+  </slide>
+
+  <slide layout="content" title="JSON &amp; XML">
+    <code lang="json">{
+    "name": "Presenter",
+    "version": "1.0",
+    "features": ["layout", "images",
+                 "code highlighting"],
+    "dependencies": {
+        "sdl2": ">= 2.0",
+        "tinyxml2": ">= 8.0"
+    }
+}</code>
+    <code lang="xml">&lt;slide layout="content" title="Example"&gt;
+    &lt;notes&gt;Demo notes&lt;/notes&gt;
+    &lt;text&gt;A bullet point&lt;/text&gt;
+    &lt;code lang="cpp"&gt;int x = 42;&lt;/code&gt;
+&lt;/slide&gt;</code>
+  </slide>
+
 </presentation>

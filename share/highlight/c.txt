@@ -1,0 +1,24 @@
+[config]
+line_comment=//
+block_comment_start=/*
+block_comment_end=*/
+
+[keywords]
+if else for while do switch case break continue return goto
+struct union enum typedef
+static const volatile extern register auto
+sizeof
+break continue goto return
+
+[types]
+int long short char float double void
+int8_t int16_t int32_t int64_t
+uint8_t uint16_t uint32_t uint64_t
+size_t ssize_t
+
+[builtins]
+printf scanf fprintf sprintf
+malloc free calloc realloc
+memcpy memmove memset memcmp
+strlen strcpy strcmp strcat
+fopen fclose fread fwrite

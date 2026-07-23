@@ -15,6 +15,7 @@ add_executable(presenter
     src/renderer.cpp
     src/layout.cpp
     src/image.cpp
+    src/highlight.cpp
 )
 
 target_include_directories(presenter PRIVATE
@@ -35,6 +36,7 @@ add_executable(test_textbounds
     src/style.cpp
     src/layout.cpp
     src/image.cpp
+    src/highlight.cpp
 )
 
 target_include_directories(test_textbounds PRIVATE
@@ -97,10 +99,30 @@ set_target_properties(test_image PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 
+add_executable(test_highlight
+    test/test_highlight.cpp
+    src/highlight.cpp
+)
+
+target_include_directories(test_highlight PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/third_party
+)
+
+set_target_properties(test_highlight PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
 add_custom_target(copy_assets ALL
     COMMAND ${CMAKE_COMMAND} -E copy_directory
     ${CMAKE_SOURCE_DIR}/assets
     ${CMAKE_BINARY_DIR}/assets
+)
+
+add_custom_target(copy_share ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+    ${CMAKE_SOURCE_DIR}/share
+    ${CMAKE_BINARY_DIR}/share
 )
 
 add_custom_target(demo

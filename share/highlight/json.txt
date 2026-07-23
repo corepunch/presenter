@@ -1,0 +1,11 @@
+[config]
+line_comment=
+block_comment_start=
+block_comment_end=
+
+[keywords]
+true false null
+
+[types]
+
+[builtins]

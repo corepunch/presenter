@@ -1,0 +1,23 @@
+[config]
+line_comment=;
+brackets = ( ) lisp, [ ] lisp, { } lisp
+
+[keywords]
+defun defvar defmacro defparameter let lambda
+if cond when unless
+progn prog1 prog2 let let*
+setq setf
+loop dolist dotimes while
+quote function
+and or not
+car cdr cons list append
+nil t
+
+[types]
+
+[builtins]
+print format princ prin1 terpri
++ - * / = < > <= >=
+eq equal eql
+length aref elt
+mapcar mapcan remove-if find-if

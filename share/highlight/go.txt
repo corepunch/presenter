@@ -1,0 +1,24 @@
+[config]
+line_comment=//
+block_comment_start=/*
+block_comment_end=*/
+
+[keywords]
+if else for switch case break continue return
+func var const type struct interface map
+go select defer range package import
+chan fallthrough default goto
+true false nil
+
+[types]
+int int8 int16 int32 int64
+uint uint8 uint16 uint32 uint64
+float32 float64 complex64 complex128
+bool byte rune string error
+uintptr
+
+[builtins]
+make len cap append copy delete close
+panic recover
+print println
+new complex real imag

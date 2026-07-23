@@ -1,0 +1,29 @@
+[config]
+line_comment=//
+block_comment_start=/*
+block_comment_end=*/
+
+[keywords]
+if else for while do switch case break continue return
+function var let const class extends
+new this super delete typeof instanceof
+try catch finally throw
+import export default from as
+async await yield
+true false null undefined
+in of
+
+[types]
+Number String Boolean Array Object Function
+RegExp Date Map Set Promise Symbol Error
+Int8Array Uint8Array Float32Array
+
+[builtins]
+console log error warn info
+document window
+setTimeout setInterval clearTimeout
+JSON parse stringify
+Math abs floor ceil round random max min
+Array isArray from of
+Object keys values entries assign
+parseInt parseFloat isNaN
