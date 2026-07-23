@@ -1,14 +1,25 @@
 # Presenter
 
-A lightweight presentation tool that renders slides from XML definitions with dual-window support: an audience display and a presenter view.
+A lightweight presentation renderer for AI agents. It reads XML slide definitions, lays out text and images, and renders them via SDL2 into two windows: an audience display and a presenter view with notes.
+
+## Use Cases
+
+**AI agents generating presentations** — the primary use case. An agent creates XML slide files from structured data (git history, project status, sprint summaries) and optionally captures screenshots of app states to embed as rich visual content. The result is a polished presentation combining text, images, and before/after comparisons.
+
+Typical workflow:
+1. Agent writes `scene.xml` with slides, images, and notes
+2. Agent captures screenshots of the app: `./build/presenter scene.xml --screenshot=slides/scene.png`
+3. Agent references screenshots in image slides for before/after demos
+4. Presenter renders the final deck to screen or captures to file
 
 ## Features
 
 - **XML slide format** with recursive composition — slides nest inside slides
 - **6 layout types**: title, content, image, columns, section, blank
 - **Dual-window output**: full audience screen + smaller presenter view with notes
-- **Inline formatting**: `**bold**`, `_italic_`, `` `code` `` in text blocks
+- **Inline formatting**: `<b>bold</b>`, `<i>italic</i>`, `<code>code</code>` in text blocks
 - **Image support**: PNG, JPG, JPEG, GIF, BMP with fit/fill scaling
+- **Screenshot capture**: render slides to image files for embedding in other docs
 - **Themeable**: XML style files for colors, fonts, and spacing
 - **Keyboard controls**: arrow keys, space/enter to navigate, F5 fullscreen, Escape to quit
 
@@ -61,6 +72,32 @@ Override the theme at runtime:
 | F5 | Toggle audience fullscreen |
 | Escape | Quit |
 
+## Screenshots
+
+Capture a slide to an image file:
+
+```bash
+./build/presenter demo/demo.xml --screenshot=output/slide.png
+```
+
+This renders the current slide to a PNG and exits. Useful for:
+- **Before/after demos** — capture app states and embed in image slides
+- **Documentation** — generate slide images for READMEs or wikis
+- **CI pipelines** — render presentations as part of automated reports
+
+Example workflow for a sprint demo:
+
+```bash
+# 1. Generate the presentation XML
+agent generate-sprint-demo --output=scenes/sprint23.xml
+
+# 2. Capture key screenshots
+./build/presenter scenes/sprint23.xml --screenshot=slides/sprint23_title.png
+
+# 3. Present live
+./build/presenter scenes/sprint23.xml
+```
+
 ## Slide Format
 
 Presentations are XML files with a `<presentation>` root containing `<slide>` children.
@@ -103,6 +140,13 @@ Include the DTD in your presentation files for validation:
 ### For AI Agents
 
 When generating presentations, refer to the [Slide Format Reference](https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html) for the complete specification. Always include the DOCTYPE declaration pointing to `https://corepunch.github.io/presenter/docs/presentation.dtd`.
+
+Recommended workflow:
+1. Write the XML slide file following the format spec
+2. Capture screenshots with `--screenshot` flag
+3. Reference screenshots in `<image>` elements with relative paths
+4. Include `<notes>` for presenter context (talking points, metrics, transitions)
+5. Present live or render to images
 
 ## Layouts
 
