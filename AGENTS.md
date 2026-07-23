@@ -95,7 +95,7 @@ When generating XML presentation files:
 
 ### Modifying slide styles
 
-Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/styles/`. The presenter ships with 8 built-in themes switchable at runtime via `Shift+Left`/`Shift+Right`: Dracula, Monokai, Solarized Dark, GitHub Light, Solarized Light, Nord, Sunset, Arc.
+Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/styles/`. The presenter ships with 8 built-in themes switchable at runtime via `Shift+Left`/`Shift+Right`: Dracula, Monokai, Solarized Dark, GitHub Light, Solarized Light, Nord, Sunset, Arc. Rounded corners on code blocks, images, and notes panels use the `cornerRadius` style property (default 12px).
 
 ### Adding a new built-in theme
 

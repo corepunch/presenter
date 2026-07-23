@@ -65,6 +65,7 @@ struct PresentationStyle {
     int columnGap       = 24;
     int linePadding     = 6;
     int presenterMargin = 20;
+    int cornerRadius    = 12;
 
     void applyXmlElement(const void* el);  // tinyxml2::XMLElement*
 

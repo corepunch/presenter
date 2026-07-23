@@ -8,6 +8,7 @@
 #include "image.h"
 #include "highlight.h"
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 
 Renderer::~Renderer() {
@@ -32,6 +33,77 @@ void Renderer::cleanup() {
 
 void Renderer::clear(int r, int g, int b) {
     SDL_FillRect(m_surface, nullptr, Color(r, g, b).toUint32(m_surface->format));
+}
+
+static void setPixel(SDL_Surface* surf, int x, int y, Uint32 color) {
+    if (x < 0 || x >= surf->w || y < 0 || y >= surf->h) return;
+    auto* pixels = static_cast<Uint32*>(surf->pixels);
+    pixels[y * (surf->pitch / 4) + x] = color;
+}
+
+static void setPixelAlpha(SDL_Surface* surf, int x, int y, Uint8 a) {
+    if (x < 0 || x >= surf->w || y < 0 || y >= surf->h) return;
+    auto* pixels = static_cast<Uint32*>(surf->pixels);
+    Uint32& p = pixels[y * (surf->pitch / 4) + x];
+    p = (p & 0x00FFFFFF) | (static_cast<Uint32>(a) << 24);
+}
+
+static void fillRoundedRect(SDL_Surface* surf, SDL_Rect r, int radius, Uint32 color) {
+    int rad = std::min(radius, std::min(r.w, r.h) / 2);
+    if (rad <= 0) { SDL_FillRect(surf, &r, color); return; }
+
+    for (int y = 0; y < r.h; y++) {
+        int inset = 0;
+        if (y < rad) {
+            float dy = static_cast<float>(rad - y - 1);
+            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
+        } else if (y >= r.h - rad) {
+            float dy = static_cast<float>(y - (r.h - rad));
+            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
+        }
+        SDL_Rect row = {r.x + inset, r.y + y, r.w - 2 * inset, 1};
+        if (row.w > 0) SDL_FillRect(surf, &row, color);
+    }
+}
+
+static void drawRoundedRectOutline(SDL_Surface* surf, SDL_Rect r, int radius, Uint32 color) {
+    int rad = std::min(radius, std::min(r.w, r.h) / 2);
+    if (rad <= 0) return;
+
+    for (int y = 0; y < r.h; y++) {
+        int inset = 0;
+        if (y < rad) {
+            float dy = static_cast<float>(rad - y - 1);
+            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
+        } else if (y >= r.h - rad) {
+            float dy = static_cast<float>(y - (r.h - rad));
+            inset = rad - static_cast<int>(std::sqrt(rad * rad - dy * dy));
+        }
+        setPixel(surf, r.x + inset, r.y + y, color);
+        setPixel(surf, r.x + r.w - 1 - inset, r.y + y, color);
+    }
+    for (int x = r.x + rad; x < r.x + r.w - rad; x++) {
+        setPixel(surf, x, r.y, color);
+        setPixel(surf, x, r.y + r.h - 1, color);
+    }
+}
+
+static void maskImageCorners(SDL_Surface* surf, SDL_Rect r, int radius) {
+    int rad = std::min(radius, std::min(r.w, r.h) / 2);
+    if (rad <= 0) return;
+
+    for (int y = 0; y < rad; y++) {
+        int inset = rad;
+        float dyTop = static_cast<float>(rad - y - 1);
+        inset = rad - static_cast<int>(std::sqrt(rad * rad - dyTop * dyTop));
+
+        for (int x = 0; x < inset; x++) {
+            setPixelAlpha(surf, r.x + x, r.y + y, 0);
+            setPixelAlpha(surf, r.x + r.w - 1 - x, r.y + y, 0);
+            setPixelAlpha(surf, r.x + x, r.y + r.h - 1 - y, 0);
+            setPixelAlpha(surf, r.x + r.w - 1 - x, r.y + r.h - 1 - y, 0);
+        }
+    }
 }
 
 void Renderer::drawText(const std::string& text, float x, float y,
@@ -359,10 +431,10 @@ static void renderCodeBlock(Renderer* r, SDL_Surface* surf,
 
     Uint32 bg = SDL_MapRGBA(surf->format, s.codeBg.r, s.codeBg.g, s.codeBg.b, s.codeBg.a);
     SDL_Rect bgRect = {x, y, blockW, blockH};
-    SDL_FillRect(surf, &bgRect, bg);
+    fillRoundedRect(surf, bgRect, s.cornerRadius, bg);
 
     Uint32 brd = SDL_MapRGBA(surf->format, s.codeBorder.r, s.codeBorder.g, s.codeBorder.b, s.codeBorder.a);
-    r->drawRectOutline(&bgRect, brd);
+    drawRoundedRectOutline(surf, bgRect, s.cornerRadius, brd);
 
     LanguageSpec spec;
     if (!cb.lang.empty()) spec = loadLanguage(cb.lang);
@@ -533,7 +605,7 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
 
 static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
                           const SlidePart& part, ImageFit fit,
-                          const Font& baseFont) {
+                          const Font& baseFont, int cornerRadius) {
     if (imagePath.empty()) return;
 
     int imgW = 0, imgH = 0, channels = 0;
@@ -591,6 +663,7 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
             if (imgSurface) {
                 SDL_Rect dstRect = {dstX, dstY, dstW, dstH};
                 SDL_BlitSurface(imgSurface, nullptr, surf, &dstRect);
+                maskImageCorners(surf, dstRect, cornerRadius);
                 SDL_FreeSurface(imgSurface);
             }
             delete[] resampled.data;
@@ -608,7 +681,7 @@ static void renderPartImage(Renderer* r, SDL_Surface* surf,
                             const Slide& slide, const SlidePart& part,
                             const FontSet& fonts, int slideH) {
     const Font& baseFont = fonts.variants().get(FontType::Regular);
-    renderImageAt(surf, slide.imagePath, part, slide.imageFit, baseFont);
+    renderImageAt(surf, slide.imagePath, part, slide.imageFit, baseFont, r->style().cornerRadius);
 }
 
 static void renderPartCaption(Renderer* r, SDL_Surface* surf,
@@ -779,8 +852,8 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
         Uint32 notesBg = Color(s.bgColor.r - 5, s.bgColor.g - 5, s.bgColor.b + 5).toUint32(m_surface->format);
         int notesH = std::max(th * 3, m_height - y - margin - th * 2);
         SDL_Rect notesRect = {margin, y - 18, contentW, notesH};
-        SDL_FillRect(m_surface, &notesRect, notesBg);
-        drawRectOutline(&notesRect, s.lineColor.toUint32(m_surface->format));
+        fillRoundedRect(m_surface, notesRect, s.cornerRadius, notesBg);
+        drawRoundedRectOutline(m_surface, notesRect, s.cornerRadius, s.lineColor.toUint32(m_surface->format));
 
         drawText("Notes:", static_cast<float>(margin + 6),
                  static_cast<float>(y + 4), smallFont, s.dimColor.toSDLColor());
