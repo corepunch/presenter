@@ -39,7 +39,7 @@ Typical workflow:
 
 **3. Product launch recap from social media.** Your team shipped a feature and reactions are flying across Twitter, Reddit, and HN. An agent scrapes the top threads, pulls quote-worthy praise, downloads screenshots of the best reactions, and weaves them into a "launch recap" deck — timeline slide, highlight quotes, sentiment summary, and a closing slide with follow-up actions. Ready for the all-hands meeting in minutes.
 
-![Three AI-generated presentation scenarios: a competitor landscape report, a conference talk built from blog posts, and a product launch recap assembled from social reactions](docs/images/presenter-hypothetical-scenarios.png)
+![Three AI-generated presentation scenarios: a competitor landscape report, a conference talk built from blog posts, and a product launch recap assembled from social reactions](docs/images/presenter-hypothetical-scenarios.jpg)
 
 ## Features
 
