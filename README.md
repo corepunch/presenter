@@ -213,7 +213,7 @@ Custom styles use the format defined in [schemas/style.dtd](https://corepunch.gi
 <style>
   <colors bg="#1E1E28" text="#C8C8D2" accent="#FFCC00"/>
   <fonts title="48" content="28"/>
-  <layout margin="40" gap="24"/>
+  <layout margin="40" gap="24" cornerRadius="24" presenterCornerRadius="12"/>
 </style>
 ```
 

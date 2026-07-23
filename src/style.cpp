@@ -39,6 +39,7 @@ static const AttrEntry STYLE_ATTRS[] = {
     {"layout", "linePadding",     parseAttr<&PresentationStyle::linePadding,     atoi>},
     {"layout", "presenterMargin", parseAttr<&PresentationStyle::presenterMargin, atoi>},
     {"layout", "cornerRadius",    parseAttr<&PresentationStyle::cornerRadius,    atoi>},
+    {"layout", "presenterCornerRadius", parseAttr<&PresentationStyle::presenterCornerRadius, atoi>},
     {"layout", "bulletGap",       parseAttr<&PresentationStyle::bulletGap,       atoi>},
 };
 
@@ -50,6 +51,14 @@ void PresentationStyle::applyXmlElement(const void* el) {
         if (!child) continue;
         const char* v = child->Attribute(attr);
         if (v) set(*this, v);
+    }
+
+    // A custom slide radius keeps the presenter radius at half unless the
+    // presenter value is explicitly configured.
+    auto* layout = root->FirstChildElement("layout");
+    if (layout && layout->Attribute("cornerRadius") &&
+        !layout->Attribute("presenterCornerRadius")) {
+        presenterCornerRadius = cornerRadius / 2;
     }
 }
 
@@ -107,6 +116,7 @@ static PresentationStyle makeTheme(
     s.linePadding = linePad;
     s.presenterMargin = presMargin;
     s.cornerRadius = cornerRad;
+    s.presenterCornerRadius = cornerRad / 2;
     return s;
 }
 

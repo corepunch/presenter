@@ -37,4 +37,5 @@
     columnGap       CDATA #IMPLIED
     linePadding     CDATA #IMPLIED
     presenterMargin CDATA #IMPLIED
-    cornerRadius    CDATA #IMPLIED>
+    cornerRadius    CDATA #IMPLIED
+    presenterCornerRadius CDATA #IMPLIED>

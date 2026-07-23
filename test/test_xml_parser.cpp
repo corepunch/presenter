@@ -30,7 +30,8 @@ static std::string writeTmp(const char* name, const std::string& content) {
 
 static void cleanupTmpDir() {
     const char* files[] = {"empty.xml", "title.xml", "content.xml", "columns.xml", "recursive.xml",
-                           "formatted.xml", "legacy_title.xml", "nested_title.xml", "no_title.xml"};
+                           "formatted.xml", "legacy_title.xml", "nested_title.xml", "no_title.xml",
+                           "style_inherited.xml", "style_explicit.xml"};
     for (auto f : files) unlink((std::string(TMP_DIR) + "/" + f).c_str());
     rmdir(TMP_DIR);
 }
@@ -198,16 +199,39 @@ static int test_no_title() {
     return 0;
 }
 
+static int test_presenter_corner_radius_style() {
+    fprintf(stderr, "test_presenter_corner_radius_style...\n");
+    PresentationStyle defaults = PresentationStyle::defaults();
+    ASSERT_EQ(defaults.presenterCornerRadius, defaults.cornerRadius / 2,
+              "default presenter radius is half the slide radius");
+
+    PresentationStyle inherited = PresentationStyle::load(writeTmp(
+        "style_inherited.xml",
+        "<style><layout cornerRadius=\"30\"/></style>"));
+    ASSERT_EQ(inherited.cornerRadius, 30, "custom slide radius");
+    ASSERT_EQ(inherited.presenterCornerRadius, 15,
+              "presenter radius follows custom slide radius at half");
+
+    PresentationStyle explicitStyle = PresentationStyle::load(writeTmp(
+        "style_explicit.xml",
+        "<style><layout cornerRadius=\"30\" presenterCornerRadius=\"7\"/></style>"));
+    ASSERT_EQ(explicitStyle.presenterCornerRadius, 7,
+              "explicit presenter radius overrides inherited half");
+    return 0;
+}
+
 int main() {
     ensureTmpDir();
     int failures = 0;
     int results[] = {
         test_empty(), test_title(), test_content(), test_columns(), test_recursive(),
         test_formatted_text(), test_legacy_title_ignored(), test_nested_title_attrs(), test_no_title(),
+        test_presenter_corner_radius_style(),
     };
     const char* names[] = {
         "empty", "title", "content", "columns", "recursive",
         "formatted_text", "legacy_title_ignored", "nested_title_attrs", "no_title",
+        "presenter_corner_radius_style",
     };
     int numTests = sizeof(results) / sizeof(results[0]);
     for (int i = 0; i < numTests; ++i) {

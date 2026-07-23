@@ -101,21 +101,28 @@ private:
     std::vector<Child> m_children;
 };
 
-class Border final : public Element {
-public:
-    Border() = default;
-    explicit Border(std::unique_ptr<Element> child) : m_child(std::move(child)) {}
-
-    void setChild(std::unique_ptr<Element> child) { m_child = std::move(child); }
-    Element* child() { return m_child.get(); }
-    const Element* child() const { return m_child.get(); }
-
+struct BorderStyle {
     Thickness padding;
     Color background;
     Color borderColor;
     bool hasBackground = false;
     bool hasBorder = false;
     int cornerRadius = 0;
+};
+
+class Border final : public Element {
+public:
+    Border() = default;
+    explicit Border(std::unique_ptr<Element> child)
+        : m_child(std::move(child)) {}
+    Border(std::unique_ptr<Element> child, BorderStyle style)
+        : style(std::move(style)), m_child(std::move(child)) {}
+
+    void setChild(std::unique_ptr<Element> child) { m_child = std::move(child); }
+    Element* child() { return m_child.get(); }
+    const Element* child() const { return m_child.get(); }
+
+    BorderStyle style;
 
 protected:
     Size measureOverride(LayoutContext& context, Size availableSize) override;

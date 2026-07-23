@@ -1093,6 +1093,13 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
     FontVariants baseFonts = fonts.variants();
     FontVariants smallFonts = fonts.smallVariants();
     int cardPadding = std::max(8, s.partPadding / 2);
+    ui::BorderStyle cardStyle;
+    cardStyle.padding = ui::Thickness(cardPadding);
+    cardStyle.background = s.codeBg;
+    cardStyle.borderColor = s.lineColor;
+    cardStyle.hasBackground = true;
+    cardStyle.hasBorder = true;
+    cardStyle.cornerRadius = s.presenterCornerRadius;
 
     auto root = std::make_unique<ui::Stack>();
     root->margin = ui::Thickness(s.presenterMargin);
@@ -1107,13 +1114,8 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
     title->wrap = true;
     header->add(std::move(title));
 
-    auto headerCard = std::make_unique<ui::Border>(std::move(header));
-    headerCard->padding = ui::Thickness(cardPadding);
-    headerCard->background = s.codeBg;
-    headerCard->borderColor = s.lineColor;
-    headerCard->hasBackground = true;
-    headerCard->hasBorder = true;
-    headerCard->cornerRadius = s.cornerRadius;
+    auto headerCard = std::make_unique<ui::Border>(
+        std::move(header), cardStyle);
     root->add(std::move(headerCard));
 
     auto notes = std::make_unique<ui::Stack>();
@@ -1127,13 +1129,8 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
     noteText->wrap = true;
     notes->add(std::move(noteText), 1.0f);
 
-    auto notesCard = std::make_unique<ui::Border>(std::move(notes));
-    notesCard->padding = ui::Thickness(cardPadding);
-    notesCard->background = s.codeBg;
-    notesCard->borderColor = s.lineColor;
-    notesCard->hasBackground = true;
-    notesCard->hasBorder = true;
-    notesCard->cornerRadius = s.cornerRadius;
+    auto notesCard = std::make_unique<ui::Border>(
+        std::move(notes), cardStyle);
     root->add(std::move(notesCard), 1.0f);
 
     if (pres.canGoNext()) {
@@ -1147,13 +1144,8 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
         nextTitle->wrap = true;
         nextSlide->add(std::move(nextTitle));
 
-        auto nextCard = std::make_unique<ui::Border>(std::move(nextSlide));
-        nextCard->padding = ui::Thickness(cardPadding);
-        nextCard->background = s.codeBg;
-        nextCard->borderColor = s.lineColor;
-        nextCard->hasBackground = true;
-        nextCard->hasBorder = true;
-        nextCard->cornerRadius = s.cornerRadius;
+        auto nextCard = std::make_unique<ui::Border>(
+            std::move(nextSlide), cardStyle);
         root->add(std::move(nextCard));
     }
 

@@ -143,21 +143,23 @@ void Stack::renderOverride(LayoutContext& context) {
 }
 
 Size Border::measureOverride(LayoutContext& context, Size availableSize) {
-    if (!m_child) return {padding.horizontal(), padding.vertical()};
+    if (!m_child) {
+        return {style.padding.horizontal(), style.padding.vertical()};
+    }
     Size inner = {
-        std::max(0, availableSize.width - padding.horizontal()),
-        std::max(0, availableSize.height - padding.vertical()),
+        std::max(0, availableSize.width - style.padding.horizontal()),
+        std::max(0, availableSize.height - style.padding.vertical()),
     };
     m_child->measure(context, inner);
     return {
-        m_child->desiredSize().width + padding.horizontal(),
-        m_child->desiredSize().height + padding.vertical(),
+        m_child->desiredSize().width + style.padding.horizontal(),
+        m_child->desiredSize().height + style.padding.vertical(),
     };
 }
 
 Size Border::arrangeOverride(LayoutContext& context, Size finalSize) {
     if (m_child) {
-        Rect content = inset(bounds(), padding);
+        Rect content = inset(bounds(), style.padding);
         m_child->arrange(context, content);
     }
     return finalSize;
@@ -165,11 +167,13 @@ Size Border::arrangeOverride(LayoutContext& context, Size finalSize) {
 
 void Border::renderOverride(LayoutContext& context) {
     SDL_Rect rect = {bounds().x, bounds().y, bounds().width, bounds().height};
-    if (hasBackground) {
-        context.renderer.fillRect(rect, background, cornerRadius);
+    if (style.hasBackground) {
+        context.renderer.fillRect(
+            rect, style.background, style.cornerRadius);
     }
-    if (hasBorder) {
-        context.renderer.drawRectOutline(rect, borderColor, cornerRadius);
+    if (style.hasBorder) {
+        context.renderer.drawRectOutline(
+            rect, style.borderColor, style.cornerRadius);
     }
     if (m_child) m_child->render(context);
 }

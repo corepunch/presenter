@@ -68,6 +68,7 @@ struct PresentationStyle {
     int linePadding     = LINE_PADDING;
     int presenterMargin = PRESENTER_MARGIN;
     int cornerRadius    = CORNER_RADIUS;
+    int presenterCornerRadius = PRESENTER_CORNER_RADIUS;
     int bulletGap       = BULLET_GAP;
 
     void applyXmlElement(const void* el);  // tinyxml2::XMLElement*
