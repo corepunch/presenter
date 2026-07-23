@@ -17,8 +17,8 @@ LayoutKind selectLayout(const Slide& slide) {
         return layoutFromType(slide.type);
     }
 
-    bool hasLeftRight = !slide.leftContent.empty() || !slide.rightContent.empty();
-    if (hasLeftRight) {
+    // Two blocks → two-column (before/after or side-by-side)
+    if (slide.blocks.size() >= 2 && slide.imagePath.empty()) {
         return LayoutKind::HeaderTwoColumn;
     }
 
@@ -27,8 +27,10 @@ LayoutKind selectLayout(const Slide& slide) {
         return LayoutKind::HeaderImage;
     }
 
-    bool hasContentLines = !slide.bullets.empty();
-    if (!hasContentLines && slide.subtitle.empty()) {
+    bool hasContent = !slide.blocks.empty()
+        || !slide.bullets.empty()
+        || !slide.subtitle.empty();
+    if (!hasContent) {
         return LayoutKind::Section;
     }
 

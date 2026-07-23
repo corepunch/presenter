@@ -31,8 +31,7 @@ struct Slide {
     std::vector<std::string> bullets;
     std::string imagePath;
     std::string imageAlt;
-    std::string leftContent;
-    std::string rightContent;
+    std::vector<std::string> blocks;  // content blocks separated by ---
     std::string notes;  // presenter-only
     bool layoutSpecified = false;
     ImageFit imageFit = ImageFit::Fit;

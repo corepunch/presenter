@@ -86,16 +86,22 @@ float Font::drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y
     if (!surface || codepoint == ' ') return advance;
 
     int width, height, xoff, yoff;
-    uint8_t* bitmap = stbtt_GetCodepointBitmap(
-        info, scale, scale, static_cast<int>(codepoint), &width, &height, &xoff, &yoff);
+    int baseX = static_cast<int>(x);
+    int baseY = static_cast<int>(y);
+    float shiftX = x - baseX;
+    float shiftY = y - baseY;
+
+    uint8_t* bitmap = stbtt_GetCodepointBitmapSubpixel(
+        info, scale, scale, shiftX, shiftY,
+        static_cast<int>(codepoint), &width, &height, &xoff, &yoff);
 
     if (!bitmap || width <= 0 || height <= 0) {
         stbtt_FreeBitmap(bitmap, nullptr);
         return advance;
     }
 
-    int baseX = static_cast<int>(x + xoff);
-    int baseY = static_cast<int>(y + yoff);
+    baseX += xoff;
+    baseY += yoff;
 
     SDL_LockSurface(surface);
     auto* pixels = static_cast<Uint32*>(surface->pixels);

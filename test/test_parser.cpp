@@ -172,23 +172,21 @@ static int test_section_slide() {
 static int test_two_column_slide() {
     std::fprintf(stderr, "test_two_column_slide...\n");
     std::string path = writeTmpFile("two_column.md",
-        "layout: TwoColumn\n"
         "# Comparison\n"
-        "---left---\n"
         "Left side content\n"
         "More left\n"
-        "---right---\n"
+        "---\n"
         "Right side content\n"
         "More right\n"
     );
     Presentation p = parseMarkdown(path);
     ASSERT_EQ(p.slides.size(), (size_t)1, "should have 1 slide");
-    ASSERT(p.slides[0].type == SlideType::TwoColumn, "slide type should be TwoColumn");
     ASSERT_STR_EQ(p.slides[0].title, std::string("Comparison"), "title should match");
-    ASSERT_STR_EQ(p.slides[0].leftContent, std::string("Left side content\nMore left"),
-                  "left content with newline join");
-    ASSERT_STR_EQ(p.slides[0].rightContent, std::string("Right side content\nMore right"),
-                  "right content with newline join");
+    ASSERT_EQ(p.slides[0].blocks.size(), (size_t)2, "should have 2 blocks");
+    ASSERT_STR_EQ(p.slides[0].blocks[0], std::string("Left side content\nMore left"),
+                  "block 0 content");
+    ASSERT_STR_EQ(p.slides[0].blocks[1], std::string("Right side content\nMore right"),
+                  "block 1 content");
     return 0;
 }
 

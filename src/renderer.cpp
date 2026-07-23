@@ -5,6 +5,7 @@
 
 #include "renderer.h"
 #include "layout.h"
+#include "image.h"
 #include <algorithm>
 #include <cstring>
 
@@ -281,11 +282,11 @@ static void renderPartHeader(Renderer* r, SDL_Surface* surf,
     const Font& titleFont = titleV.get(FontType::Regular);
     SDL_Color white = {255, 255, 255, 255};
 
-    // Vertically center title in the header part using font metrics
+    // Vertically center title: place baseline so the glyph cell (ascent..descent) is centered
     float ascent = titleFont.getAscent();
     float descent = titleFont.getDescent();
     float titleLineH = ascent - descent;
-    int textY = part.rect.y + (part.rect.h - static_cast<int>(titleLineH)) / 2 - static_cast<int>(descent);
+    int textY = part.rect.y + (part.rect.h - static_cast<int>(titleLineH)) / 2 + static_cast<int>(ascent);
 
     r->renderFormatted(slide.title, static_cast<float>(part.rect.x + PART_PADDING),
                        static_cast<float>(textY), titleV, white);
@@ -327,7 +328,8 @@ static void renderPartColumnLeft(Renderer* r, SDL_Surface* surf,
     FontVariants titleV = fonts.titleVariants();
     SDL_Color ltgray = {200, 200, 210, 255};
     int contentW = part.rect.w - 2 * PART_PADDING;
-    r->renderFormattedBlock(slide.leftContent, part.rect.x + PART_PADDING, part.rect.y + PART_PADDING,
+    std::string content = slide.blocks.size() > 0 ? slide.blocks[0] : "";
+    r->renderFormattedBlock(content, part.rect.x + PART_PADDING, part.rect.y + PART_PADDING,
                             baseV, ltgray, contentW, &titleV);
 }
 
@@ -338,7 +340,8 @@ static void renderPartColumnRight(Renderer* r, SDL_Surface* surf,
     FontVariants titleV = fonts.titleVariants();
     SDL_Color ltgray = {200, 200, 210, 255};
     int contentW = part.rect.w - 2 * PART_PADDING;
-    r->renderFormattedBlock(slide.rightContent, part.rect.x + PART_PADDING, part.rect.y + PART_PADDING,
+    std::string content = slide.blocks.size() > 1 ? slide.blocks[1] : "";
+    r->renderFormattedBlock(content, part.rect.x + PART_PADDING, part.rect.y + PART_PADDING,
                             baseV, ltgray, contentW, &titleV);
 }
 
@@ -353,47 +356,63 @@ static void renderPartImage(Renderer* r, SDL_Surface* surf,
     if (data && imgW > 0 && imgH > 0) {
         float scaleX = static_cast<float>(part.rect.w) / static_cast<float>(imgW);
         float scaleY = static_cast<float>(part.rect.h) / static_cast<float>(imgH);
-        float scale;
-        int srcX = 0, srcY = 0, srcW = imgW, srcH = imgH;
+
+        int dstW, dstH, dstX, dstY;
+        ImageBuf srcBuf;
 
         if (slide.imageFit == ImageFit::Fill) {
-            scale = std::max(scaleX, scaleY);
-            // Center-crop: compute source rect
-            int dstW = static_cast<int>(imgW * scale);
-            int dstH = static_cast<int>(imgH * scale);
-            srcX = (imgW - part.rect.w / scale) / 2;
-            srcY = (imgH - part.rect.h / scale) / 2;
-            srcW = static_cast<int>(part.rect.w / scale);
-            srcH = static_cast<int>(part.rect.h / scale);
-            if (srcX < 0) srcX = 0;
-            if (srcY < 0) srcY = 0;
-            if (srcX + srcW > imgW) srcW = imgW - srcX;
-            if (srcY + srcH > imgH) srcH = imgH - srcY;
+            float scale = std::max(scaleX, scaleY);
+            // Center-crop the source to the visible region before resampling
+            int cropW = static_cast<int>(part.rect.w / scale);
+            int cropH = static_cast<int>(part.rect.h / scale);
+            int cropX = std::max(0, (imgW - cropW) / 2);
+            int cropY = std::max(0, (imgH - cropH) / 2);
+            cropW = std::min(cropW, imgW - cropX);
+            cropH = std::min(cropH, imgH - cropY);
+
+            // Build a contiguous buffer for the cropped region
+            srcBuf.w = cropW;
+            srcBuf.h = cropH;
+            srcBuf.data = new uint8_t[cropW * cropH * 4];
+            for (int row = 0; row < cropH; ++row)
+                std::memcpy(srcBuf.data + row * cropW * 4,
+                            data + ((cropY + row) * imgW + cropX) * 4,
+                            cropW * 4);
+
+            dstW = part.rect.w;
+            dstH = part.rect.h;
+            dstX = part.rect.x;
+            dstY = part.rect.y;
         } else {
-            scale = std::min(scaleX, scaleY);
+            float scale = std::min(scaleX, scaleY);
+            dstW = static_cast<int>(imgW * scale);
+            dstH = static_cast<int>(imgH * scale);
+            dstX = part.rect.x + (part.rect.w - dstW) / 2;
+            dstY = part.rect.y + (part.rect.h - dstH) / 2;
+
+            srcBuf.w = imgW;
+            srcBuf.h = imgH;
+            srcBuf.data = data; // borrow — do not delete[]
         }
 
-        int dstW = static_cast<int>(imgW * scale);
-        int dstH = static_cast<int>(imgH * scale);
-        // Center the image in the part
-        int dstX = part.rect.x + (part.rect.w - dstW) / 2;
-        int dstY = part.rect.y + (part.rect.h - dstH) / 2;
+        ImageBuf resampled = resampleBilinear(srcBuf, dstW, dstH);
 
-        SDL_Surface* imgSurface = SDL_CreateRGBSurfaceFrom(
-            data, imgW, imgH, 32, imgW * 4,
-            0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+        if (slide.imageFit == ImageFit::Fill)
+            delete[] srcBuf.data;
+        // (Fit path borrows data — not freed here)
 
-        if (imgSurface) {
-            if (slide.imageFit == ImageFit::Fill) {
-                SDL_Rect srcRect = {srcX, srcY, srcW, srcH};
-                SDL_Rect dstRect = {dstX, dstY, part.rect.w, part.rect.h};
-                SDL_BlitScaled(imgSurface, &srcRect, surf, &dstRect);
-            } else {
+        if (resampled.data) {
+            SDL_Surface* imgSurface = SDL_CreateRGBSurfaceFrom(
+                resampled.data, dstW, dstH, 32, dstW * 4,
+                0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+            if (imgSurface) {
                 SDL_Rect dstRect = {dstX, dstY, dstW, dstH};
-                SDL_BlitScaled(imgSurface, nullptr, surf, &dstRect);
+                SDL_BlitSurface(imgSurface, nullptr, surf, &dstRect);
+                SDL_FreeSurface(imgSurface);
             }
-            SDL_FreeSurface(imgSurface);
+            delete[] resampled.data;
         }
+
         stbi_image_free(data);
     } else {
         // Placeholder
@@ -468,16 +487,16 @@ static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
 
     int startY = part.rect.y + (part.rect.h - static_cast<int>(totalH)) / 2;
 
-    // Title
-    int titleY = startY - static_cast<int>(descent);
+    // Title: baseline = top of centered cell + ascent
+    int titleY = startY + static_cast<int>(ascent);
     r->renderFormatted(slide.title, static_cast<float>(part.rect.x),
                        static_cast<float>(titleY), titleV, white);
 
     // Subtitle (Title slides only)
     if (!subtitleText.empty()) {
         const Font& baseFont = baseV.get(FontType::Regular);
-        float baseDescent = baseFont.getDescent();
-        int subtitleY = startY + static_cast<int>(titleLineH) + PART_GAP - static_cast<int>(baseDescent);
+        float baseAscent2 = baseFont.getAscent();
+        int subtitleY = startY + static_cast<int>(titleLineH) + PART_GAP + static_cast<int>(baseAscent2);
         r->renderFormattedBlock(subtitleText, part.rect.x, subtitleY, baseV, ltgray, part.rect.w);
     }
 }

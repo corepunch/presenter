@@ -94,28 +94,30 @@ static int test_auto_header_body_with_subtitle() {
     return 0;
 }
 
-static int test_auto_two_column_with_left_right() {
-    std::fprintf(stderr, "test_auto_two_column_with_left_right...\n");
+static int test_auto_two_column_with_two_blocks() {
+    std::fprintf(stderr, "test_auto_two_column_with_two_blocks...\n");
     Slide slide;
     slide.type = SlideType::Content;
     slide.layoutSpecified = false;
     slide.title = "Comparison";
-    slide.leftContent = "Left side";
-    slide.rightContent = "Right side";
+    slide.blocks.push_back("Left side");
+    slide.blocks.push_back("Right side");
     LayoutKind kind = selectLayout(slide);
-    ASSERT_EQ(static_cast<int>(kind), static_cast<int>(LayoutKind::HeaderTwoColumn), "left+right -> HeaderTwoColumn");
+    ASSERT_EQ(static_cast<int>(kind), static_cast<int>(LayoutKind::HeaderTwoColumn), "2 blocks -> HeaderTwoColumn");
     return 0;
 }
 
-static int test_auto_two_column_with_left_only() {
-    std::fprintf(stderr, "test_auto_two_column_with_left_only...\n");
+static int test_auto_two_column_three_blocks() {
+    std::fprintf(stderr, "test_auto_two_column_three_blocks...\n");
     Slide slide;
     slide.type = SlideType::Content;
     slide.layoutSpecified = false;
     slide.title = "Comparison";
-    slide.leftContent = "Left side";
+    slide.blocks.push_back("A");
+    slide.blocks.push_back("B");
+    slide.blocks.push_back("C");
     LayoutKind kind = selectLayout(slide);
-    ASSERT_EQ(static_cast<int>(kind), static_cast<int>(LayoutKind::HeaderTwoColumn), "left only -> HeaderTwoColumn");
+    ASSERT_EQ(static_cast<int>(kind), static_cast<int>(LayoutKind::HeaderTwoColumn), "3+ blocks -> HeaderTwoColumn");
     return 0;
 }
 
@@ -144,17 +146,17 @@ static int test_image_overrides_body() {
     return 0;
 }
 
-static int test_columns_overrides_image() {
-    std::fprintf(stderr, "test_columns_overrides_image...\n");
+static int test_image_overrides_columns() {
+    std::fprintf(stderr, "test_image_overrides_columns...\n");
     Slide slide;
     slide.type = SlideType::Content;
     slide.layoutSpecified = false;
     slide.title = "All";
-    slide.leftContent = "L";
-    slide.rightContent = "R";
+    slide.blocks.push_back("L");
+    slide.blocks.push_back("R");
     slide.imagePath = "/tmp/test.png";
     LayoutKind kind = selectLayout(slide);
-    ASSERT_EQ(static_cast<int>(kind), static_cast<int>(LayoutKind::HeaderTwoColumn), "columns win over image");
+    ASSERT_EQ(static_cast<int>(kind), static_cast<int>(LayoutKind::HeaderImage), "image wins over multiple blocks");
     return 0;
 }
 
@@ -230,8 +232,8 @@ static int test_header_two_column_parts_count() {
     std::fprintf(stderr, "test_header_two_column_parts_count...\n");
     Slide slide;
     slide.title = "Compare";
-    slide.leftContent = "L";
-    slide.rightContent = "R";
+    slide.blocks.push_back("L");
+    slide.blocks.push_back("R");
     LayoutMetrics m = makeMetrics(1280, 720);
     auto parts = computeParts(LayoutKind::HeaderTwoColumn, slide, m);
     ASSERT_EQ(parts.size(), (size_t)4, "HeaderTwoColumn has 4 parts");
@@ -246,8 +248,8 @@ static int test_header_two_column_equal_widths() {
     std::fprintf(stderr, "test_header_two_column_equal_widths...\n");
     Slide slide;
     slide.title = "Compare";
-    slide.leftContent = "L";
-    slide.rightContent = "R";
+    slide.blocks.push_back("L");
+    slide.blocks.push_back("R");
     LayoutMetrics m = makeMetrics(1280, 720);
     auto parts = computeParts(LayoutKind::HeaderTwoColumn, slide, m);
     int contentW = 1280 - 2 * SLIDE_MARGIN;
@@ -299,11 +301,11 @@ int main() {
         test_auto_section_empty(),
         test_auto_header_body_with_bullets(),
         test_auto_header_body_with_subtitle(),
-        test_auto_two_column_with_left_right(),
-        test_auto_two_column_with_left_only(),
+        test_auto_two_column_with_two_blocks(),
+        test_auto_two_column_three_blocks(),
         test_auto_header_image(),
         test_image_overrides_body(),
-        test_columns_overrides_image(),
+        test_image_overrides_columns(),
         test_title_parts_single_fullslide(),
         test_section_parts_single_fullslide(),
         test_header_body_parts_count(),
@@ -320,11 +322,11 @@ int main() {
         "auto_section_empty",
         "auto_header_body_with_bullets",
         "auto_header_body_with_subtitle",
-        "auto_two_column_with_left_right",
-        "auto_two_column_with_left_only",
+        "auto_two_column_with_two_blocks",
+        "auto_two_column_three_blocks",
         "auto_header_image",
         "image_overrides_body",
-        "columns_overrides_image",
+        "image_overrides_columns",
         "title_parts_single_fullslide",
         "section_parts_single_fullslide",
         "header_body_parts_count",

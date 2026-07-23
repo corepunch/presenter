@@ -108,15 +108,13 @@ static void test_wordWrap_formatted_words(const FontVariants& fonts, Renderer& r
 
 static Slide makeSlide(SlideType type, const std::string& title,
                        const std::vector<std::string>& bullets = {},
-                       const std::string& left = "",
-                       const std::string& right = "",
+                       const std::vector<std::string>& blks = {},
                        const std::string& notes = "") {
     Slide s;
     s.type = type;
     s.title = title;
     s.bullets = bullets;
-    s.leftContent = left;
-    s.rightContent = right;
+    s.blocks = blks;
     s.notes = notes;
     return s;
 }
@@ -158,8 +156,8 @@ static void test_renderSlide_section(SDL_Renderer* sdlRenderer,
 static void test_renderSlide_twoColumn(SDL_Renderer* sdlRenderer,
                                        const FontSet& fonts, Renderer& renderer) {
     Slide slide = makeSlide(SlideType::TwoColumn, "Two Columns",
-                            {}, "Left side content here",
-                            "Right side content here");
+                            {}, {"Left side content here",
+                                 "Right side content here"});
     SDL_Texture* tex = renderer.renderSlide(slide, fonts);
     TEST_ASSERT(tex != nullptr,
         "renderSlide two-column type returns valid texture (no crash)");
@@ -183,7 +181,7 @@ static void test_renderSlide_all_types(SDL_Renderer* sdlRenderer,
         makeSlide(SlideType::Title, "T", {"Sub"}),
         makeSlide(SlideType::Content, "C", {"a","b","c"}),
         makeSlide(SlideType::Section, "S"),
-        makeSlide(SlideType::TwoColumn, "2C", {}, "L", "R"),
+        makeSlide(SlideType::TwoColumn, "2C", {}, {"L", "R"}),
         makeSlide(SlideType::Image, "I"),
     };
     bool allOk = true;
@@ -205,8 +203,8 @@ static void test_presenter_view(SDL_Renderer* sdlRenderer,
                                 const FontSet& fonts, Renderer& renderer) {
     Presentation pres;
     pres.slides = {
-        makeSlide(SlideType::Title, "Slide 1", {"Sub 1"}, "", "", "Note 1"),
-        makeSlide(SlideType::Content, "Slide 2", {"a","b"}, "", "", "Note 2"),
+        makeSlide(SlideType::Title, "Slide 1", {"Sub 1"}, {}, "Note 1"),
+        makeSlide(SlideType::Content, "Slide 2", {"a","b"}, {}, "Note 2"),
         makeSlide(SlideType::Section, "Slide 3"),
     };
     pres.current = 0;

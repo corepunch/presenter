@@ -130,45 +130,24 @@ Presentation parseMarkdown(const std::string& filePath) {
         }
         slide.title = heading;
 
-        // Collect non-empty content lines after heading (skip '---' slide separators)
+        // Collect non-empty content lines after heading (except --- block separators)
         std::vector<std::string> contentLines;
         for (size_t i = headingIdx; i < block.lines.size(); ++i) {
             std::string t = trim(block.lines[i]);
-            if (!t.empty() && t != "---") {
+            if (!t.empty()) {
                 contentLines.push_back(t);
             }
         }
 
-        // Generic extraction: images, columns, subtitle, bullets for all slide types
+        // Split content on --- into blocks, scanning for images inline
+        std::vector<std::string> rawBlocks;
+        std::vector<std::string> currentBlockLines;
         bool foundImage = false;
-        enum class ColumnState { None, Left, Right };
-        ColumnState columnState = ColumnState::None;
 
         for (auto& l : contentLines) {
-            // Skip title line itself
             if (l == slide.title) continue;
 
-            // Check for column separators
-            if (l == "---left---") {
-                columnState = ColumnState::Left;
-                continue;
-            } else if (l == "---right---") {
-                columnState = ColumnState::Right;
-                continue;
-            }
-
-            // Handle column content
-            if (columnState == ColumnState::Left) {
-                if (!slide.leftContent.empty()) slide.leftContent += "\n";
-                slide.leftContent += l;
-                continue;
-            } else if (columnState == ColumnState::Right) {
-                if (!slide.rightContent.empty()) slide.rightContent += "\n";
-                slide.rightContent += l;
-                continue;
-            }
-
-            // Check for image markdown
+            // Detect images from individual lines
             std::smatch match;
             if (!foundImage && std::regex_match(l, match, imageRegex)) {
                 slide.imageAlt = match[1].str();
@@ -178,38 +157,75 @@ Presentation parseMarkdown(const std::string& filePath) {
                 continue;
             }
 
-            // Handle different slide types
-            switch (slide.type) {
-                case SlideType::Title: {
-                    // Store as subtitle (first non-title line)
-                    if (slide.subtitle.empty()) {
-                        slide.subtitle = l;
-                        slide.imageAlt = l; // backward compatibility
+            if (l == "---") {
+                if (!currentBlockLines.empty()) {
+                    std::string joined;
+                    for (size_t i = 0; i < currentBlockLines.size(); ++i) {
+                        if (i > 0) joined += "\n";
+                        joined += currentBlockLines[i];
                     }
-                    break;
+                    rawBlocks.push_back(joined);
+                    currentBlockLines.clear();
                 }
-                case SlideType::Content: {
-                    // Bullet points
-                    if (l.rfind("- ", 0) == 0) {
-                        slide.bullets.push_back(l.substr(2));
-                    } else {
-                        slide.bullets.push_back(l);
+            } else {
+                currentBlockLines.push_back(l);
+            }
+        }
+        if (!currentBlockLines.empty()) {
+            std::string joined;
+            for (size_t i = 0; i < currentBlockLines.size(); ++i) {
+                if (i > 0) joined += "\n";
+                joined += currentBlockLines[i];
+            }
+            rawBlocks.push_back(joined);
+            currentBlockLines.clear();
+        }
+
+        for (auto& raw : rawBlocks) {
+            slide.blocks.push_back(raw);
+        }
+
+        // For explicit layouts, handle content accordingly
+        switch (slide.type) {
+            case SlideType::Title: {
+                if (!slide.blocks.empty() && slide.subtitle.empty()) {
+                    slide.subtitle = slide.blocks[0];
+                    slide.imageAlt = slide.blocks[0];
+                }
+                break;
+            }
+            case SlideType::Image: {
+                for (auto& b : slide.blocks) {
+                    slide.bullets.push_back(b);
+                }
+                break;
+            }
+            case SlideType::Content:
+            case SlideType::TwoColumn:
+            default: {
+                if (foundImage) {
+                    // Text blocks become captions for the image
+                    for (auto& b : slide.blocks) {
+                        slide.bullets.push_back(b);
                     }
-                    break;
+                } else if (slide.blocks.size() == 1) {
+                    std::istringstream iss(slide.blocks[0]);
+                    std::string line;
+                    while (std::getline(iss, line)) {
+                        line = trim(line);
+                        if (!line.empty()) {
+                            if (line.rfind("- ", 0) == 0) {
+                                slide.bullets.push_back(line.substr(2));
+                            } else {
+                                slide.bullets.push_back(line);
+                            }
+                        }
+                    }
                 }
-                case SlideType::Image: {
-                    // Non-image lines become bullets (captions)
-                    slide.bullets.push_back(l);
-                    break;
-                }
-                case SlideType::Section: {
-                    // Section slides typically have no content
-                    break;
-                }
-                case SlideType::TwoColumn: {
-                    // Column separators already handled above
-                    break;
-                }
+                break;
+            }
+            case SlideType::Section: {
+                break;
             }
         }
 
