@@ -102,7 +102,7 @@ agent generate-sprint-demo --output=scenes/sprint23.xml
 
 Presentations are XML files with a `<presentation>` root containing `<slide>` children.
 
-- **Full format reference**: [docs/SLIDE_FORMAT.md](https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html) — detailed guide with examples for all layouts
+- **Full format reference**: [skills/presentation.md](https://corepunch.github.io/presenter/skills/presentation.md) — detailed guide with examples for all layouts
 - **DTD schemas**: [schemas/presentation.dtd](https://corepunch.github.io/presenter/schemas/presentation.dtd) and [schemas/style.dtd](https://corepunch.github.io/presenter/schemas/style.dtd) — formal XML validation
 
 ### DOCTYPE Declaration
@@ -139,7 +139,7 @@ Include the DTD in your presentation files for validation:
 
 ### For AI Agents
 
-When generating presentations, refer to the [Slide Format Reference](https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html) for the complete specification. Always include the DOCTYPE declaration pointing to `https://corepunch.github.io/presenter/schemas/presentation.dtd`.
+When generating presentations, refer to the [Slide Format Reference](https://corepunch.github.io/presenter/skills/presentation.md) for the complete specification. Always include the DOCTYPE declaration pointing to `https://corepunch.github.io/presenter/schemas/presentation.dtd`.
 
 Recommended workflow:
 1. Write the XML slide file following the format spec

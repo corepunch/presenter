@@ -1,5 +1,8 @@
 # Slide Format Specification
 
+> **DTD schema**: [schemas/presentation.dtd](../schemas/presentation.dtd)  
+> **Style DTD**: [schemas/style.dtd](../schemas/style.dtd)
+
 An XML-based format for creating presentations. Each `<slide>` element represents one slide. The root element is `<presentation>`.
 
 ---

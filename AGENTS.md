@@ -77,7 +77,7 @@ When generating XML presentation files:
    <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
    ```
 
-2. **Refer to the format spec** at `https://corepunch.github.io/presenter/docs/SLIDE_FORMAT.html` for layout details, examples, and best practices.
+2. **Refer to the format spec** at `https://corepunch.github.io/presenter/skills/presentation.md` for layout details, examples, and best practices.
 
 3. Use `<b>`, `<i>`, `<code>` for inline formatting — not markdown `**bold**` or `` `code` ``.
 
