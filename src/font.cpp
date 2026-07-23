@@ -140,6 +140,22 @@ float Font::getKerning(uint32_t a, uint32_t b) const {
     return static_cast<float>(kern) * m_scale;
 }
 
+float Font::getAscent() const {
+    auto* primary = static_cast<const stbtt_fontinfo*>(m_fontInfo);
+    if (!primary) return 0;
+    int ascent;
+    stbtt_GetFontVMetrics(primary, &ascent, nullptr, nullptr);
+    return static_cast<float>(ascent) * m_scale;
+}
+
+float Font::getDescent() const {
+    auto* primary = static_cast<const stbtt_fontinfo*>(m_fontInfo);
+    if (!primary) return 0;
+    int descent;
+    stbtt_GetFontVMetrics(primary, nullptr, &descent, nullptr);
+    return static_cast<float>(descent) * m_scale;
+}
+
 float Font::measureString(const std::string& text) const {
     float width = 0;
     utf8_int32_t prev = 0;

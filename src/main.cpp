@@ -172,7 +172,7 @@ int main(int argc, char* argv[]) {
         }
 
         if (needsRender) {
-            SDL_Texture* audienceTex = audienceRend.renderSlide(pres.currentSlide(), fonts);
+            SDL_Texture* audienceTex = audienceRend.renderSlide(pres.currentSlide(), fonts, pres.current + 1, pres.size());
             SDL_Texture* presenterTex = presenterRend.renderPresenterView(pres, fonts);
 
             // Render audience

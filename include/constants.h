@@ -14,3 +14,8 @@
 #define SLIDE_MARGIN 40
 #define PRESENTER_MARGIN 20
 #define LINE_PADDING 6
+
+// Part-based layout constants
+#define PART_PADDING 20
+#define PART_GAP 12
+#define COLUMN_GAP 24

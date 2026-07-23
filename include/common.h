@@ -19,15 +19,23 @@ enum class SlideType {
     TwoColumn    // Title + left/right text columns
 };
 
+enum class ImageFit {
+    Fit,         // scale = min(sx, sy), centered (default)
+    Fill         // scale = max(sx, sy), center-crop
+};
+
 struct Slide {
     SlideType type = SlideType::Title;
     std::string title;
+    std::string subtitle;
     std::vector<std::string> bullets;
     std::string imagePath;
     std::string imageAlt;
     std::string leftContent;
     std::string rightContent;
     std::string notes;  // presenter-only
+    bool layoutSpecified = false;
+    ImageFit imageFit = ImageFit::Fit;
 };
 
 struct Presentation {

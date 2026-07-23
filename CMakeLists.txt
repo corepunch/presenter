@@ -11,6 +11,7 @@ add_executable(presenter
     src/parser.cpp
     src/font.cpp
     src/renderer.cpp
+    src/layout.cpp
 )
 
 target_include_directories(presenter PRIVATE
@@ -28,6 +29,7 @@ add_executable(test_textbounds
     test/test_textbounds.cpp
     src/font.cpp
     src/renderer.cpp
+    src/layout.cpp
 )
 
 target_include_directories(test_textbounds PRIVATE
@@ -38,6 +40,20 @@ target_include_directories(test_textbounds PRIVATE
 target_link_libraries(test_textbounds PRIVATE SDL2::SDL2)
 
 set_target_properties(test_textbounds PROPERTIES
+    RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+add_executable(test_layout
+    test/test_layout.cpp
+    src/layout.cpp
+)
+
+target_include_directories(test_layout PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/third_party
+)
+
+set_target_properties(test_layout PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
 )
 

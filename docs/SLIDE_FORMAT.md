@@ -28,6 +28,7 @@ Optional key-value pairs appear **before** the `# heading`:
 | -------- | -------- | ---------------------------------- |
 | `layout` | No       | One of: title, content, image, section, two-column (default: content) |
 | `notes`  | No       | Presenter speaking notes           |
+| `fit`    | No       | Image scaling: `fit` (default, centered) or `fill` (center-crop) |
 
 Example:
 
@@ -39,7 +40,20 @@ notes: Remind audience about Q3 targets
 - First point
 ```
 
-If no `layout:` is specified, the slide defaults to `content` type.
+If no `layout:` is specified, the slide is auto-selected based on content:
+
+1. If left/right column content is present (via `---left---`/`---right---` separators) → **two-column**
+2. If an image is present → **image** (remaining text becomes caption)
+3. If no content lines at all → **section**
+4. Otherwise → **content** (bullet list)
+
+The `title` layout is only available via explicit `layout: title` directive.
+
+---
+
+## Footer
+
+Content, two-column, and image slides automatically display a slide number (`N / total`) in the bottom-right corner. Title and section slides have no footer.
 
 ---
 
@@ -83,6 +97,22 @@ notes: Describe the architecture diagram
 ![System Architecture](./images/architecture.png)
 Caption text describing the image
 ```
+
+#### Image Scaling
+
+By default, images use **fit** mode: the image is scaled to fit within the available area while preserving aspect ratio, centered in the part.
+
+To use **fill** mode (center-crop), add `fit: fill` to the front matter:
+
+```
+layout: image
+fit: fill
+
+# Full-Bleed Photo
+![Hero image](./images/hero.jpg)
+```
+
+In fill mode, the image is scaled to cover the entire area and center-cropped to fit.
 
 ### section
 

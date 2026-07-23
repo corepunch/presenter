@@ -25,6 +25,10 @@ public:
     float getKerning(uint32_t a, uint32_t b) const;
     float getFontSize() const { return m_fontSize; }
 
+    // Get font vertical metrics (ascent above baseline, descent below)
+    float getAscent() const;
+    float getDescent() const;
+
     // Render a single glyph directly to a 32-bit RGBA surface with alpha
     // blending. Returns the horizontal advance in pixels.
     float drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y, SDL_Color color) const;

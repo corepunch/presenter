@@ -19,7 +19,7 @@ public:
     bool init(SDL_Renderer* renderer, int width, int height);
     void cleanup();
 
-    SDL_Texture* renderSlide(const Slide& slide, const FontSet& fonts);
+    SDL_Texture* renderSlide(const Slide& slide, const FontSet& fonts, int slideNum = 1, int totalSlides = 1);
     SDL_Texture* renderPresenterView(const Presentation& pres, const FontSet& fonts);
 
     void clear(int r = 30, int g = 30, int b = 40);
