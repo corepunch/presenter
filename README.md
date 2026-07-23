@@ -4,7 +4,7 @@ A lightweight presentation renderer built for AI-generated decks and live screen
 
 Presenter works especially well with Microsoft Teams, Zoom, Google Meet, and other screen-sharing software. Choose **share this window** and select only the **Presentation** canvas. Your audience sees the slides while you read what to say for each slide from the AI-generated notes in **Presenter View**, navigate the deck, and deliver a polished presentation with little to no preparation.
 
-**Let the AI agent make the entire presentation.** Give it git history, issue-tracker data, project notes, reports, articles, or any other source material. The agent creates the slides, chooses layouts and images, and writes presenter notes containing the talking points, explanations, transitions, and wording you should read or say during each slide. You review the result, share the canvas, and present. For details on the XML slide format, see the [skill definition](skills/presentation.md).
+**Let the AI agent make the entire presentation.** Give it git history, issue-tracker data, project notes, reports, articles, or any other source material. Tell the agent to use the provided [presentation skill](skills/presentation.md), which covers research synthesis, narrative structure, visual choices, presenter notes, and the exact XML format. The agent creates the slides, chooses layouts and images, and writes presenter notes containing the talking points, explanations, transitions, and wording you should read or say during each slide. You review the result, share the canvas, and present.
 
 ![Presenter workflow: generate slides and presenter notes with AI, then share only the Presentation window while keeping Presenter View private](docs/images/presenter-ai-workflow.png)
 
@@ -25,10 +25,11 @@ This keeps controls, notes, and other desktop activity private. Because the agen
 
 Typical workflow:
 
-1. Give the agent your source material and ask it to create the presentation.
-2. The agent writes `scene.xml` with slides, images, and presenter notes containing what you should say during each slide.
-3. Launch Presenter and share only the **Presentation** window in your meeting.
-4. Read from **Presenter View** and deliver the talk.
+1. Give the agent your source material and explicitly ask it to follow [`skills/presentation.md`](skills/presentation.md).
+2. The agent first collects and synthesizes all available information into an intermediate Markdown source file.
+3. Using that source file, the agent designs the narrative and writes `scene.xml` with slides, images, and ready-to-say presenter notes.
+4. Launch Presenter and share only the **Presentation** window in your meeting.
+5. Read from **Presenter View** and deliver the talk.
 
 ### Hypothetical scenarios
 
@@ -37,6 +38,8 @@ Typical workflow:
 **2. Conference talk from a blog series.** You wrote 4 blog posts about a technical deep-dive and got asked to give a talk on it tomorrow. An agent pulls the articles, rewrites verbose prose into bullet-pointed slides, pulls inline diagrams as standalone images, and produces a presenter-ready deck with speaker notes drawn from the original post intros. No copy-pasting, no slide design.
 
 **3. Product launch recap from social media.** Your team shipped a feature and reactions are flying across Twitter, Reddit, and HN. An agent scrapes the top threads, pulls quote-worthy praise, downloads screenshots of the best reactions, and weaves them into a "launch recap" deck — timeline slide, highlight quotes, sentiment summary, and a closing slide with follow-up actions. Ready for the all-hands meeting in minutes.
+
+![Three AI-generated presentation scenarios: a competitor landscape report, a conference talk built from blog posts, and a product launch recap assembled from social reactions](docs/images/presenter-hypothetical-scenarios.png)
 
 ## Features
 
@@ -151,13 +154,13 @@ Include the DTD in your presentation files for validation:
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
 <presentation>
-  <slide layout="title">
-    <title>My Talk</title>
+  <slide layout="title" title="My Talk">
+    <notes>Welcome everyone. Today I will explain the three ideas that matter most.</notes>
     <subtitle>Subtitle here</subtitle>
   </slide>
 
-  <slide layout="content">
-    <title>Key Points</title>
+  <slide layout="content" title="Key Points">
+    <notes>These points form the core of the talk. I will start with the first and show how each one leads to the next.</notes>
     <text><b>Bold</b> point one</text>
     <text>Point two</text>
     <text>Point three</text>
@@ -167,14 +170,16 @@ Include the DTD in your presentation files for validation:
 
 ### For AI Agents
 
-When generating presentations, refer to the [Slide Format Reference](https://corepunch.github.io/presenter/skills/presentation.md) for the complete specification. Always include the DOCTYPE declaration pointing to `https://corepunch.github.io/presenter/schemas/presentation.dtd`.
+Use the provided [presentation skill](skills/presentation.md) when generating a deck. It explains how to research the subject, build a coherent presentation structure, write useful presenter notes, choose layouts and visuals, and produce valid Presenter XML. The hosted [Slide Format Reference](https://corepunch.github.io/presenter/skills/presentation.md) contains the same guidance. Always include the DOCTYPE declaration pointing to `https://corepunch.github.io/presenter/schemas/presentation.dtd`.
 
 Recommended workflow:
-1. Write the XML slide file following the format spec
-2. Capture screenshots with `--screenshot` flag
-3. Reference screenshots in `<image>` elements with relative paths
-4. Include `<notes>` on every slide with a ready-to-read script: what to say, key facts to mention, and the transition to the next slide
-5. Present live or render to images
+
+1. Gather all available source material into an intermediate `.md` file, preserving facts, evidence, links, quotes, and unresolved questions.
+2. Define the audience, objective, central message, narrative arc, and slide outline from that source file.
+3. Convert the outline into XML using the skill, [`schemas/presentation.dtd`](schemas/presentation.dtd), and the examples in this repository.
+4. Capture or create useful visuals and reference them in `<image>` elements with relative paths.
+5. Include `<notes>` on every slide with a natural, ready-to-say script: context, evidence, what to emphasize, and the transition to the next slide.
+6. Validate and review the complete deck, then present it live or render it to images.
 
 ## Layouts
 

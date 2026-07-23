@@ -11,6 +11,7 @@ An XML-based format for creating presentations. Each `<slide>` element represent
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
 <presentation>
   <slide layout="title" title="My Presentation">
     <notes>Presenter-only notes</notes>
@@ -18,6 +19,7 @@ An XML-based format for creating presentations. Each `<slide>` element represent
   </slide>
 
   <slide layout="content" title="Agenda">
+    <notes>We will cover two connected topics, then close with the decision they support.</notes>
     <text>First topic</text>
     <text>Second topic</text>
   </slide>
@@ -25,6 +27,73 @@ An XML-based format for creating presentations. Each `<slide>` element represent
 ```
 
 Slides are separated by `<slide>` elements — no delimiter characters. The XML structure itself defines slide boundaries.
+
+---
+
+## Agent Workflow: Research First, XML Second
+
+Do not generate the presentation XML directly from scattered inputs. First accumulate and synthesize all available information into an intermediate Markdown file such as `presentation-source.md`. Treat this file as the factual and narrative source of truth for the deck.
+
+### 1. Gather the source material
+
+Read all relevant material available to the task: documents, articles, reports, webpages, issue trackers, git history, PR descriptions, metrics, screenshots, diagrams, and user instructions. In `presentation-source.md`, record:
+
+- Audience, occasion, desired outcome, duration, and any required call to action
+- Key facts, dates, metrics, quotes, examples, and decisions
+- Source links, file paths, commit hashes, or other provenance for important claims
+- Candidate visuals and where their original files can be found
+- Contradictions, missing context, assumptions, and open questions
+
+Keep verified facts distinct from inference. Never invent a number, quote, user reaction, or source. If a claim cannot be verified, label it as an assumption or omit it.
+
+A practical intermediate file can use this structure:
+
+```markdown
+# Presentation brief
+- Audience:
+- Occasion and duration:
+- Desired outcome:
+- Central message:
+
+# Evidence and source notes
+## Theme or question
+- Fact or quotation — source/provenance
+- Metric and measurement context — source/provenance
+- Candidate visual — file path or URL
+
+# Gaps and assumptions
+- Open question:
+- Explicit assumption:
+
+# Slide plan
+1. Takeaway — evidence — visual — narrative role
+2. Takeaway — evidence — visual — narrative role
+```
+
+### 2. Synthesize before outlining
+
+Organize the intermediate Markdown by theme rather than by input file. Remove duplication, reconcile conflicts where the evidence allows it, and identify:
+
+- The single sentence the audience should remember
+- The audience's starting context and likely questions
+- The 2-4 supporting ideas that prove the central message
+- The strongest evidence or visual for each idea
+- The decision, behavior, or next step the presentation should produce
+
+Then add a slide plan to the Markdown file. For every proposed slide, record its takeaway, supporting evidence, intended visual, and role in the narrative. This makes it possible to review the story before encoding it as XML.
+
+### 3. Convert the source file into Presenter XML
+
+Only after the source and outline are complete, translate them into the format below. Follow the repository's [`presentation.dtd`](../schemas/presentation.dtd) and [`style.dtd`](../schemas/style.dtd); use this document's layout examples rather than inventing elements or attributes.
+
+- Start every deck with the XML declaration and required DOCTYPE shown above.
+- Use `title="..."` on `<slide>`; there is no `<title>` child element.
+- Put `<notes>` first inside each slide, before visible content.
+- Use relative image paths and descriptive `alt` text.
+- Escape XML-sensitive characters: `&amp;`, `&lt;`, `&gt;`, `&quot;`, and `&apos;` where needed.
+- Keep the intermediate `.md` file beside the presentation when practical so facts, sources, and future revisions remain traceable.
+
+Review the XML against the DTD and render the deck before delivery. Fix structural errors, overflowing text, weak image crops, repetitive layouts, and presenter notes that do not match the visible slide.
 
 ---
 
@@ -51,6 +120,7 @@ When `layout` is omitted, it defaults to `content`. The `title` layout requires 
 | `<subtitle>` | 0 or 1   | Secondary heading, used with `layout="title"` |
 | `<text>`    | 0 or more | Text block with optional inline formatting |
 | `<image>`   | 0 or more | Image (self-closing element) |
+| `<code>`    | 0 or more | Preformatted code block with optional syntax language |
 | `<slide>`   | 0 or more | Nested slide, positioned via `slot` when parent is `layout="columns"` |
 
 `<notes>` should appear first, followed by visual elements. Within a slide, elements render in document order — top to bottom in default vertical flow, or into column slots when using `layout="columns"`.
@@ -300,7 +370,7 @@ No footer.
 
 ## Text Formatting
 
-Text inside `<text>`, `<title>`, `<notes>`, and `<subtitle>` uses HTML-like inline tags:
+Visible text inside `<text>` elements supports HTML-like inline tags:
 
 | Tag | Effect | Example |
 |-----|--------|---------|
@@ -308,7 +378,7 @@ Text inside `<text>`, `<title>`, `<notes>`, and `<subtitle>` uses HTML-like inli
 | `<i>` | Italic | `<text>Species: <i>Homo sapiens</i></text>` |
 | `<code>` | Monospace | `<text>Run <code>npm install</code> first</text>` |
 
-**Markdown markers (`**bold**`, `_italic_`, `` `code` ``) are not supported.** Always use the XML tags.
+**Markdown markers (`**bold**`, `_italic_`, `` `code` ``) are not supported.** Use the XML tags inside `<text>`. Slide titles are plain text supplied through the `title` attribute, and presenter notes are plain text inside `<notes>`.
 
 Long text wraps automatically. For paragraph breaks, use separate `<text>` elements:
 
@@ -378,12 +448,48 @@ The `<notes>` element is only shown in the presenter window, never on the audien
 </slide>
 ```
 
-**Good notes tell you:**
-- **Why** the change was made (the user pain, the blocker)
-- **What to highlight** on a screenshot ("point to the new sidebar")
-- **Specific numbers** that back up the bullet points
-- **Transition phrases** between slides
-- **Questions to ask the audience** ("Any team facing this same issue?")
+Write notes for every top-level slide, including title, section, image, and closing slides. Notes are the presenter's private, ready-to-say script—not a copy of the visible bullets and not a collection of vague reminders.
+
+### What strong notes contain
+
+Use this sequence when it fits the slide:
+
+1. **Opening sentence:** State the slide's takeaway in natural spoken language.
+2. **Context and meaning:** Explain why the audience should care and define anything the slide cannot show succinctly.
+3. **Evidence:** Give the relevant number, example, quote, comparison, or source context.
+4. **Visual cue:** Add a short bracketed direction such as `[Point to the latency drop on the right]` when the slide contains an image or comparison.
+5. **Transition:** End with a sentence that creates a logical bridge to the next slide.
+
+The script should sound like speech: short sentences, contractions where natural, and clear signposting. Write enough to let the presenter deliver the slide without returning to the source material, while leaving room to speak naturally. A useful default is roughly 45-90 seconds of notes for a normal content slide; adjust to the requested talk length and give title or section slides much less.
+
+### Notes quality rules
+
+- Expand the slide instead of reading it aloud. Slides show the headline and evidence; notes explain the story, nuance, and implications.
+- Preserve exact facts from `presentation-source.md`. Do not introduce unsupported claims while making the script conversational.
+- Explain acronyms and specialist terms the first time they are spoken.
+- Include attribution where it matters: who said a quote, when a metric was measured, or which source supports a surprising claim.
+- Tell the presenter what to emphasize, point at, pause on, or ask the audience.
+- Use a specific transition that previews the next idea; avoid repeatedly ending with "next slide."
+- Keep delivery directions brief and in square brackets so they are not mistaken for spoken words.
+- Use plain text inside `<notes>`. Escape XML-sensitive characters, especially `&` as `&amp;` and `<` as `&lt;`.
+
+### Weak and strong notes
+
+Weak:
+
+```xml
+<notes>Talk about performance. Mention the chart.</notes>
+```
+
+Strong:
+
+```xml
+<notes>Cold starts were the delay users felt most often: every new session
+  took 22 seconds before the dashboard became usable. Container snapshots
+  bring that down to 4 seconds for 90% of builds. [Point from the gray bar
+  to the blue bar.] That speedup fixes the first impression; now let's look
+  at what changed for users after they signed in.</notes>
+```
 
 ---
 
@@ -391,6 +497,7 @@ The `<notes>` element is only shown in the presenter window, never on the audien
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
 <presentation>
   <slide layout="title" title="Q4 Product Roadmap">
     <notes>Welcome everyone. Today we're walking through what shipped
@@ -398,7 +505,9 @@ The `<notes>` element is only shown in the presenter window, never on the audien
     <subtitle>Engineering Team — July 2026</subtitle>
   </slide>
 
-  <slide layout="section" title="What We Shipped"/>
+  <slide layout="section" title="What We Shipped">
+    <notes>Let's start with the changes users can already experience.</notes>
+  </slide>
 
   <slide layout="content" title="Recent Wins">
     <notes>Dashboards used to reload on every filter change — 3-4 second
@@ -431,7 +540,9 @@ The `<notes>` element is only shown in the presenter window, never on the audien
     <text>Search across all projects from home screen</text>
   </slide>
 
-  <slide layout="section" title="What's Next"/>
+  <slide layout="section" title="What's Next">
+    <notes>Those results give us a strong base. Now I'll turn to the next priorities.</notes>
+  </slide>
 
   <slide layout="columns" gap="24" title="Q1 Priorities">
     <notes>Dark mode was our most-requested feature this quarter.</notes>
@@ -555,14 +666,48 @@ Always add a short caption telling the audience **what to notice**: "Before: 3 c
 
 ### Structuring a Presentation
 
-Follow this narrative arc:
+Design the deck as one argument, not a sequence of facts. Every slide should advance the audience from what they know now to what they should understand, believe, decide, or do at the end.
 
-1. **Title slide** — Sprint, release, or time period
-2. **Section: Highlights** — 2-3 biggest wins, framed as outcomes
-3. **Section: What Shipped** — 4-8 key changes, grouped by theme (UX, performance, infra)
-4. **Section: Deep Dives** (optional) — Before/after screenshot slides for visible changes
-5. **Section: Numbers** — Metrics: lines changed, PRs merged, bugs closed, perf numbers
-6. **Title slide (close)** — Summary + next sprint preview
+### Build the narrative arc
+
+1. **Opening:** Establish the subject, audience relevance, and promise of the talk. A title slide should orient quickly; the first substantive slide should create interest with a problem, change, question, or surprising result.
+2. **Thesis and roadmap:** State the central message early. Preview the 2-4 ideas needed to support it when the audience benefits from a roadmap.
+3. **Main chapters:** Group evidence into a few coherent sections. Within each section, move from claim → evidence → implication rather than listing everything discovered.
+4. **Synthesis:** Reconnect the chapters and explain what the combined evidence means. Do not make the audience assemble the conclusion themselves.
+5. **Close:** Restate the central message in fresh language, give explicit next steps or a call to action, and make the final slide useful during questions.
+
+For a status or release presentation, that can become:
+
+1. Title and one-sentence outcome
+2. Highlights: the 2-3 biggest wins
+3. What shipped, grouped by audience-relevant theme
+4. Optional deep dives with before/after evidence
+5. Metrics, risks, and lessons
+6. Next priorities, owners, and decisions needed
+7. Summary and questions
+
+### Shape the slide sequence
+
+- Give each slide one job and one takeaway. If its purpose needs "and," consider splitting it.
+- Use conclusion-style titles such as "Checkout time fell by 40%" instead of topic labels such as "Performance."
+- Put context before detail, evidence immediately after claims, and implications immediately after evidence.
+- Alternate layouts with purpose. Use `content` for concise arguments, `image` for visual evidence, `columns` for genuine comparisons, and `section` only at meaningful chapter boundaries.
+- Use section slides as pacing devices, not decoration. In a short deck, headings alone may provide enough structure.
+- Prefer the strongest evidence over exhaustive coverage. Move supporting detail into notes.
+- Create continuity: the final sentence in one slide's notes should make the next slide feel inevitable.
+- Estimate timing from the requested duration before writing XML. Reserve time for the opening, transitions, close, and questions; then trim the outline rather than rushing overloaded slides.
+
+### Review the whole story
+
+Read only the slide titles in order. They should form a coherent summary of the presentation. Then read the notes continuously as a script and check that:
+
+- The opening promise is fulfilled
+- Important claims have evidence
+- Terms and acronyms appear only after they are introduced
+- No slide repeats the previous slide without adding meaning
+- Transitions match the actual next slide
+- The conclusion follows from the material presented
+- The call to action names the decision, owner, or next step when one exists
 
 ### Before/After Slide Pattern for Commits
 
@@ -600,13 +745,18 @@ For any commit labeled "improved X" or "updated component X", generate a two-col
 
 ### Visual Quality Checklist
 
+- [ ] Intermediate `.md` contains the audience, objective, evidence, provenance, visuals, open questions, and slide plan
+- [ ] XML declaration and required presentation DOCTYPE are present
 - [ ] Each slide has a clear, action-oriented `title`
 - [ ] 3-5 `<text>` elements max, under 8 words each
 - [ ] At least one numeric metric per section ("40% faster", "120 engineers affected")
 - [ ] Every bullet answers "so what?"
 - [ ] Images have descriptive `alt` text and captions
-- [ ] `<notes>` written for each slide (at minimum: the one thing to say)
+- [ ] Every top-level slide has ready-to-say `<notes>` with context, evidence, delivery cues where useful, and a transition
 - [ ] One clear narrative thread from first slide to last
+- [ ] Slide titles alone form a coherent summary
+- [ ] Facts and notes agree with the intermediate source file
+- [ ] XML matches `schemas/presentation.dtd` and renders without overflow or broken image paths
 
 ---
 
