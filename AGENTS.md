@@ -33,13 +33,13 @@ clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2 tinyx
 |------|---------|
 | `src/main.cpp` | Entry point. Parses CLI args, creates SDL windows, runs event loop |
 | `src/xml_parser.cpp` | Parses XML into `Presentation`/`Slide` structs |
-| `src/style.cpp` | Loads theme XML into `PresentationStyle` |
+| `src/style.cpp` | Loads theme XML into `PresentationStyle`; defines 8 built-in themes |
 | `src/font.cpp` | TTF font loading via SDL_ttf-style API (bundled Inter + JetBrains Mono) |
 | `src/renderer.cpp` | SDL2 rendering — slides, presenter view, text layout |
 | `src/layout.cpp` | Recursive layout engine: sizes slides, positions children |
 | `src/image.cpp` | Image loading (SDL_image) and scaling (fit/fill) |
 | `include/common.h` | Core types: `Slide`, `Presentation`, `SlideLayout`, `ImageFit` enums |
-| `include/style.h` | `PresentationStyle` and `Color` structs |
+| `include/style.h` | `PresentationStyle` and `Color` structs — Color has `toSDLColor()` and `toUint32(fmt)` methods |
 | `include/constants.h` | Compile-time layout constants (margins, font scales) |
 
 ### Data Flow
@@ -66,6 +66,8 @@ clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2 tinyx
 - Enum classes for type safety
 - Build artifacts in `build/` (gitignored)
 - Fonts bundled in `assets/` (Inter family + JetBrains Mono)
+- **Never hardcode RGB values in renderer.cpp** — use `Color` struct from style. Convert via `color.toSDLColor()` (SDL_Color) or `color.toUint32(format)` (Uint32 pixel).
+- Color supports `"#rrggbb"` string construction: `Color("#FF79C6")`
 
 ## Generating Presentations
 
@@ -93,7 +95,13 @@ When generating XML presentation files:
 
 ### Modifying slide styles
 
-Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/styles/`.
+Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/styles/`. The presenter ships with 8 built-in themes switchable at runtime via `Shift+Left`/`Shift+Right`: Dracula, Monokai, Solarized Dark, GitHub Light, Solarized Light, Nord, Sunset, Arc.
+
+### Adding a new built-in theme
+
+1. Add a `makeTheme(...)` call to the list in `PresentationStyle::builtInThemes()` in `src/style.cpp`
+2. Use `"#rrggbb"` string literals for colors (Color has implicit constructor from hex strings)
+3. Rebuild — themes auto-register with Shift+Arrow hotkeys
 
 ### Adding image formats
 

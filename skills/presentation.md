@@ -459,7 +459,9 @@ The `<notes>` element is only shown in the presenter window, never on the audien
 
 ## Style
 
-Presentation styling (fonts, colors, layout metrics) is configured via an external style file. See [schemas/style.dtd](../schemas/style.dtd) for the full style format.
+Presentation styling (fonts, colors, layout metrics) is configured via an external style file or one of 8 built-in themes (Dracula, Monokai, Solarized Dark/Light, GitHub Light, Nord, Sunset, Arc). Built-in themes can be cycled at runtime with `Shift+Left` / `Shift+Right`.
+
+See [schemas/style.dtd](../schemas/style.dtd) for the full style format.
 
 Style files can be referenced in two ways:
 
@@ -475,7 +477,7 @@ Style files can be referenced in two ways:
    presenter demo.xml --style=styles/light.xml
    ```
 
-If no style is specified, the built-in dark theme is used.
+If no style is specified, the built-in Dracula theme is used.
 
 ---
 
