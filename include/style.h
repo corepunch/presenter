@@ -1,4 +1,5 @@
 #pragma once
+#include <SDL2/SDL.h>
 #include <string>
 #include <vector>
 #include <cstdio>
@@ -10,7 +11,6 @@ struct Color {
     Color(unsigned char r, unsigned char g, unsigned char b, unsigned char a = 255)
         : r(r), g(g), b(b), a(a) {}
 
-    // Implicit conversion from "#rrggbb" hex string
     Color(const char* hex) {
         if (!hex || hex[0] != '#') return;
         unsigned int ri, gi, bi;
@@ -19,6 +19,11 @@ struct Color {
             g = static_cast<unsigned char>(gi);
             b = static_cast<unsigned char>(bi);
         }
+    }
+
+    SDL_Color toSDLColor() const { return {r, g, b, a}; }
+    Uint32 toUint32(const SDL_PixelFormat* fmt) const {
+        return SDL_MapRGBA(fmt, r, g, b, a);
     }
 };
 

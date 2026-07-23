@@ -10,14 +10,6 @@
 #include <algorithm>
 #include <cstring>
 
-static inline Uint32 makeColor(SDL_Surface* surface, Uint8 r, Uint8 g, Uint8 b, Uint8 a = 255) {
-    return SDL_MapRGBA(surface->format, r, g, b, a);
-}
-
-static inline SDL_Color toSdl(const Color& c) {
-    return {c.r, c.g, c.b, c.a};
-}
-
 Renderer::~Renderer() {
     cleanup();
 }
@@ -39,7 +31,7 @@ void Renderer::cleanup() {
 }
 
 void Renderer::clear(int r, int g, int b) {
-    SDL_FillRect(m_surface, nullptr, makeColor(m_surface, r, g, b));
+    SDL_FillRect(m_surface, nullptr, Color(r, g, b).toUint32(m_surface->format));
 }
 
 void Renderer::drawText(const std::string& text, float x, float y,
@@ -190,14 +182,14 @@ void Renderer::renderFormatted(const std::string& text, float x, float y,
                         std::string seg = codeText.substr(tok.start, tok.len);
                         SDL_Color tc;
                         switch (tok.type) {
-                            case HighlightType::Keyword:     tc = toSdl(m_style->codeKeyword);     break;
-                            case HighlightType::Type:        tc = toSdl(m_style->codeType);        break;
-                            case HighlightType::String:      tc = toSdl(m_style->codeString);      break;
-                            case HighlightType::Comment:     tc = toSdl(m_style->codeComment);     break;
-                            case HighlightType::Number:      tc = toSdl(m_style->codeNumber);      break;
-                            case HighlightType::Builtin:     tc = toSdl(m_style->codeBuiltin);     break;
-                            case HighlightType::Punctuation: tc = toSdl(m_style->codePunctuation); break;
-                            default:                         tc = toSdl(m_style->codeText);        break;
+                            case HighlightType::Keyword:     tc = m_style->codeKeyword.toSDLColor();     break;
+                            case HighlightType::Type:        tc = m_style->codeType.toSDLColor();        break;
+                            case HighlightType::String:      tc = m_style->codeString.toSDLColor();      break;
+                            case HighlightType::Comment:     tc = m_style->codeComment.toSDLColor();     break;
+                            case HighlightType::Number:      tc = m_style->codeNumber.toSDLColor();      break;
+                            case HighlightType::Builtin:     tc = m_style->codeBuiltin.toSDLColor();     break;
+                            case HighlightType::Punctuation: tc = m_style->codePunctuation.toSDLColor(); break;
+                            default:                         tc = m_style->codeText.toSDLColor();        break;
                         }
                         drawText(seg, curX, y, monoFont, tc);
                         curX += monoFont.measureString(seg);
@@ -396,14 +388,14 @@ static void renderCodeBlock(Renderer* r, SDL_Surface* surf,
 
             SDL_Color clr;
             switch (tok.type) {
-                case HighlightType::Keyword:     clr = toSdl(s.codeKeyword);     break;
-                case HighlightType::Type:        clr = toSdl(s.codeType);        break;
-                case HighlightType::String:      clr = toSdl(s.codeString);      break;
-                case HighlightType::Comment:     clr = toSdl(s.codeComment);     break;
-                case HighlightType::Number:      clr = toSdl(s.codeNumber);      break;
-                case HighlightType::Builtin:     clr = toSdl(s.codeBuiltin);     break;
-                case HighlightType::Punctuation: clr = toSdl(s.codePunctuation); break;
-                default:                         clr = toSdl(s.codeText);        break;
+                case HighlightType::Keyword:     clr = s.codeKeyword.toSDLColor();     break;
+                case HighlightType::Type:        clr = s.codeType.toSDLColor();        break;
+                case HighlightType::String:      clr = s.codeString.toSDLColor();      break;
+                case HighlightType::Comment:     clr = s.codeComment.toSDLColor();     break;
+                case HighlightType::Number:      clr = s.codeNumber.toSDLColor();      break;
+                case HighlightType::Builtin:     clr = s.codeBuiltin.toSDLColor();     break;
+                case HighlightType::Punctuation: clr = s.codePunctuation.toSDLColor(); break;
+                default:                         clr = s.codeText.toSDLColor();        break;
             }
 
             r->drawText(text, curX, static_cast<float>(curY), monoFont, clr);
@@ -436,7 +428,7 @@ static void renderPartHeader(Renderer* r, SDL_Surface* surf,
     int textY = part.rect.y + (part.rect.h - static_cast<int>(titleLineH)) / 2 + static_cast<int>(ascent);
 
     r->renderFormatted(slide.title, static_cast<float>(part.rect.x + s.partPadding),
-                       static_cast<float>(textY), titleV, toSdl(s.titleColor));
+                       static_cast<float>(textY), titleV, s.titleColor.toSDLColor());
 
     Uint32 lc = SDL_MapRGBA(surf->format, s.lineColor.r, s.lineColor.g, s.lineColor.b, s.lineColor.a);
     SDL_Rect lineRect = {part.rect.x, part.rect.y + part.rect.h - 1, part.rect.w, 1};
@@ -456,11 +448,11 @@ static void renderPartBody(Renderer* r, SDL_Surface* surf,
         std::string heading;
         if (isHeadingLine(slide.texts[i], &heading)) {
             r->renderFormatted(heading, static_cast<float>(part.rect.x + s.partPadding),
-                               static_cast<float>(y), titleV, toSdl(s.titleColor));
+                               static_cast<float>(y), titleV, s.titleColor.toSDLColor());
             y += r->textHeight(titleV.get(FontType::Regular));
         } else {
             std::string line = "\xE2\x80\xA2 " + slide.texts[i];
-            r->renderFormattedBlock(line, part.rect.x + s.partPadding, y, baseV, toSdl(s.textColor), contentW);
+            r->renderFormattedBlock(line, part.rect.x + s.partPadding, y, baseV, s.textColor.toSDLColor(), contentW);
             y += r->textHeight(baseV.get(FontType::Regular));
         }
     }
@@ -494,7 +486,7 @@ static void renderPartSlot(Renderer* r, SDL_Surface* surf,
         0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
     if (!childSurf) return;
 
-    SDL_FillRect(childSurf, nullptr, makeColor(surf, r->style().bgColor.r, r->style().bgColor.g, r->style().bgColor.b));
+    SDL_FillRect(childSurf, nullptr, r->style().bgColor.toUint32(surf->format));
 
     // Save state and set up child surface
     SDL_Renderer* savedR = r->sdlRenderer();
@@ -608,11 +600,9 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
 
         stbi_image_free(data);
     } else {
-        Uint32 phColor = makeColor(surf, 50, 50, 60);
+        Color phC = "#32323C";
         SDL_Rect ph = {part.rect.x, part.rect.y, part.rect.w, part.rect.h};
-        SDL_FillRect(surf, &ph, phColor);
-        SDL_Color ltgray = {200, 200, 210, 255};
-        // Can't easily access renderer here; skip text placeholder
+        SDL_FillRect(surf, &ph, phC.toUint32(surf->format));
     }
 }
 
@@ -638,7 +628,7 @@ static void renderPartCaption(Renderer* r, SDL_Surface* surf,
     const auto& s = r->style();
     int contentW = part.rect.w - 2 * s.partPadding;
     r->renderFormattedBlock(text, part.rect.x + s.partPadding, part.rect.y + s.partPadding,
-                            baseV, toSdl(s.textColor), contentW);
+                            baseV, s.textColor.toSDLColor(), contentW);
 }
 
 static void renderPartFooter(Renderer* r, SDL_Surface* surf,
@@ -653,7 +643,7 @@ static void renderPartFooter(Renderer* r, SDL_Surface* surf,
     float numW = smallFont.measureString(numBuf);
     float x = static_cast<float>(part.rect.x + part.rect.w - s.partPadding) - numW;
     float y = static_cast<float>(part.rect.y + (part.rect.h - r->textHeight(smallFont)) / 2);
-    r->drawText(numBuf, x, y, smallFont, toSdl(s.dimColor));
+    r->drawText(numBuf, x, y, smallFont, s.dimColor.toSDLColor());
 }
 
 static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
@@ -682,13 +672,13 @@ static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
     int startY = part.rect.y + (part.rect.h - static_cast<int>(totalH)) / 2;
     int titleY = startY + static_cast<int>(ascent);
     r->renderFormatted(slide.title, static_cast<float>(part.rect.x),
-                       static_cast<float>(titleY), titleV, toSdl(s.titleColor));
+                       static_cast<float>(titleY), titleV, s.titleColor.toSDLColor());
 
     if (!subtitleText.empty()) {
         const Font& baseFont = baseV.get(FontType::Regular);
         float baseAscent2 = baseFont.getAscent();
         int subtitleY = startY + static_cast<int>(titleLineH) + s.partGap + static_cast<int>(baseAscent2);
-        r->renderFormattedBlock(subtitleText, part.rect.x, subtitleY, baseV, toSdl(s.subtitleColor), part.rect.w);
+        r->renderFormattedBlock(subtitleText, part.rect.x, subtitleY, baseV, s.subtitleColor.toSDLColor(), part.rect.w);
     }
 }
 
@@ -703,7 +693,7 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
     SDL_Surface* surf = SDL_CreateRGBSurface(0, m_width, m_height, 32,
         0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
     if (surf) {
-        SDL_FillRect(surf, nullptr, makeColor(surf, style.bgColor.r, style.bgColor.g, style.bgColor.b));
+        SDL_FillRect(surf, nullptr, style.bgColor.toUint32(surf->format));
         m_surface = surf;
 
         // Compute layout metrics
@@ -780,33 +770,33 @@ SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontS
 
     char numBuf[64];
     snprintf(numBuf, sizeof(numBuf), "Slide %d / %d", pres.current + 1, pres.size());
-    drawText(numBuf, static_cast<float>(margin), static_cast<float>(y), smallFont, toSdl(s.dimColor));
+    drawText(numBuf, static_cast<float>(margin), static_cast<float>(y), smallFont, s.dimColor.toSDLColor());
     y += th + 4;
 
     const Slide& current = pres.currentSlide();
-    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), baseV, toSdl(s.titleColor));
+    renderFormatted(current.title, static_cast<float>(margin), static_cast<float>(y), baseV, s.titleColor.toSDLColor());
     y += textHeight(baseFont) + 12;
 
     int contentW = m_width - 2 * margin;
     if (!current.notes.empty()) {
-        Uint32 notesBg = makeColor(m_surface, s.bgColor.r - 5, s.bgColor.g - 5, s.bgColor.b + 5);
+        Uint32 notesBg = Color(s.bgColor.r - 5, s.bgColor.g - 5, s.bgColor.b + 5).toUint32(m_surface->format);
         int notesH = std::max(th * 3, m_height - y - margin - th * 2);
         SDL_Rect notesRect = {margin, y - 18, contentW, notesH};
         SDL_FillRect(m_surface, &notesRect, notesBg);
-        drawRectOutline(&notesRect, makeColor(m_surface, s.lineColor.r, s.lineColor.g, s.lineColor.b));
+        drawRectOutline(&notesRect, s.lineColor.toUint32(m_surface->format));
 
         drawText("Notes:", static_cast<float>(margin + 6),
-                 static_cast<float>(y + 4), smallFont, toSdl(s.dimColor));
-        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallV, toSdl(s.textColor), contentW - 12);
+                 static_cast<float>(y + 4), smallFont, s.dimColor.toSDLColor());
+        renderFormattedBlock(current.notes, margin + 6, y + th + 4, smallV, s.textColor.toSDLColor(), contentW - 12);
         y += notesH + 12;
     }
 
     if (pres.canGoNext()) {
         const Slide& next = pres.slides[pres.current + 1];
         drawText("Next:", static_cast<float>(margin),
-                 static_cast<float>(y), smallFont, toSdl(s.dimColor));
+                 static_cast<float>(y), smallFont, s.dimColor.toSDLColor());
         drawText(next.title, static_cast<float>(margin),
-                 static_cast<float>(y + th + 2), smallFont, toSdl(s.textColor));
+                 static_cast<float>(y + th + 2), smallFont, s.textColor.toSDLColor());
     }
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, m_surface);
