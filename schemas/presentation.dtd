@@ -135,7 +135,7 @@
     style CDATA #IMPLIED>
 <!--
   @name   Optional audience window title. Defaults to "Presentation".
-  @style  Path to an external style file (e.g. "./styles/light.xml").
+  @style  Path to an external style file (e.g. "./styles/light.style").
           Overrides any inline <style> element. See schemas/style.dtd.
           Can also be overridden with the CLI style option.
 -->

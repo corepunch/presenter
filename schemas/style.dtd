@@ -5,9 +5,9 @@
   All attributes are optional — omitted values keep the built-in default.
 
   Example usage:
-    <presentation style="./styles/dark.xml">
+    <presentation style="./styles/dark.style">
     or
-    presenter demo.xml [style option] styles/light.xml
+    presenter demo.slides [style option] styles/light.style
 -->
 
 <!ELEMENT style (fonts?, colors?, charts?, layout?)>

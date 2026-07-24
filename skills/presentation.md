@@ -38,7 +38,7 @@ Slides are separated by `<slide>` elements — no delimiter characters. The XML 
 | `style` | No | Built-in theme | Path to an external style XML file |
 
 ```xml
-<presentation name="Q3 Product Review" style="./styles/dark.xml">
+<presentation name="Q3 Product Review" style="./styles/dark.style">
 ```
 
 The presenter-notes window keeps the title `Presenter View`; `name` changes
@@ -709,14 +709,14 @@ Style files can be referenced in two ways:
 
 1. **Inline attribute:**
    ```xml
-  <presentation name="Q4 Product Roadmap" style="./styles/dark.xml">
+  <presentation name="Q4 Product Roadmap" style="./styles/dark.style">
      ...
    </presentation>
    ```
 
 2. **CLI flag:**
    ```
-   presenter demo.xml --style=styles/light.xml
+   presenter demo.slides --style=styles/light.style
    ```
 
 If no style is specified, the built-in Dracula theme is used.

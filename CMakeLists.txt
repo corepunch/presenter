@@ -147,7 +147,7 @@ add_custom_target(copy_share ALL
 )
 
 add_custom_target(demo
-    COMMAND $<TARGET_FILE:presenter> ${CMAKE_SOURCE_DIR}/demo/demo.xml
+    COMMAND $<TARGET_FILE:presenter> ${CMAKE_SOURCE_DIR}/demo/demo.slides
     DEPENDS presenter
     USES_TERMINAL
 )

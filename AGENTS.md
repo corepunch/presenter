@@ -13,7 +13,7 @@ Instructions for AI agents working on this codebase.
 cmake -B build && cmake --build build
 
 # Run
-./build/presenter demo/demo.xml
+./build/presenter demo/demo.slides
 
 # Tests
 ./build/test_textbounds

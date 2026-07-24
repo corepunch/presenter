@@ -11,8 +11,8 @@
 #include <string>
 
 static void printUsage(const char* prog) {
-    printf("Usage: %s <presentation.xml> [options]\n", prog);
-    printf("  --style <style.xml>               Override the presentation style\n");
+    printf("Usage: %s <presentation.slides> [options]\n", prog);
+    printf("  --style <style.style>             Override the presentation style\n");
     printf("  --slide <number>                  Select a 1-based slide for capture\n");
     printf("  --screenshot <output.png>         Save the audience view and exit\n");
     printf("  --presenter-screenshot <file.png> Save the presenter view and exit\n");

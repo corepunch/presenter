@@ -32,7 +32,7 @@ Presenter works especially well with Microsoft Teams, Zoom, Google Meet, and oth
 Presenter is designed around window sharing rather than sharing your entire desktop:
 
 1. Ask an AI agent to generate the XML deck and a ready-to-read script in the presenter notes for every slide.
-2. Launch it with `./build/presenter your-deck.xml`.
+2. Launch it with `./build/presenter your-deck.slides`.
 3. In Teams or another meeting app, choose **Share → Window** and select **Presentation**.
 4. Keep **Presenter View** visible only to yourself and read or adapt its slide-by-slide script as you speak.
 
@@ -46,7 +46,7 @@ Typical workflow:
 
 1. Give the agent your source material and explicitly ask it to follow [`skills/presentation.md`](skills/presentation.md).
 2. The agent first collects and synthesizes all available information into an intermediate Markdown source file.
-3. Using that source file, the agent designs the narrative and writes `scene.xml` with slides, images, and ready-to-say presenter notes.
+3. Using that source file, the agent designs the narrative and writes `scene.slides` with slides, images, and ready-to-say presenter notes.
 4. Launch Presenter and share only the **Presentation** window in your meeting.
 5. Read from **Presenter View** and deliver the talk.
 
@@ -102,13 +102,13 @@ cmake --build build
 ## Run
 
 ```bash
-./build/presenter demo/demo.xml
+./build/presenter demo/demo.slides
 ```
 
 Override the theme at runtime:
 
 ```bash
-./build/presenter demo/demo.xml --style demo/styles/light.xml
+./build/presenter demo/demo.slides --style demo/styles/light.style
 ```
 
 ### Controls
@@ -131,13 +131,13 @@ Override the theme at runtime:
 Capture a slide to an image file:
 
 ```bash
-./build/presenter demo/demo.xml --slide 7 --screenshot output/slide.png
+./build/presenter demo/demo.slides --slide 7 --screenshot output/slide.png
 ```
 
 Capture the matching private presenter view, or both views in one run:
 
 ```bash
-./build/presenter demo/demo.xml --slide 7 \
+./build/presenter demo/demo.slides --slide 7 \
   --screenshot output/slide.png \
   --presenter-screenshot output/notes.png
 ```
@@ -153,13 +153,13 @@ Example workflow for a sprint demo:
 
 ```bash
 # 1. Generate the presentation XML
-agent generate-sprint-demo --output=scenes/sprint23.xml
+agent generate-sprint-demo --output=scenes/sprint23.slides
 
 # 2. Capture key screenshots
-./build/presenter scenes/sprint23.xml --slide 1 --screenshot slides/sprint23_title.png
+./build/presenter scenes/sprint23.slides --slide 1 --screenshot slides/sprint23_title.png
 
 # 3. Present live
-./build/presenter scenes/sprint23.xml
+./build/presenter scenes/sprint23.slides
 ```
 
 ## Slide Format
@@ -264,7 +264,7 @@ Custom styles use the format defined in [schemas/style.dtd](https://corepunch.gi
 Reference a style from the presentation:
 
 ```xml
-<presentation style="./styles/dark.xml">
+<presentation style="./styles/dark.style">
 ```
 
 ## Project Structure
