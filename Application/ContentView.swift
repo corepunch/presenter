@@ -48,9 +48,9 @@ private extension RecentPresentation {
 // MARK: - Root view
 
 struct ContentView: View {
+    var openPresenterWindow: (URL) -> Void = { _ in }
     @State private var recentPresentations: [RecentPresentation] = RecentPresentation.samples
     @State private var isFileImporterPresented = false
-    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         HStack(spacing: 0) {
@@ -121,7 +121,7 @@ struct ContentView: View {
                 at: 0
             )
         }
-        openWindow(id: "presenter", value: url)
+        openPresenterWindow(url)
     }
 }
 

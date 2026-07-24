@@ -22,11 +22,11 @@ jobs:
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
-          sudo apt-get install -y libsdl2-dev libtinyxml2-dev xvfb
+          sudo apt-get install -y libsdl2-dev xvfb
 
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
-        run: brew install sdl2 tinyxml2
+        run: brew install sdl2
 
       - name: Install dependencies (Windows)
         if: runner.os == 'Windows'
@@ -34,7 +34,7 @@ jobs:
         run: |
           git clone --depth 1 https://github.com/Microsoft/vcpkg.git "${{ github.workspace }}\vcpkg"
           . "${{ github.workspace }}\vcpkg\bootstrap-vcpkg.bat"
-          "${{ github.workspace }}\vcpkg\vcpkg" install sdl2 tinyxml2 --triplet x64-windows
+          "${{ github.workspace }}\vcpkg\vcpkg" install sdl2 --triplet x64-windows
           echo "VCPKG_ROOT=${{ github.workspace }}\vcpkg" >> $env:GITHUB_ENV
 
       - name: Configure CMake

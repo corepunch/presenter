@@ -5,7 +5,16 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(SDL2 REQUIRED)
-find_package(tinyxml2 REQUIRED)
+
+add_library(tinyxml2_vendor STATIC
+    third_party/tinyxml2.cpp
+)
+
+target_include_directories(tinyxml2_vendor PUBLIC
+    ${CMAKE_SOURCE_DIR}/third_party
+)
+
+add_library(tinyxml2::tinyxml2 ALIAS tinyxml2_vendor)
 
 # ---------------------------------------------------------------------------
 # presenter_core  —  static library used by both the SDL2 executable and the
@@ -97,7 +106,7 @@ target_include_directories(test_layout PRIVATE
     ${CMAKE_SOURCE_DIR}/third_party
 )
 
-target_link_libraries(test_layout PRIVATE tinyxml2::tinyxml2)
+target_link_libraries(test_layout PRIVATE SDL2::SDL2 tinyxml2::tinyxml2)
 
 set_target_properties(test_layout PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}
@@ -114,7 +123,7 @@ target_include_directories(test_xml_parser PRIVATE
     ${CMAKE_SOURCE_DIR}/third_party
 )
 
-target_link_libraries(test_xml_parser PRIVATE tinyxml2::tinyxml2)
+target_link_libraries(test_xml_parser PRIVATE SDL2::SDL2 tinyxml2::tinyxml2)
 
 set_target_properties(test_xml_parser PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}

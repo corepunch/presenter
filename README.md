@@ -78,18 +78,19 @@ Typical workflow:
 - C++17 compiler
 - CMake >= 3.10
 - SDL2
-- tinyxml2
+
+tinyxml2 is vendored in `third_party/` and built from source.
 
 ### macOS (Homebrew)
 
 ```bash
-brew install cmake sdl2 tinyxml2
+brew install cmake sdl2
 ```
 
 ### Ubuntu/Debian
 
 ```bash
-sudo apt install cmake libsdl2-dev libtinyxml2-dev
+sudo apt install cmake libsdl2-dev
 ```
 
 ## Build

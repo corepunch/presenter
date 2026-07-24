@@ -7,12 +7,21 @@
 
 import SwiftUI
 
+private struct ContentViewContainer: View {
+    @Environment(\.openWindow) private var openWindow
+    var body: some View {
+        ContentView(openPresenterWindow: { url in
+            openWindow(id: "presenter", value: url)
+        })
+    }
+}
+
 @main
 struct RebreifApp: App {
     var body: some Scene {
         // Welcome / launcher window
         WindowGroup("QuickSlides") {
-            ContentView()
+            ContentViewContainer()
         }
         .defaultSize(width: 740, height: 480)
         .windowResizability(.contentMinSize)
