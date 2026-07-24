@@ -53,13 +53,6 @@ PresenterHandle presenter_load(const char* slides_path, const char* cwd) {
         sdlInited = true;
     }
 
-    // Change working directory so relative asset paths (fonts, images) work.
-    std::string workDir = cwd ? std::string(cwd) : dirOf(slides_path);
-    if (!workDir.empty()) {
-        if (chdir(workDir.c_str()) != 0)
-            fprintf(stderr, "[presenter_api] chdir(%s) failed\n", workDir.c_str());
-    }
-
     Presentation pres = parseXml(slides_path);
     if (pres.empty()) {
         fprintf(stderr, "[presenter_api] No slides found in %s\n", slides_path);
@@ -74,6 +67,14 @@ PresenterHandle presenter_load(const char* slides_path, const char* cwd) {
     s->themeIndex = 0;
     for (int i = 0; i < (int)themes.size(); ++i) {
         if (themes[i].name == s->pres.style.name) { s->themeIndex = i; break; }
+    }
+
+    // Change working directory after parsing. Slide-relative paths are resolved
+    // during parse; runtime assets such as fonts and syntax data use cwd.
+    std::string workDir = cwd ? std::string(cwd) : dirOf(slides_path);
+    if (!workDir.empty()) {
+        if (chdir(workDir.c_str()) != 0)
+            fprintf(stderr, "[presenter_api] chdir(%s) failed\n", workDir.c_str());
     }
 
     if (!s->fonts.load(s->pres.style)) {

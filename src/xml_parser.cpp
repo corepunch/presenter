@@ -2,6 +2,7 @@
 #include <tinyxml2.h>
 #include <filesystem>
 #include <algorithm>
+#include <cstdio>
 
 static SlideLayout parseSlideLayout(const std::string& s) {
     std::string lower = s;
@@ -74,14 +75,25 @@ static Slide parseSlideElement(tinyxml2::XMLElement* el, const std::filesystem::
 Presentation parseXml(const std::string& filePath) {
     using namespace tinyxml2;
 
+    std::filesystem::path sourcePath(filePath);
+    std::error_code statusError;
+    if (std::filesystem::is_directory(sourcePath, statusError)) {
+        sourcePath /= "presentation.xml";
+    }
+
     XMLDocument doc;
-    if (doc.LoadFile(filePath.c_str()) != XML_SUCCESS) return {};
+    XMLError error = doc.LoadFile(sourcePath.string().c_str());
+    if (error != XML_SUCCESS) {
+        fprintf(stderr, "[xml_parser] Failed to load %s: %s\n",
+                sourcePath.string().c_str(), doc.ErrorStr());
+        return {};
+    }
 
     XMLElement* root = doc.FirstChildElement("presentation");
     if (!root) return {};
 
     Presentation pres;
-    std::filesystem::path base = std::filesystem::path(filePath).parent_path();
+    std::filesystem::path base = sourcePath.parent_path();
     if (const char* name = root->Attribute("name")) pres.name = name;
 
     const char* stylePath = root->Attribute("style");

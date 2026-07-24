@@ -4,53 +4,102 @@ import UniformTypeIdentifiers
 // MARK: - UTType extension
 
 extension UTType {
-    static let slidesPresentation = UTType(exportedAs: "com.presenter.slides", conformingTo: .data)
+    static let slidesPresentation = UTType(
+        exportedAs: "com.corepunch.slides",
+        conformingTo: .package
+    )
 }
 
 // MARK: - Model
 
-struct RecentPresentation: Identifiable {
+struct PresentationOpenRequest: Codable, Hashable {
+    let url: URL
+    let bookmarkData: Data?
+}
+
+struct SlidesPackageDocument: FileDocument {
+    static let readableContentTypes: [UTType] = [.slidesPresentation]
+
+    var presentationXML: Data
+
+    init() {
+        let xml = """
+        <?xml version="1.0" encoding="UTF-8"?>
+        <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
+        <presentation name="Untitled Presentation">
+          <slide layout="title" title="Untitled Presentation">
+            <subtitle>Add a subtitle</subtitle>
+            <notes>Add presenter notes here.</notes>
+          </slide>
+        </presentation>
+
+        """
+        presentationXML = Data(xml.utf8)
+    }
+
+    init(configuration: ReadConfiguration) throws {
+        guard configuration.file.isDirectory,
+              let manifest = configuration.file.fileWrappers?["presentation.xml"],
+              let data = manifest.regularFileContents
+        else {
+            throw CocoaError(.fileReadCorruptFile)
+        }
+        presentationXML = data
+    }
+
+    func fileWrapper(configuration: WriteConfiguration) throws -> FileWrapper {
+        FileWrapper(directoryWithFileWrappers: [
+            "presentation.xml": FileWrapper(regularFileWithContents: presentationXML)
+        ])
+    }
+}
+
+struct RecentPresentation: Codable, Identifiable {
     let id: UUID
     let title: String
     let location: String
     let lastOpened: Date
+    let bookmarkData: Data?
 
-    init(id: UUID = UUID(), title: String, location: String, lastOpened: Date) {
+    init(id: UUID = UUID(),
+         title: String,
+         location: String,
+         lastOpened: Date,
+         bookmarkData: Data?) {
         self.id = id
         self.title = title
         self.location = location
         self.lastOpened = lastOpened
+        self.bookmarkData = bookmarkData
     }
 }
 
-// MARK: - Sample data
+private enum RecentPresentationStore {
+    private static let key = "recentPresentations"
 
-private extension RecentPresentation {
-    static let samples: [RecentPresentation] = [
-        RecentPresentation(
-            title: "Sprint Demo",
-            location: "~/Documents/Presentations/Sprint Demo.slides",
-            lastOpened: Date().addingTimeInterval(-3600 * 2)
-        ),
-        RecentPresentation(
-            title: "Product Update",
-            location: "~/Documents/Presentations/Product Update.slides",
-            lastOpened: Date().addingTimeInterval(-3600 * 26)
-        ),
-        RecentPresentation(
-            title: "Architecture Review",
-            location: "~/Dropbox/Work/Architecture Review.slides",
-            lastOpened: Date().addingTimeInterval(-3600 * 24 * 5)
-        ),
-    ]
+    static func load() -> [RecentPresentation] {
+        guard let data = UserDefaults.standard.data(forKey: key),
+              let presentations = try? JSONDecoder().decode([RecentPresentation].self, from: data)
+        else {
+            return []
+        }
+        return presentations
+    }
+
+    static func save(_ presentations: [RecentPresentation]) {
+        guard let data = try? JSONEncoder().encode(presentations) else { return }
+        UserDefaults.standard.set(data, forKey: key)
+    }
 }
 
 // MARK: - Root view
 
 struct ContentView: View {
-    var openPresenterWindow: (URL) -> Void = { _ in }
-    @State private var recentPresentations: [RecentPresentation] = RecentPresentation.samples
+    var openPresenterWindow: (PresentationOpenRequest) -> Void = { _ in }
+    @State private var recentPresentations: [RecentPresentation] = RecentPresentationStore.load()
     @State private var isFileImporterPresented = false
+    @State private var isFileExporterPresented = false
+    @State private var newPresentation = SlidesPackageDocument()
 
     var body: some View {
         HStack(spacing: 0) {
@@ -76,13 +125,21 @@ struct ContentView: View {
         ) { result in
             handleFileImportResult(result)
         }
+        .fileExporter(
+            isPresented: $isFileExporterPresented,
+            document: newPresentation,
+            contentType: .slidesPresentation,
+            defaultFilename: "Untitled"
+        ) { result in
+            handleFileExportResult(result)
+        }
     }
 
     // MARK: - Actions
 
     private func createNewPresentation() {
-        // TODO: new-file workflow
-        print("[Presenter] createNewPresentation()")
+        newPresentation = SlidesPackageDocument()
+        isFileExporterPresented = true
     }
 
     private func openPresentation() {
@@ -90,38 +147,65 @@ struct ContentView: View {
     }
 
     private func openExamplePresentation() {
-        // Resolve the demo file bundled next to the executable
-        let exampleURL = Bundle.main.url(forResource: "demo", withExtension: "slides")
-            ?? URL(fileURLWithPath: "demo/demo.slides")
+        let exampleURL = Bundle.main.url(
+            forResource: "Nature Portfolio",
+            withExtension: "slides",
+            subdirectory: "demo"
+        ) ?? URL(fileURLWithPath: "demo/Nature Portfolio.slides")
         launch(url: exampleURL)
     }
 
     private func openRecentPresentation(_ presentation: RecentPresentation) {
         let url = URL(fileURLWithPath: (presentation.location as NSString).expandingTildeInPath)
-        launch(url: url)
+        launch(url: url, bookmarkData: presentation.bookmarkData)
     }
 
     private func handleFileImportResult(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            launch(url: url)
+            let bookmarkData = try? url.bookmarkData(
+                options: .withSecurityScope,
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+            launch(url: url, bookmarkData: bookmarkData)
         case .failure(let error):
             print("[Presenter] open failed: \(error.localizedDescription)")
         }
     }
 
-    private func launch(url: URL) {
-        // Record in recents (deduplicated by path)
+    private func handleFileExportResult(_ result: Result<URL, Error>) {
+        switch result {
+        case .success(let url):
+            let bookmarkData = try? url.bookmarkData(
+                options: .withSecurityScope,
+                includingResourceValuesForKeys: nil,
+                relativeTo: nil
+            )
+            launch(url: url, bookmarkData: bookmarkData)
+        case .failure(let error):
+            print("[Presenter] save failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func launch(url: URL, bookmarkData: Data? = nil) {
         let path = url.path
         let name = url.deletingPathExtension().lastPathComponent
-        if !recentPresentations.contains(where: { $0.location == path }) {
-            recentPresentations.insert(
-                RecentPresentation(title: name, location: path, lastOpened: Date()),
-                at: 0
-            )
-        }
-        openPresenterWindow(url)
+        recentPresentations.removeAll { $0.location == path }
+        recentPresentations.insert(
+            RecentPresentation(
+                title: name,
+                location: path,
+                lastOpened: Date(),
+                bookmarkData: bookmarkData
+            ),
+            at: 0
+        )
+        recentPresentations = Array(recentPresentations.prefix(12))
+        RecentPresentationStore.save(recentPresentations)
+
+        openPresenterWindow(PresentationOpenRequest(url: url, bookmarkData: bookmarkData))
     }
 }
 

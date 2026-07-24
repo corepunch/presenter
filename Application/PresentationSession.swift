@@ -21,13 +21,44 @@ final class PresentationSession {
     // MARK: - Private
 
     private let bridge: PresenterBridge
+    private let sourceURL: URL
+    private let isAccessingSecurityScopedResource: Bool
 
     // MARK: - Init
 
-    init?(slidesPath: String) {
-        guard let b = PresenterBridge(slidesPath: slidesPath) else { return nil }
+    init?(request: PresentationOpenRequest) {
+        var bookmarkIsStale = false
+        let resolvedURL: URL
+        if let bookmarkData = request.bookmarkData,
+           let bookmarkedURL = try? URL(
+                resolvingBookmarkData: bookmarkData,
+                options: .withSecurityScope,
+                relativeTo: nil,
+                bookmarkDataIsStale: &bookmarkIsStale
+           ) {
+            resolvedURL = bookmarkedURL
+        } else {
+            resolvedURL = request.url
+        }
+
+        let didStartAccessing = resolvedURL.startAccessingSecurityScopedResource()
+        guard let b = PresenterBridge(slidesPath: resolvedURL.path) else {
+            if didStartAccessing {
+                resolvedURL.stopAccessingSecurityScopedResource()
+            }
+            return nil
+        }
+
+        self.sourceURL = resolvedURL
+        self.isAccessingSecurityScopedResource = didStartAccessing
         self.bridge = b
         sync()
+    }
+
+    deinit {
+        if isAccessingSecurityScopedResource {
+            sourceURL.stopAccessingSecurityScopedResource()
+        }
     }
 
     // MARK: - Navigation

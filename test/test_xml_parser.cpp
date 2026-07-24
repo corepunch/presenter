@@ -3,6 +3,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <fstream>
+#include <filesystem>
 #include <unistd.h>
 #include <sys/stat.h>
 
@@ -34,7 +35,30 @@ static void cleanupTmpDir() {
                            "style_inherited.xml", "style_explicit.xml", "charts.xml",
                            "chart_style.xml"};
     for (auto f : files) unlink((std::string(TMP_DIR) + "/" + f).c_str());
+    unlink((std::string(TMP_DIR) + "/Package.slides/presentation.xml").c_str());
+    rmdir((std::string(TMP_DIR) + "/Package.slides").c_str());
     rmdir(TMP_DIR);
+}
+
+static int test_package() {
+    fprintf(stderr, "test_package...\n");
+    std::string packagePath = std::string(TMP_DIR) + "/Package.slides";
+    std::filesystem::create_directory(packagePath);
+    std::ofstream manifest(packagePath + "/presentation.xml");
+    manifest << "<?xml version=\"1.0\"?>\n"
+                "<presentation name=\"Package Test\">\n"
+                "  <slide layout=\"content\" title=\"Packaged\">\n"
+                "    <image src=\"images/example.png\"/>\n"
+                "  </slide>\n"
+                "</presentation>\n";
+    manifest.close();
+
+    Presentation p = parseXml(packagePath);
+    ASSERT_EQ(p.slides.size(), (size_t)1, "package contains 1 slide");
+    ASSERT_STR_EQ(p.name, std::string("Package Test"), "package presentation name");
+    ASSERT(p.slides[0].imagePath.find("Package.slides/images/example.png") != std::string::npos,
+           "package assets resolve relative to presentation.xml");
+    return 0;
 }
 
 static int test_empty() {
@@ -264,12 +288,12 @@ int main() {
     ensureTmpDir();
     int failures = 0;
     int results[] = {
-        test_empty(), test_title(), test_content(), test_columns(), test_recursive(),
+        test_empty(), test_package(), test_title(), test_content(), test_columns(), test_recursive(),
         test_formatted_text(), test_legacy_title_ignored(), test_nested_title_attrs(), test_no_title(),
         test_presenter_corner_radius_style(), test_charts_and_icons(),
     };
     const char* names[] = {
-        "empty", "title", "content", "columns", "recursive",
+        "empty", "package", "title", "content", "columns", "recursive",
         "formatted_text", "legacy_title_ignored", "nested_title_attrs", "no_title",
         "presenter_corner_radius_style", "charts_and_icons",
     };

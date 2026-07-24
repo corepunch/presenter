@@ -46,7 +46,7 @@ Typical workflow:
 
 1. Give the agent your source material and explicitly ask it to follow [`skills/presentation.md`](skills/presentation.md).
 2. The agent first collects and synthesizes all available information into an intermediate Markdown source file.
-3. Using that source file, the agent designs the narrative and writes `scene.slides` with slides, images, and ready-to-say presenter notes.
+3. Using that source file, the agent designs the narrative and writes a `scene.slides` package containing `presentation.xml`, images, and ready-to-say presenter notes.
 4. Launch Presenter and share only the **Presentation** window in your meeting.
 5. Read from **Presenter View** and deliver the talk.
 
@@ -103,13 +103,14 @@ cmake --build build
 ## Run
 
 ```bash
-./build/presenter demo/demo.slides
+./build/presenter "demo/Nature Portfolio.slides"
 ```
 
 Override the theme at runtime:
 
 ```bash
-./build/presenter demo/demo.slides --style demo/styles/light.style
+./build/presenter "demo/Nature Portfolio.slides" \
+  --style "demo/Nature Portfolio.slides/styles/light.style"
 ```
 
 ### Controls
@@ -132,13 +133,13 @@ Override the theme at runtime:
 Capture a slide to an image file:
 
 ```bash
-./build/presenter demo/demo.slides --slide 7 --screenshot output/slide.png
+./build/presenter "demo/Nature Portfolio.slides" --slide 7 --screenshot output/slide.png
 ```
 
 Capture the matching private presenter view, or both views in one run:
 
 ```bash
-./build/presenter demo/demo.slides --slide 7 \
+./build/presenter "demo/Nature Portfolio.slides" --slide 7 \
   --screenshot output/slide.png \
   --presenter-screenshot output/notes.png
 ```
@@ -165,7 +166,21 @@ agent generate-sprint-demo --output=scenes/sprint23.slides
 
 ## Slide Format
 
-Presentations are XML files with a `<presentation>` root containing `<slide>` children.
+Presentations are macOS document packages. Finder shows the package as one `.slides`
+document, while its contents keep the XML, images, and custom styles together:
+
+```text
+My Talk.slides/
+├── presentation.xml
+├── images/
+│   └── architecture.png
+└── styles/
+    └── custom.style
+```
+
+`presentation.xml` has a `<presentation>` root containing `<slide>` children.
+Relative paths resolve from the package root. The command-line renderer also
+continues to accept legacy single-file `.slides` XML decks.
 
 - **Full format reference**: [skills/presentation.md](https://corepunch.github.io/presenter/skills/presentation.md) — detailed guide with examples for all layouts
 - **DTD schemas**: [schemas/presentation.dtd](https://corepunch.github.io/presenter/schemas/presentation.dtd) and [schemas/style.dtd](https://corepunch.github.io/presenter/schemas/style.dtd) — formal XML validation

@@ -7,6 +7,28 @@ An XML-based format for creating presentations. Each `<slide>` element represent
 
 ---
 
+## Document Package
+
+Create each presentation as a `.slides` directory package. macOS presents the
+directory as one document, while Presenter can access all of its supporting
+files through the permission granted for that document.
+
+```text
+My Presentation.slides/
+├── presentation.xml
+├── images/
+│   └── diagram.png
+└── styles/
+    └── custom.style
+```
+
+Write the presentation XML to `presentation.xml`. Keep referenced images and
+styles inside the package and use paths relative to `presentation.xml`, such as
+`./images/diagram.png`. The command-line renderer still accepts legacy
+single-file `.slides` XML decks for compatibility.
+
+---
+
 ## Structure Overview
 
 ```xml

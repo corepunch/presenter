@@ -13,7 +13,7 @@ Instructions for AI agents working on this codebase.
 cmake -B build && cmake --build build
 
 # Run
-./build/presenter demo/demo.slides
+./build/presenter "demo/Nature Portfolio.slides"
 
 # Tests
 ./build/test_textbounds
@@ -71,17 +71,20 @@ clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2 tinyx
 
 ## Generating Presentations
 
-When generating XML presentation files:
+When generating presentations:
 
-1. **Always include the DOCTYPE declaration:**
+1. Create a `.slides` directory package containing `presentation.xml`. Put
+   referenced images and styles inside that package so the document is portable.
+
+2. **Always include the DOCTYPE declaration in `presentation.xml`:**
    ```xml
    <?xml version="1.0" encoding="UTF-8"?>
    <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
    ```
 
-2. **Refer to the format spec** at `https://corepunch.github.io/presenter/skills/presentation.md` for layout details, examples, and best practices.
+3. **Refer to the format spec** at `https://corepunch.github.io/presenter/skills/presentation.md` for layout details, examples, and best practices.
 
-3. Use `<b>`, `<i>`, `<code>` for inline formatting — not markdown `**bold**` or `` `code` ``.
+4. Use `<b>`, `<i>`, `<code>` for inline formatting — not markdown `**bold**` or `` `code` ``.
 
 ## Common Tasks
 
@@ -95,7 +98,7 @@ When generating XML presentation files:
 
 ### Modifying slide styles
 
-Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/styles/`. The presenter ships with 8 built-in themes switchable at runtime via `Shift+Left`/`Shift+Right`: Dracula, Monokai, Solarized Dark, GitHub Light, Solarized Light, Nord, Sunset, Arc. Rounded corners on code blocks, images, and notes panels use the `cornerRadius` style property (default 12px).
+Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/Nature Portfolio.slides/styles/`. The presenter ships with 8 built-in themes switchable at runtime via `Shift+Left`/`Shift+Right`: Dracula, Monokai, Solarized Dark, GitHub Light, Solarized Light, Nord, Sunset, Arc. Rounded corners on code blocks, images, and notes panels use the `cornerRadius` style property (default 12px).
 
 ### Adding a new built-in theme
 

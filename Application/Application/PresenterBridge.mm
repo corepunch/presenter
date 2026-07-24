@@ -55,10 +55,8 @@
 
     _lock = OS_UNFAIR_LOCK_INIT;
 
-    // Work directory = directory containing the slides file so relative asset
-    // paths (fonts, images) resolve correctly.
-    NSString* dir = slidesPath.stringByDeletingLastPathComponent;
-    _handle = presenter_load(slidesPath.UTF8String, dir.UTF8String);
+    NSString* resourcePath = NSBundle.mainBundle.resourcePath;
+    _handle = presenter_load(slidesPath.UTF8String, resourcePath.UTF8String);
     if (!_handle) return nil;
 
     return self;

@@ -27,6 +27,9 @@
 		5DC506A030139A00005C75E4 /* SDL2.xcframework in Frameworks */ = {isa = PBXBuildFile; fileRef = 5DC5069730139A00005C75E4 /* SDL2.xcframework */; };
 		5DC506A130139A00005C75E4 /* SDL2.xcframework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 5DC5069730139A00005C75E4 /* SDL2.xcframework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		5DC506A230139A00005C75E4 /* tinyxml2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5DC5069830139A00005C75E4 /* tinyxml2.cpp */; };
+		5DC506A83013A054005C75E4 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 5DC506A53013A054005C75E4 /* assets */; };
+		5DC506A93013A054005C75E4 /* demo in Resources */ = {isa = PBXBuildFile; fileRef = 5DC506A63013A054005C75E4 /* demo */; };
+		5DC506AA3013A054005C75E4 /* share in Resources */ = {isa = PBXBuildFile; fileRef = 5DC506A73013A054005C75E4 /* share */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -68,6 +71,9 @@
 		5DC5069730139A00005C75E4 /* SDL2.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; path = SDL2.xcframework; sourceTree = "<group>"; };
 		5DC5069830139A00005C75E4 /* tinyxml2.cpp */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.cpp; path = tinyxml2.cpp; sourceTree = "<group>"; };
 		5DC5069930139A00005C75E4 /* tinyxml2.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = tinyxml2.h; sourceTree = "<group>"; };
+		5DC506A53013A054005C75E4 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
+		5DC506A63013A054005C75E4 /* demo */ = {isa = PBXFileReference; lastKnownFileType = folder; path = demo; sourceTree = "<group>"; };
+		5DC506A73013A054005C75E4 /* share */ = {isa = PBXFileReference; lastKnownFileType = folder; path = share; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -85,11 +91,14 @@
 		5D6E070E301362CF00564F5F = {
 			isa = PBXGroup;
 			children = (
-				5D6E076430136EFD00564F5F /* src */,
-				5D6E0718301362CF00564F5F /* Products */,
+				5DC506A53013A054005C75E4 /* assets */,
+				5DC506A63013A054005C75E4 /* demo */,
+				5DC506A73013A054005C75E4 /* share */,
 				5D6E074D3013678700564F5F /* Application */,
 				5D6E075630136E8B00564F5F /* Core */,
 				5DC5067F3013841F005C75E4 /* Frameworks */,
+				5D6E0718301362CF00564F5F /* Products */,
+				5D6E076430136EFD00564F5F /* src */,
 				5DC5069A30139A00005C75E4 /* third_party */,
 			);
 			sourceTree = "<group>";
@@ -222,6 +231,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				5DC506A83013A054005C75E4 /* assets in Resources */,
+				5DC506A93013A054005C75E4 /* demo in Resources */,
+				5DC506AA3013A054005C75E4 /* share in Resources */,
 				5D6E07443013653F00564F5F /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -389,13 +401,13 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/include",
 					"$(SRCROOT)/third_party",
 				);
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = Application/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -411,6 +423,7 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "Application/Application-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				WARNING_CFLAGS = "-Wno-comma";
 			};
 			name = Debug;
 		};
@@ -427,13 +440,13 @@
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_HARDENED_RUNTIME = YES;
 				ENABLE_PREVIEWS = YES;
-				ENABLE_USER_SELECTED_FILES = readonly;
-				GENERATE_INFOPLIST_FILE = YES;
+				ENABLE_USER_SELECTED_FILES = readwrite;
+				GENERATE_INFOPLIST_FILE = NO;
 				HEADER_SEARCH_PATHS = (
 					"$(SRCROOT)/include",
 					"$(SRCROOT)/third_party",
 				);
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_FILE = Application/Info.plist;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -449,6 +462,7 @@
 				SWIFT_OBJC_BRIDGING_HEADER = "Application/Application-Bridging-Header.h";
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
 				SWIFT_VERSION = 5.0;
+				WARNING_CFLAGS = "-Wno-comma";
 			};
 			name = Release;
 		};

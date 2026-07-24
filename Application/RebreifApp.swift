@@ -27,8 +27,8 @@ struct RebreifApp: App {
         .windowResizability(.contentMinSize)
 
         // Presenter window — one per open .slides file
-        WindowGroup(id: "presenter", for: URL.self) { $url in
-            if let url, let session = PresentationSession(slidesPath: url.path) {
+        WindowGroup(id: "presenter", for: PresentationOpenRequest.self) { $request in
+            if let request, let session = PresentationSession(request: request) {
                 PresenterWindowView(session: session)
             } else {
                 Text("Could not open presentation.")
