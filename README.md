@@ -2,7 +2,7 @@
 
 A lightweight presentation renderer built for AI-generated decks and live screen sharing. Ask an AI agent to turn your source material into an XML presentation—including presenter notes for every slide that explain exactly what to say—then launch Presenter and get two separate windows: a clean **Presentation** canvas for the audience and a private **Presenter View** with your script.
 
-![A presenter delivering a syntax-highlighted technical talk to an impressed audience using Presenter](docs/images/presenter-live-infographic.png)
+![A presenter in an online meeting reading private notes on a laptop while sharing only the audience presentation window on a separate monitor](docs/images/presenter-live-infographic.png)
 
 Presenter works especially well with Microsoft Teams, Zoom, Google Meet, and other screen-sharing software. Choose **share this window** and select only the **Presentation** canvas. Your audience sees the slides while you read what to say for each slide from the AI-generated notes in **Presenter View**, navigate the deck, and deliver a polished presentation with little to no preparation.
 
