@@ -7,8 +7,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 find_package(SDL2 REQUIRED)
 find_package(tinyxml2 REQUIRED)
 
-add_executable(presenter
-    src/main.cpp
+# ---------------------------------------------------------------------------
+# presenter_core  —  static library used by both the SDL2 executable and the
+# macOS SwiftUI application (via presenter_api).
+# ---------------------------------------------------------------------------
+add_library(presenter_core STATIC
     src/xml_parser.cpp
     src/style.cpp
     src/font.cpp
@@ -21,12 +24,39 @@ add_executable(presenter
     src/charts.cpp
 )
 
+target_include_directories(presenter_core PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/third_party
+)
+
+target_link_libraries(presenter_core PUBLIC SDL2::SDL2 tinyxml2::tinyxml2)
+
+# ---------------------------------------------------------------------------
+# presenter_api  —  C-API wrapper (links presenter_core; consumed by the app)
+# ---------------------------------------------------------------------------
+add_library(presenter_api STATIC
+    src/presenter_api.cpp
+)
+
+target_include_directories(presenter_api PUBLIC
+    ${CMAKE_SOURCE_DIR}/include
+)
+
+target_link_libraries(presenter_api PUBLIC presenter_core)
+
+# ---------------------------------------------------------------------------
+# presenter  —  standalone SDL2 executable (unchanged behaviour)
+# ---------------------------------------------------------------------------
+add_executable(presenter
+    src/main.cpp
+)
+
 target_include_directories(presenter PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/third_party
 )
 
-target_link_libraries(presenter PRIVATE SDL2::SDL2 tinyxml2::tinyxml2)
+target_link_libraries(presenter PRIVATE presenter_core)
 
 set_target_properties(presenter PROPERTIES
     OUTPUT_NAME presenter

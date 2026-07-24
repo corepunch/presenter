@@ -50,7 +50,7 @@ private extension RecentPresentation {
 struct ContentView: View {
     @State private var recentPresentations: [RecentPresentation] = RecentPresentation.samples
     @State private var isFileImporterPresented = false
-    @State private var statusMessage: String? = nil
+    @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         HStack(spacing: 0) {
@@ -81,7 +81,7 @@ struct ContentView: View {
     // MARK: - Actions
 
     private func createNewPresentation() {
-        statusMessage = "Creating new presentation…"
+        // TODO: new-file workflow
         print("[Presenter] createNewPresentation()")
     }
 
@@ -90,23 +90,38 @@ struct ContentView: View {
     }
 
     private func openExamplePresentation() {
-        statusMessage = "Opening example presentation…"
-        print("[Presenter] openExamplePresentation()")
+        // Resolve the demo file bundled next to the executable
+        let exampleURL = Bundle.main.url(forResource: "demo", withExtension: "slides")
+            ?? URL(fileURLWithPath: "demo/demo.slides")
+        launch(url: exampleURL)
     }
 
     private func openRecentPresentation(_ presentation: RecentPresentation) {
-        statusMessage = "Opening \(presentation.title)…"
-        print("[Presenter] openRecentPresentation(\(presentation.title)) at \(presentation.location)")
+        let url = URL(fileURLWithPath: (presentation.location as NSString).expandingTildeInPath)
+        launch(url: url)
     }
 
     private func handleFileImportResult(_ result: Result<[URL], Error>) {
         switch result {
         case .success(let urls):
             guard let url = urls.first else { return }
-            print("[Presenter] openPresentation(url: \(url.path))")
+            launch(url: url)
         case .failure(let error):
-            print("[Presenter] openPresentation() failed: \(error.localizedDescription)")
+            print("[Presenter] open failed: \(error.localizedDescription)")
         }
+    }
+
+    private func launch(url: URL) {
+        // Record in recents (deduplicated by path)
+        let path = url.path
+        let name = url.deletingPathExtension().lastPathComponent
+        if !recentPresentations.contains(where: { $0.location == path }) {
+            recentPresentations.insert(
+                RecentPresentation(title: name, location: path, lastOpened: Date()),
+                at: 0
+            )
+        }
+        openWindow(id: "presenter", value: url)
     }
 }
 
