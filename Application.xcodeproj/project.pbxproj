@@ -30,6 +30,7 @@
 		5DC506A83013A054005C75E4 /* assets in Resources */ = {isa = PBXBuildFile; fileRef = 5DC506A53013A054005C75E4 /* assets */; };
 		5DC506A93013A054005C75E4 /* demo in Resources */ = {isa = PBXBuildFile; fileRef = 5DC506A63013A054005C75E4 /* demo */; };
 		5DC506AA3013A054005C75E4 /* share in Resources */ = {isa = PBXBuildFile; fileRef = 5DC506A73013A054005C75E4 /* share */; };
+		780C10673013E8C000C2D08E /* VisualEffectView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 780C10663013E8BA00C2D08E /* VisualEffectView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -74,6 +75,7 @@
 		5DC506A53013A054005C75E4 /* assets */ = {isa = PBXFileReference; lastKnownFileType = folder; path = assets; sourceTree = "<group>"; };
 		5DC506A63013A054005C75E4 /* demo */ = {isa = PBXFileReference; lastKnownFileType = folder; path = demo; sourceTree = "<group>"; };
 		5DC506A73013A054005C75E4 /* share */ = {isa = PBXFileReference; lastKnownFileType = folder; path = share; sourceTree = "<group>"; };
+		780C10663013E8BA00C2D08E /* VisualEffectView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisualEffectView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -113,6 +115,7 @@
 		5D6E074D3013678700564F5F /* Application */ = {
 			isa = PBXGroup;
 			children = (
+				780C10663013E8BA00C2D08E /* VisualEffectView.swift */,
 				5D6E07413013653F00564F5F /* Assets.xcassets */,
 				5D6E07423013653F00564F5F /* ContentView.swift */,
 				5D6E07433013653F00564F5F /* RebreifApp.swift */,
@@ -248,6 +251,7 @@
 				5D6E076E30136EFD00564F5F /* highlight.cpp in Sources */,
 				5D6E076F30136EFD00564F5F /* layout.cpp in Sources */,
 				5D6E077030136EFD00564F5F /* screenshot.cpp in Sources */,
+				780C10673013E8C000C2D08E /* VisualEffectView.swift in Sources */,
 				5D6E077130136EFD00564F5F /* image.cpp in Sources */,
 				5D6E075330136E7300564F5F /* PresentationSession.swift in Sources */,
 				5D6E075530136E8800564F5F /* PresenterWindowView.swift in Sources */,

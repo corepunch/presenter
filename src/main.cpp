@@ -215,12 +215,17 @@ int main(int argc, char* argv[]) {
     );
     if (!presenterWindow) {
         fprintf(stderr, "Failed to create presenter window: %s\n", SDL_GetError());
+        SDL_DestroyRenderer(audienceRenderer);
+        SDL_DestroyWindow(audienceWindow);
         SDL_Quit();
         return 1;
     }
     SDL_Renderer* presenterRenderer = createDisplayRenderer(presenterWindow);
     if (!presenterRenderer) {
         fprintf(stderr, "Failed to create presenter renderer: %s\n", SDL_GetError());
+        SDL_DestroyWindow(presenterWindow);
+        SDL_DestroyRenderer(audienceRenderer);
+        SDL_DestroyWindow(audienceWindow);
         SDL_Quit();
         return 1;
     }

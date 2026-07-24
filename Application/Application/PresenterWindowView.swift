@@ -8,18 +8,19 @@ struct PresenterWindowView: View {
     @State private var isNotesBodyVisible = true
 
     var body: some View {
-        HSplitView {
-            if isSidebarVisible {
-                slideSidebar
-                    .frame(
-                        minWidth: LayoutMetrics.sidebarWidth.minimum,
-                        idealWidth: LayoutMetrics.sidebarWidth.ideal,
-                        maxWidth: LayoutMetrics.sidebarWidth.maximum
-                    )
-            }
-
+        ZStack(alignment: .leading) {
             mainContent
+
+            if isSidebarVisible {
+                dismissScrim
+                    .zIndex(1)
+
+                sidebarOverlay
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                    .zIndex(2)
+            }
         }
+        .animation(.easeOut(duration: 0.2), value: isSidebarVisible)
         .frame(
             minWidth: LayoutMetrics.windowSize.minimum.width,
             idealWidth: LayoutMetrics.windowSize.ideal.width,
@@ -96,6 +97,26 @@ struct PresenterWindowView: View {
             }
         }
         .listStyle(.sidebar)
+        .scrollContentBackground(.hidden)
+    }
+
+    private var dismissScrim: some View {
+        Color.clear
+            .contentShape(Rectangle())
+            .onTapGesture {
+                isSidebarVisible = false
+            }
+    }
+
+    private var sidebarOverlay: some View {
+        slideSidebar
+            .frame(width: LayoutMetrics.sidebarWidth.ideal)
+            .frame(maxHeight: .infinity)
+            .background(VisualEffectView())
+            .overlay(alignment: .trailing) {
+                Divider()
+            }
+            .shadow(radius: 16, x: 4)
     }
 
     private var slidePreview: some View {

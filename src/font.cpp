@@ -32,6 +32,9 @@ bool Font::load(const std::string& ttfPath, float fontSize) {
     m_ttfData.resize(static_cast<size_t>(size));
     if (!file.read(reinterpret_cast<char*>(m_ttfData.data()), size)) return false;
 
+    delete static_cast<stbtt_fontinfo*>(m_fontInfo);
+    m_fontInfo = nullptr;
+
     auto* fontInfo = new stbtt_fontinfo;
     if (!stbtt_InitFont(fontInfo, m_ttfData.data(),
             stbtt_GetFontOffsetForIndex(m_ttfData.data(), 0))) {
