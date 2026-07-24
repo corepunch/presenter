@@ -1,5 +1,11 @@
 #pragma once
 
+// Audience slides are always laid out and rasterized on this virtual canvas.
+// Display surfaces may scale the finished bitmap, but must never feed their
+// dimensions back into slide layout.
+inline constexpr int SLIDE_CANVAS_WIDTH = 1280;
+inline constexpr int SLIDE_CANVAS_HEIGHT = 720;
+
 // Font sizes (pixels). Base size can be overridden with --size.
 #define FONT_SIZE_BASE 28.0f
 

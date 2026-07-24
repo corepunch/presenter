@@ -1,4 +1,5 @@
 #include "presenter_api.h"
+#include "constants.h"
 #include "parser.h"
 #include <unistd.h>
 #include "font.h"
@@ -7,6 +8,7 @@
 #include "screenshot.h"
 
 #include <SDL2/SDL.h>
+#include <algorithm>
 #include <cstdio>
 #include <cstring>
 #include <string>
@@ -153,15 +155,19 @@ const char* presenter_slide_label(PresenterHandle h) {
 
 static int renderToPixels(PresenterSession* s, bool presenterView,
                           uint8_t* pixels, int width, int height, int stride) {
+    if (width <= 0 || height <= 0 || stride < width * 4) return 0;
+
+    const int renderWidth = presenterView ? width : SLIDE_CANVAS_WIDTH;
+    const int renderHeight = presenterView ? height : SLIDE_CANVAS_HEIGHT;
     SDL_Surface* target = SDL_CreateRGBSurfaceWithFormat(
-        0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
+        0, renderWidth, renderHeight, 32, SDL_PIXELFORMAT_RGBA32);
     if (!target) return 0;
 
     SDL_Renderer* sdlRenderer = SDL_CreateSoftwareRenderer(target);
     if (!sdlRenderer) { SDL_FreeSurface(target); return 0; }
 
     Renderer r;
-    if (!r.init(sdlRenderer, width, height)) {
+    if (!r.init(sdlRenderer, renderWidth, renderHeight)) {
         SDL_DestroyRenderer(sdlRenderer);
         SDL_FreeSurface(target);
         return 0;
@@ -175,14 +181,11 @@ static int renderToPixels(PresenterSession* s, bool presenterView,
     int ok = 0;
     SDL_Surface* rendered = r.surface();
     if (tex && rendered) {
-        if (SDL_LockSurface(rendered) == 0) {
-            const uint8_t* src = static_cast<const uint8_t*>(rendered->pixels);
-            for (int y = 0; y < height; y++) {
-                memcpy(pixels + y * stride, src + y * rendered->pitch,
-                       (size_t)width * 4);
-            }
-            SDL_UnlockSurface(rendered);
-            ok = 1;
+        SDL_Surface* output = SDL_CreateRGBSurfaceWithFormatFrom(
+            pixels, width, height, 32, stride, SDL_PIXELFORMAT_RGBA32);
+        if (output) {
+            ok = SDL_BlitScaled(rendered, nullptr, output, nullptr) == 0;
+            SDL_FreeSurface(output);
         }
         SDL_DestroyTexture(tex);
     }
@@ -213,17 +216,28 @@ int presenter_render_presenter_rgba(PresenterHandle h,
 
 int presenter_render_slide_sdl(PresenterHandle h,
                                void* sdl_renderer, int w, int h_px) {
-    if (!h || !sdl_renderer) return 0;
+    if (!h || !sdl_renderer || w <= 0 || h_px <= 0) return 0;
     Renderer r;
-    if (!r.init(static_cast<SDL_Renderer*>(sdl_renderer), w, h_px)) return 0;
+    if (!r.init(static_cast<SDL_Renderer*>(sdl_renderer),
+                SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT)) return 0;
     SDL_Texture* tex = r.renderSlide(h->pres.currentSlide(), h->fonts,
                                      h->pres.style,
                                      h->pres.current + 1, h->pres.size());
     int ok = 0;
     if (tex) {
-        SDL_RenderClear(static_cast<SDL_Renderer*>(sdl_renderer));
-        SDL_RenderCopy(static_cast<SDL_Renderer*>(sdl_renderer), tex, nullptr, nullptr);
-        SDL_RenderPresent(static_cast<SDL_Renderer*>(sdl_renderer));
+        auto* output = static_cast<SDL_Renderer*>(sdl_renderer);
+        SDL_RenderClear(output);
+        const float scale = std::min(
+            static_cast<float>(w) / SLIDE_CANVAS_WIDTH,
+            static_cast<float>(h_px) / SLIDE_CANVAS_HEIGHT);
+        SDL_Rect destination{
+            static_cast<int>((w - SLIDE_CANVAS_WIDTH * scale) / 2.0f),
+            static_cast<int>((h_px - SLIDE_CANVAS_HEIGHT * scale) / 2.0f),
+            static_cast<int>(SLIDE_CANVAS_WIDTH * scale),
+            static_cast<int>(SLIDE_CANVAS_HEIGHT * scale)
+        };
+        SDL_RenderCopy(output, tex, nullptr, &destination);
+        SDL_RenderPresent(output);
         SDL_DestroyTexture(tex);
         ok = 1;
     }

@@ -66,6 +66,8 @@ const char* presenter_slide_label(PresenterHandle h);
 
 /**
  * Render the current audience slide into a caller-supplied RGBA8888 buffer.
+ * Slide layout is always computed on the fixed 1280x720 virtual canvas; the
+ * completed raster is scaled to width x height when those dimensions differ.
  * Returns 0 on failure.
  */
 int presenter_render_slide_rgba(PresenterHandle h,
@@ -87,7 +89,9 @@ int presenter_render_presenter_rgba(PresenterHandle h,
 
 /**
  * Render the current audience slide into an SDL_Renderer*.
- * The renderer must already be initialised; w/h are the logical viewport size.
+ * The renderer must already be initialised; w/h are the output viewport size.
+ * Slide layout remains fixed at 1280x720 and the resulting texture is scaled
+ * uniformly and centered in that viewport.
  * Returns 0 on failure.
  *
  * sdl_renderer is typed as void* so this header stays SDL-free when included

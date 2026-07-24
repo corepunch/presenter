@@ -30,8 +30,8 @@ static bool optionValue(const std::string& arg, const char* name,
 
 static bool saveRenderedView(const Presentation& pres, const FontSet& fonts,
                              bool presenterView, const std::string& path) {
-    int width = presenterView ? 640 : 1280;
-    int height = presenterView ? 480 : 720;
+    int width = presenterView ? 640 : SLIDE_CANVAS_WIDTH;
+    int height = presenterView ? 480 : SLIDE_CANVAS_HEIGHT;
     SDL_Surface* target = SDL_CreateRGBSurfaceWithFormat(
         0, width, height, 32, SDL_PIXELFORMAT_RGBA32);
     SDL_Renderer* sdlRenderer = target
@@ -187,7 +187,7 @@ int main(int argc, char* argv[]) {
     SDL_Window* audienceWindow = SDL_CreateWindow(
         audienceTitle,
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
-        1280, 720,
+        SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
     );
     if (!audienceWindow) {
@@ -201,6 +201,10 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
         return 1;
     }
+    // Preserve the virtual slide canvas and let SDL letterbox the completed
+    // bitmap when the audience window has a different size or aspect ratio.
+    SDL_RenderSetLogicalSize(
+        audienceRenderer, SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT);
 
     // Presenter window
     SDL_Window* presenterWindow = SDL_CreateWindow(
@@ -224,10 +228,10 @@ int main(int argc, char* argv[]) {
     Renderer audienceRend;
     Renderer presenterRend;
 
-    int aw, ah, pw, ph;
-    SDL_GetWindowSize(audienceWindow, &aw, &ah);
+    int pw, ph;
     SDL_GetWindowSize(presenterWindow, &pw, &ph);
-    audienceRend.init(audienceRenderer, aw, ah);
+    audienceRend.init(
+        audienceRenderer, SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT);
     presenterRend.init(presenterRenderer, pw, ph);
 
     bool running = bool(true);
@@ -325,9 +329,7 @@ int main(int argc, char* argv[]) {
             case SDL_WINDOWEVENT:
                 if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
                     if (event.window.windowID == SDL_GetWindowID(audienceWindow)) {
-                        SDL_GetWindowSize(audienceWindow, &aw, &ah);
-                        audienceRend.init(audienceRenderer, aw, ah);
-                        audienceDirty = true;
+                        presentAudience = true;
                     } else if (event.window.windowID ==
                                SDL_GetWindowID(presenterWindow)) {
                         SDL_GetWindowSize(presenterWindow, &pw, &ph);

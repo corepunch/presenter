@@ -26,7 +26,7 @@ struct PresenterWindowView: View {
 
     private var slidePreview: some View {
         VStack(spacing: 12) {
-            RenderedSlideView(session: session, presenterView: false)
+            RenderedSlideView(session: session)
                 .aspectRatio(16 / 9, contentMode: .fit)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .shadow(radius: 6)
@@ -116,42 +116,33 @@ struct PresenterWindowView: View {
 /// CGImage whenever renderToken changes.
 struct RenderedSlideView: View {
     var session: PresentationSession
-    var presenterView: Bool = false
 
     @State private var image: CGImage?
 
     var body: some View {
-        GeometryReader { geo in
-            Group {
-                if let img = image {
-                    Image(img, scale: 1, label: Text("Slide"))
-                        .resizable()
-                        .interpolation(.medium)
-                } else {
-                    Color.black
-                }
+        Group {
+            if let img = image {
+                Image(img, scale: 1, label: Text("Slide"))
+                    .resizable()
+                    .aspectRatio(CGSize(width: img.width, height: img.height), contentMode: .fit)
+                    .interpolation(.medium)
+            } else {
+                Color.black
             }
-            .onChange(of: session.renderToken, initial: true) { _, _ in
-                render(size: geo.size)
-            }
-            .onChange(of: geo.size) { _, newSize in
-                render(size: newSize)
-            }
+        }
+        .onChange(of: session.renderToken, initial: true) { _, _ in
+            render()
         }
     }
 
-    private func render(size: CGSize) {
-        let w = max(1, Int(size.width))
-        let h = max(1, Int(size.height))
+    private func render() {
+        let w = 1280
+        let h = 720
         let stride = w * 4
         var pixels = [UInt8](repeating: 0, count: stride * h)
         let ok = pixels.withUnsafeMutableBytes { buf in
             let ptr = buf.bindMemory(to: UInt8.self).baseAddress!
-            if presenterView {
-                return session.renderPresenterView(into: ptr, width: w, height: h)
-            } else {
-                return session.renderSlide(into: ptr, width: w, height: h)
-            }
+            return session.renderSlide(into: ptr, width: w, height: h)
         }
         guard ok else { return }
         let data = Data(pixels)

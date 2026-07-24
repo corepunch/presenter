@@ -100,8 +100,8 @@ struct PresenterWindowView: View {
 
 // MARK: - RenderedSlideView
 
-/// Asks PresentationSession to render a frame into a CGImage whenever
-/// renderToken or the view size changes, then displays it.
+/// Renders on the presentation's fixed 1280×720 virtual canvas. SwiftUI only
+/// scales the finished bitmap to fit the preview.
 struct RenderedSlideView: View {
     var session: PresentationSession
     var presenterView: Bool = false
@@ -109,24 +109,25 @@ struct RenderedSlideView: View {
     @State private var image: CGImage?
 
     var body: some View {
-        GeometryReader { geo in
-            Group {
-                if let img = image {
-                    Image(img, scale: 1, label: Text("Slide"))
-                        .resizable()
-                        .interpolation(.medium)
-                } else {
-                    Color.black
-                }
+        Group {
+            if let img = image {
+                Image(img, scale: 1, label: Text("Slide"))
+                    .resizable()
+                    .interpolation(.medium)
+                    .aspectRatio(
+                        CGSize(width: img.width, height: img.height),
+                        contentMode: .fit
+                    )
+            } else {
+                Color.black
             }
-            .onChange(of: session.renderToken, initial: true) { _, _ in render(size: geo.size) }
-            .onChange(of: geo.size) { _, newSize in render(size: newSize) }
         }
+        .onChange(of: session.renderToken, initial: true) { _, _ in render() }
     }
 
-    private func render(size: CGSize) {
-        let w = max(1, Int(size.width))
-        let h = max(1, Int(size.height))
+    private func render() {
+        let w = 1280
+        let h = 720
         let stride = w * 4
         var pixels = [UInt8](repeating: 0, count: stride * h)
         let ok = pixels.withUnsafeMutableBytes { buf in
