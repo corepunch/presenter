@@ -95,7 +95,6 @@
 				5DC506A63013A054005C75E4 /* demo */,
 				5DC506A73013A054005C75E4 /* share */,
 				5D6E074D3013678700564F5F /* Application */,
-				5D6E075630136E8B00564F5F /* Core */,
 				5DC5067F3013841F005C75E4 /* Frameworks */,
 				5D6E0718301362CF00564F5F /* Products */,
 				5D6E076430136EFD00564F5F /* src */,
@@ -124,13 +123,6 @@
 				5D6E075430136E8800564F5F /* PresenterWindowView.swift */,
 			);
 			path = Application;
-			sourceTree = "<group>";
-		};
-		5D6E075630136E8B00564F5F /* Core */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Core;
 			sourceTree = "<group>";
 		};
 		5D6E076430136EFD00564F5F /* src */ = {

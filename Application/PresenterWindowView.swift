@@ -1,9 +1,12 @@
+import AppKit
 import SwiftUI
 
 /// The presenter's control window: rendered slide thumbnail, notes,
 /// navigation controls, slide counter, and theme picker.
 struct PresenterWindowView: View {
     @State var session: PresentationSession
+    @State private var audienceWindowController = AudienceWindowController()
+    @State private var isAudienceWindowVisible = false
 
     var body: some View {
         HSplitView {
@@ -19,28 +22,24 @@ struct PresenterWindowView: View {
         .onKeyPress(.rightArrow) { session.next(); return .handled }
         .onKeyPress(.leftArrow)  { session.prev(); return .handled }
         .onKeyPress(.space)      { session.next(); return .handled }
+        .onDisappear {
+            audienceWindowController.hide()
+        }
     }
 
     // MARK: - Subviews
 
     private var slidePreview: some View {
-        VStack(spacing: 12) {
-            RenderedSlideView(session: session, presenterView: false)
-                .aspectRatio(16.0 / 9.0, contentMode: .fit)
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-                .shadow(radius: 6)
-                .padding(.horizontal, 20)
-                .padding(.top, 20)
-
-            Text(session.slideLabel)
-                .font(.system(size: 13, weight: .medium).monospacedDigit())
-                .foregroundStyle(.secondary)
-
-            navigationBar
-                .padding(.horizontal, 20)
-                .padding(.bottom, 16)
-        }
+        slidePreviewContent
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+    }
+
+    private var slidePreviewContent: some View {
+        RenderedSlideView(session: session, presenterView: false)
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .shadow(radius: 6)
+            .padding(20)
     }
 
     private var notesPanel: some View {
@@ -66,26 +65,43 @@ struct PresenterWindowView: View {
         .background(.background)
     }
 
-    private var navigationBar: some View {
-        HStack(spacing: 12) {
-            Button { session.prev() } label: {
-                Image(systemName: "chevron.left").frame(width: 28, height: 28)
-            }
-            .buttonStyle(.bordered)
-            .disabled(!session.canGoPrev)
-
-            Spacer()
-
-            Button { session.next() } label: {
-                Image(systemName: "chevron.right").frame(width: 28, height: 28)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!session.canGoNext)
-        }
-    }
-
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
+        ToolbarItemGroup(placement: .primaryAction) {
+            ControlGroup {
+                Button { session.prev() } label: {
+                    Label("Previous", systemImage: "chevron.left")
+                        .labelStyle(.iconOnly)
+                }
+                .help("Previous slide")
+                .disabled(!session.canGoPrev)
+
+                Button { session.next() } label: {
+                    Label("Next", systemImage: "chevron.right")
+                        .labelStyle(.iconOnly)
+                }
+                .help("Next slide")
+                .disabled(!session.canGoNext)
+            }
+
+            Text(session.slideLabel)
+                .font(.system(size: 13, weight: .medium).monospacedDigit())
+                .foregroundStyle(.secondary)
+                .frame(minWidth: 56)
+        }
+
+        ToolbarItem(placement: .automatic) {
+            Button {
+                toggleAudienceWindow()
+            } label: {
+                Label(
+                    isAudienceWindowVisible ? "Hide Audience Window" : "Show Audience Window",
+                    systemImage: isAudienceWindowVisible ? "rectangle.badge.minus" : "rectangle.badge.plus"
+                )
+            }
+            .help(isAudienceWindowVisible ? "Hide audience window" : "Show audience window")
+        }
+
         ToolbarItem(placement: .automatic) {
             Menu {
                 ForEach(0..<session.themeCount, id: \.self) { i in
@@ -96,11 +112,81 @@ struct PresenterWindowView: View {
             }
         }
     }
+
+    private func toggleAudienceWindow() {
+        if isAudienceWindowVisible {
+            audienceWindowController.hide()
+            isAudienceWindowVisible = false
+        } else {
+            audienceWindowController.show(session: session, title: session.title) {
+                isAudienceWindowVisible = false
+            }
+            isAudienceWindowVisible = true
+        }
+    }
+}
+
+// MARK: - Audience Window
+
+private struct AudienceWindowView: View {
+    var session: PresentationSession
+
+    var body: some View {
+        RenderedSlideView(session: session, presenterView: false)
+            .aspectRatio(16.0 / 9.0, contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Color.black)
+    }
+}
+
+@Observable
+private final class AudienceWindowController: NSObject, NSWindowDelegate {
+    private var window: NSWindow?
+    private var onClose: (() -> Void)?
+
+    func show(session: PresentationSession, title: String, onClose: @escaping () -> Void) {
+        self.onClose = onClose
+
+        if let window {
+            window.title = audienceTitle(for: title)
+            window.contentView = NSHostingView(rootView: AudienceWindowView(session: session))
+            window.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 1280, height: 720),
+            styleMask: [.titled, .closable, .miniaturizable, .resizable],
+            backing: .buffered,
+            defer: false
+        )
+        window.title = audienceTitle(for: title)
+        window.contentView = NSHostingView(rootView: AudienceWindowView(session: session))
+        window.delegate = self
+        window.minSize = NSSize(width: 640, height: 360)
+        window.center()
+        window.makeKeyAndOrderFront(nil)
+        self.window = window
+    }
+
+    func hide() {
+        window?.close()
+    }
+
+    func windowWillClose(_ notification: Notification) {
+        window = nil
+        onClose?()
+        onClose = nil
+    }
+
+    private func audienceTitle(for presentationTitle: String) -> String {
+        presentationTitle.isEmpty ? "Audience Window" : "\(presentationTitle) - Audience"
+    }
 }
 
 // MARK: - RenderedSlideView
 
-/// Renders on the presentation's fixed 1280×720 virtual canvas. SwiftUI only
+/// Renders on the presentation's fixed 1280x720 virtual canvas. SwiftUI only
 /// scales the finished bitmap to fit the preview.
 struct RenderedSlideView: View {
     var session: PresentationSession
@@ -152,5 +238,24 @@ struct RenderedSlideView: View {
             shouldInterpolate: true,
             intent: .defaultIntent
         )
+    }
+}
+
+// MARK: - Preview
+
+#Preview {
+    let previewURL = Bundle.main.url(
+        forResource: "Nature Portfolio",
+        withExtension: "slides",
+        subdirectory: "demo"
+    ) ?? URL(fileURLWithPath: "demo/Nature Portfolio.slides")
+
+    if let session = PresentationSession(
+        request: PresentationOpenRequest(url: previewURL, bookmarkData: nil)
+    ) {
+        PresenterWindowView(session: session)
+    } else {
+        Text("Could not load preview presentation.")
+            .frame(width: 900, height: 560)
     }
 }
