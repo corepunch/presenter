@@ -12,7 +12,7 @@ An XML-based format for creating presentations. Each `<slide>` element represent
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
-<presentation>
+<presentation name="My Presentation">
   <slide layout="title" title="My Presentation">
     <notes>Presenter-only notes</notes>
     <subtitle>Optional tagline</subtitle>
@@ -27,6 +27,22 @@ An XML-based format for creating presentations. Each `<slide>` element represent
 ```
 
 Slides are separated by `<slide>` elements — no delimiter characters. The XML structure itself defines slide boundaries.
+
+---
+
+## Presentation Attributes
+
+| Attribute | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `name` | No | `Presentation` | Audience window title |
+| `style` | No | Built-in theme | Path to an external style XML file |
+
+```xml
+<presentation name="Q3 Product Review" style="./styles/dark.xml">
+```
+
+The presenter-notes window keeps the title `Presenter View`; `name` changes
+only the audience window.
 
 ---
 
@@ -125,7 +141,11 @@ When `layout` is omitted, it defaults to `content`. The `title` layout requires 
 | `<icon>`    | 0 or more | Named Font Awesome icon with a short text callout |
 | `<slide>`   | 0 or more | Nested slide, positioned via `slot` when parent is `layout="columns"` |
 
-`<notes>` should appear first, followed by visual elements. Within a slide, elements render in document order — top to bottom in default vertical flow, or into column slots when using `layout="columns"`.
+`<notes>` should appear first. In a body slide, Presenter groups visible
+elements as text, code blocks, icon cards, then charts; XML interleaving does
+not change that order. A slide containing an image automatically uses the
+image-and-caption layout. Use nested `<slide slot="...">` children only inside
+a `columns` parent.
 
 ---
 
@@ -384,11 +404,12 @@ adapt when the theme changes.
 </chart>
 ```
 
-Supported chart types are `bar`, `line`, `pie`, and `donut`.
+Supported chart types are `bar`, `line`, `pie`, and `donut`. `circular` is an
+alias for `donut`.
 
 | Chart attribute | Required | Default | Description |
 |-----------------|----------|---------|-------------|
-| `type` | No | `bar` | `bar`, `line`, `pie`, or `donut` |
+| `type` | No | `bar` | `bar`, `line`, `pie`, `donut`, or the `circular` donut alias |
 | `title` | No | — | Heading displayed inside the chart card |
 | `icon` | No | — | Named icon displayed beside the chart heading |
 | `height` | No | `340` | Natural chart height in pixels; minimum 160 |
@@ -530,7 +551,7 @@ subdir/chart.png             — relative path
 | Layout | Image behavior |
 |--------|---------------|
 | `image` | First `<image>` fills the available content area; `<text>` elements render as captions below |
-| `content` | Images render inline between `<text>` elements in document order |
+| `content` | A slide with an image automatically becomes an image-and-caption slide |
 | `columns` | Images inside slotted child slides fill their column's allocated space |
 | `blank` | Images fill the full slide area |
 
@@ -565,7 +586,12 @@ Use this sequence when it fits the slide:
 4. **Visual cue:** Add a short bracketed direction such as `[Point to the latency drop on the right]` when the slide contains an image or comparison.
 5. **Transition:** End with a sentence that creates a logical bridge to the next slide.
 
-The script should sound like speech: short sentences, contractions where natural, and clear signposting. Write enough to let the presenter deliver the slide without returning to the source material, while leaving room to speak naturally. A useful default is roughly 45-90 seconds of notes for a normal content slide; adjust to the requested talk length and give title or section slides much less.
+The script should sound like speech: short sentences, contractions where
+natural, and clear signposting. Write enough to let the presenter deliver the
+slide without returning to the source material, while leaving room to speak
+naturally. Start with roughly 50-110 words for a normal content slide, adjust
+to the requested talk length, and give title or section slides much less.
+Render the presenter view at 640×480 and split or tighten notes that do not fit.
 
 ### Notes quality rules
 
@@ -603,7 +629,7 @@ Strong:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
-<presentation>
+<presentation name="Q4 Product Roadmap">
   <slide layout="title" title="Q4 Product Roadmap">
     <notes>Welcome everyone. Today we're walking through what shipped
       in Q4 — 4 major wins, 12 engineers contributed, 87 PRs merged.</notes>
@@ -683,7 +709,7 @@ Style files can be referenced in two ways:
 
 1. **Inline attribute:**
    ```xml
-   <presentation style="./styles/dark.xml">
+  <presentation name="Q4 Product Roadmap" style="./styles/dark.xml">
      ...
    </presentation>
    ```

@@ -176,7 +176,7 @@ Include the DTD in your presentation files for validation:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
-<presentation>
+<presentation name="My Talk">
   ...
 </presentation>
 ```
@@ -186,7 +186,7 @@ Include the DTD in your presentation files for validation:
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
-<presentation>
+<presentation name="My Talk">
   <slide layout="title" title="My Talk">
     <notes>Welcome everyone. Today I will explain the three ideas that matter most.</notes>
     <subtitle>Subtitle here</subtitle>

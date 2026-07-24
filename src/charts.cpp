@@ -219,6 +219,9 @@ void renderCircularChart(Renderer* renderer, SDL_Surface* surface,
     SDL_LockSurface(surface);
     auto* pixels = static_cast<Uint32*>(surface->pixels);
     int pitch = surface->pitch / 4;
+    Uint32 mappedSeries[6];
+    for (size_t i = 0; i < 6; ++i)
+        mappedSeries[i] = seriesColor(style, i).toUint32(surface->format);
     for (int dy = -radius; dy <= radius; ++dy) {
         int py = cy + dy;
         if (py < 0 || py >= surface->h) continue;
@@ -236,8 +239,7 @@ void renderCircularChart(Renderer* renderer, SDL_Surface* surface,
                 cumulative += std::max(0.0, chart.points[index].value);
                 if (position <= cumulative) break;
             }
-            pixels[py * pitch + px] =
-                seriesColor(style, index).toUint32(surface->format);
+            pixels[py * pitch + px] = mappedSeries[index % 6];
         }
     }
     SDL_UnlockSurface(surface);

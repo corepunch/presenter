@@ -47,12 +47,13 @@ static int test_empty() {
 static int test_title() {
     fprintf(stderr, "test_title...\n");
     Presentation p = parseXml(writeTmp("title.xml",
-        "<?xml version=\"1.0\"?>\n<presentation>\n"
+        "<?xml version=\"1.0\"?>\n<presentation name=\"Quarterly Review\">\n"
         "  <slide layout=\"title\" title=\"Hello\">\n"
         "    <notes>Welcome</notes>\n"
         "    <subtitle>Sub</subtitle>\n"
         "  </slide>\n</presentation>\n"));
     ASSERT_EQ(p.slides.size(), (size_t)1, "1 slide");
+    ASSERT_STR_EQ(p.name, std::string("Quarterly Review"), "presentation name");
     ASSERT(p.slides[0].layout == SlideLayout::Title, "title layout");
     ASSERT_STR_EQ(p.slides[0].title, std::string("Hello"), "title");
     ASSERT_STR_EQ(p.slides[0].subtitle, std::string("Sub"), "subtitle");

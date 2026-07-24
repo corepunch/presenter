@@ -71,6 +71,16 @@ static ThemeIterator switchTheme(Presentation& pres, FontSet& fonts,
     return next;
 }
 
+static SDL_Renderer* createDisplayRenderer(SDL_Window* window) {
+    SDL_Renderer* renderer = SDL_CreateRenderer(
+        window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (!renderer)
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    if (!renderer)
+        renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
+    return renderer;
+}
+
 int main(int argc, char* argv[]) {
     if (argc < 2) {
         printUsage(argv[0]);
@@ -172,8 +182,10 @@ int main(int argc, char* argv[]) {
     }
 
     // Audience window
+    const char* audienceTitle = pres.name.empty()
+        ? "Presentation" : pres.name.c_str();
     SDL_Window* audienceWindow = SDL_CreateWindow(
-        "Presentation",
+        audienceTitle,
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         1280, 720,
         SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
@@ -183,8 +195,7 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
         return 1;
     }
-    SDL_Renderer* audienceRenderer = SDL_CreateRenderer(audienceWindow, -1,
-        SDL_RENDERER_SOFTWARE);
+    SDL_Renderer* audienceRenderer = createDisplayRenderer(audienceWindow);
     if (!audienceRenderer) {
         fprintf(stderr, "Failed to create audience renderer: %s\n", SDL_GetError());
         SDL_Quit();
@@ -203,8 +214,7 @@ int main(int argc, char* argv[]) {
         SDL_Quit();
         return 1;
     }
-    SDL_Renderer* presenterRenderer = SDL_CreateRenderer(presenterWindow, -1,
-        SDL_RENDERER_SOFTWARE);
+    SDL_Renderer* presenterRenderer = createDisplayRenderer(presenterWindow);
     if (!presenterRenderer) {
         fprintf(stderr, "Failed to create presenter renderer: %s\n", SDL_GetError());
         SDL_Quit();
@@ -221,20 +231,28 @@ int main(int argc, char* argv[]) {
     presenterRend.init(presenterRenderer, pw, ph);
 
     bool running = bool(true);
-    bool needsRender = true;
+    bool audienceDirty = true;
+    bool presenterDirty = true;
+    bool presentAudience = false;
+    bool presentPresenter = false;
     bool audienceFullscreen = false;
     bool captureAudience = false;
     bool capturePresenter = false;
+    SDL_Texture* audienceTex = nullptr;
+    SDL_Texture* presenterTex = nullptr;
 
     printf("Controls: Right/Space/Enter = next, Left/Backspace = prev, Home/End = first/last, F5 = fullscreen toggle, Escape = quit\n");
     printf("          Shift+Left/Right = switch theme, S = save slide, Shift+S = save presenter view\n");
     printf("Theme: %s (%d/%zu)\n", pres.style.name.c_str(),
            static_cast<int>(currentTheme - themes.begin()) + 1, themes.size());
 
-    while (running) {
-        SDL_Event event;
-        while (SDL_PollEvent(&event)) {
-            switch (event.type) {
+    auto markBothDirty = [&] {
+        audienceDirty = true;
+        presenterDirty = true;
+    };
+
+    auto handleEvent = [&](const SDL_Event& event) {
+        switch (event.type) {
             case SDL_QUIT:
                 running = false;
                 break;
@@ -243,46 +261,42 @@ int main(int argc, char* argv[]) {
                 case SDLK_RIGHT:
                     if (event.key.keysym.mod & KMOD_SHIFT) {
                         currentTheme = switchTheme(pres, fonts, currentTheme, +1);
-                        needsRender = true;
+                        markBothDirty();
                     } else if (pres.canGoNext()) {
                         pres.next();
-                        needsRender = true;
-
+                        markBothDirty();
                     }
                     break;
                 case SDLK_SPACE:
                 case SDLK_RETURN:
                     if (pres.canGoNext()) {
                         pres.next();
-                        needsRender = true;
-
+                        markBothDirty();
                     }
                     break;
                 case SDLK_LEFT:
                     if (event.key.keysym.mod & KMOD_SHIFT) {
                         currentTheme = switchTheme(pres, fonts, currentTheme, -1);
-                        needsRender = true;
+                        markBothDirty();
                     } else if (pres.canGoPrev()) {
                         pres.prev();
-                        needsRender = true;
-
+                        markBothDirty();
                     }
                     break;
                 case SDLK_BACKSPACE:
                     if (pres.canGoPrev()) {
                         pres.prev();
-                        needsRender = true;
-
+                        markBothDirty();
                     }
                     break;
                 case SDLK_HOME:
                     pres.first();
-                    needsRender = true;
+                    markBothDirty();
                     printf("Slide %d/%d\n", pres.current + 1, pres.size());
                     break;
                 case SDLK_END:
                     pres.last();
-                    needsRender = true;
+                    markBothDirty();
                     printf("Slide %d/%d\n", pres.current + 1, pres.size());
                     break;
                 case SDLK_F5:
@@ -292,7 +306,7 @@ int main(int argc, char* argv[]) {
                     } else {
                         SDL_SetWindowFullscreen(audienceWindow, 0);
                     }
-                    needsRender = true;
+                    audienceDirty = true;
                     break;
                 case SDLK_s:
                     if (event.key.keysym.mod & KMOD_SHIFT) {
@@ -300,7 +314,6 @@ int main(int argc, char* argv[]) {
                     } else {
                         captureAudience = true;
                     }
-                    needsRender = true;
                     break;
                 case SDLK_ESCAPE:
                     running = false;
@@ -314,61 +327,86 @@ int main(int argc, char* argv[]) {
                     if (event.window.windowID == SDL_GetWindowID(audienceWindow)) {
                         SDL_GetWindowSize(audienceWindow, &aw, &ah);
                         audienceRend.init(audienceRenderer, aw, ah);
-                    } else {
+                        audienceDirty = true;
+                    } else if (event.window.windowID ==
+                               SDL_GetWindowID(presenterWindow)) {
                         SDL_GetWindowSize(presenterWindow, &pw, &ph);
                         presenterRend.init(presenterRenderer, pw, ph);
+                        presenterDirty = true;
                     }
-                    needsRender = true;
+                } else if (event.window.event == SDL_WINDOWEVENT_EXPOSED) {
+                    if (event.window.windowID == SDL_GetWindowID(audienceWindow))
+                        presentAudience = true;
+                    else if (event.window.windowID ==
+                             SDL_GetWindowID(presenterWindow))
+                        presentPresenter = true;
                 }
                 break;
-            }
+        }
+    };
+
+    while (running) {
+        if (audienceDirty) {
+            if (audienceTex) SDL_DestroyTexture(audienceTex);
+            audienceTex = audienceRend.renderSlide(
+                pres.currentSlide(), fonts, pres.style,
+                pres.current + 1, pres.size());
+            audienceDirty = false;
+            presentAudience = true;
+        }
+        if (presenterDirty) {
+            if (presenterTex) SDL_DestroyTexture(presenterTex);
+            presenterTex = presenterRend.renderPresenterView(pres, fonts);
+            presenterDirty = false;
+            presentPresenter = true;
         }
 
-        if (needsRender) {
-            SDL_Texture* audienceTex = audienceRend.renderSlide(pres.currentSlide(), fonts, pres.style, pres.current + 1, pres.size());
-            SDL_Texture* presenterTex = presenterRend.renderPresenterView(pres, fonts);
-
-            // Render audience
+        if (presentAudience) {
             SDL_RenderClear(audienceRenderer);
-            if (audienceTex) {
+            if (audienceTex)
                 SDL_RenderCopy(audienceRenderer, audienceTex, nullptr, nullptr);
-                SDL_DestroyTexture(audienceTex);
-            }
             SDL_RenderPresent(audienceRenderer);
-
-            // Render presenter
-            SDL_RenderClear(presenterRenderer);
-            if (presenterTex) {
-                SDL_RenderCopy(presenterRenderer, presenterTex, nullptr, nullptr);
-                SDL_DestroyTexture(presenterTex);
-            }
-            SDL_RenderPresent(presenterRenderer);
-
-            if (captureAudience) {
-                char path[64];
-                snprintf(path, sizeof(path), "presenter-slide-%02d.png",
-                         pres.current + 1);
-                bool saved = saveSurfacePng(audienceRend.surface(), path);
-                fprintf(saved ? stdout : stderr, "%s screenshot: %s\n",
-                        saved ? "Saved" : "Failed to save", path);
-                captureAudience = false;
-            }
-            if (capturePresenter) {
-                char path[64];
-                snprintf(path, sizeof(path), "presenter-notes-%02d.png",
-                         pres.current + 1);
-                bool saved = saveSurfacePng(presenterRend.surface(), path);
-                fprintf(saved ? stdout : stderr, "%s screenshot: %s\n",
-                        saved ? "Saved" : "Failed to save", path);
-                capturePresenter = false;
-            }
-
-            needsRender = false;
+            presentAudience = false;
         }
 
-        SDL_Delay(16); // ~60fps cap
+        if (presentPresenter) {
+            SDL_RenderClear(presenterRenderer);
+            if (presenterTex)
+                SDL_RenderCopy(presenterRenderer, presenterTex, nullptr, nullptr);
+            SDL_RenderPresent(presenterRenderer);
+            presentPresenter = false;
+        }
+
+        if (captureAudience) {
+            char path[64];
+            snprintf(path, sizeof(path), "presenter-slide-%02d.png",
+                     pres.current + 1);
+            bool saved = saveSurfacePng(audienceRend.surface(), path);
+            fprintf(saved ? stdout : stderr, "%s screenshot: %s\n",
+                    saved ? "Saved" : "Failed to save", path);
+            captureAudience = false;
+        }
+        if (capturePresenter) {
+            char path[64];
+            snprintf(path, sizeof(path), "presenter-notes-%02d.png",
+                     pres.current + 1);
+            bool saved = saveSurfacePng(presenterRend.surface(), path);
+            fprintf(saved ? stdout : stderr, "%s screenshot: %s\n",
+                    saved ? "Saved" : "Failed to save", path);
+            capturePresenter = false;
+        }
+
+        SDL_Event event;
+        if (!SDL_WaitEvent(&event)) {
+            fprintf(stderr, "SDL_WaitEvent failed: %s\n", SDL_GetError());
+            break;
+        }
+        handleEvent(event);
+        while (SDL_PollEvent(&event)) handleEvent(event);
     }
 
+    if (audienceTex) SDL_DestroyTexture(audienceTex);
+    if (presenterTex) SDL_DestroyTexture(presenterTex);
     audienceRend.cleanup();
     presenterRend.cleanup();
     SDL_DestroyRenderer(audienceRenderer);

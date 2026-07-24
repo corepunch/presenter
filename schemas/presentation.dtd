@@ -131,8 +131,10 @@
 
 <!ELEMENT presentation (style?, slide+)>
 <!ATTLIST presentation
+    name  CDATA #IMPLIED
     style CDATA #IMPLIED>
 <!--
+  @name   Optional audience window title. Defaults to "Presentation".
   @style  Path to an external style file (e.g. "./styles/light.xml").
           Overrides any inline <style> element. See schemas/style.dtd.
           Can also be overridden with the CLI style option.
@@ -147,6 +149,7 @@
     title    CDATA #IMPLIED
     subtitle CDATA #IMPLIED
     content  CDATA #IMPLIED
+    bullet   CDATA #IMPLIED
     small    CDATA #IMPLIED>
 
 <!ELEMENT colors EMPTY>
@@ -254,7 +257,7 @@
 
 <!ELEMENT chart (point+)>
 <!ATTLIST chart
-    type       (bar | line | pie | donut) "bar"
+    type       (bar | line | pie | donut | circular) "bar"
     title      CDATA #IMPLIED
     icon       CDATA #IMPLIED
     height     CDATA #IMPLIED
@@ -273,9 +276,7 @@
 <!ATTLIST icon
     name CDATA #REQUIRED>
 <!--
-  A styled icon-and-text row. Supported names include chart-bar, chart-line,
-  chart-pie, arrow-trend-up, circle-check, dollar-sign, lightbulb, rocket,
-  trophy, and users.
+  A styled icon-and-text row. The name is from Font Awesome Free Solid.
 -->
 
 <!ELEMENT b (#PCDATA | i | code)*>

@@ -1052,16 +1052,15 @@ static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
 
 SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, const PresentationStyle& style, int slideNum, int totalSlides) {
     setStyle(&style);
-    clear(style.bgColor.r, style.bgColor.g, style.bgColor.b);
 
     SDL_Renderer* savedR = m_renderer;
-    SDL_Surface* savedS = m_surface;
     m_renderer = nullptr;
 
-    SDL_Surface* surf = SDL_CreateRGBSurface(0, m_width, m_height, 32,
-        0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
+    // Render directly into the retained backing surface. The previous path
+    // allocated a second full-window surface, drew into it, copied every
+    // pixel, and freed it again for every slide change.
+    SDL_Surface* surf = m_surface;
     if (surf) {
-        m_surface = surf;
         fillRect({0, 0, m_width, m_height}, style.bgColor);
 
         // Compute layout metrics
@@ -1121,13 +1120,9 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
             }
         }
 
-        SDL_Rect dst = {0, 0, m_width, m_height};
-        SDL_BlitSurface(surf, nullptr, savedS, &dst);
-        SDL_FreeSurface(surf);
     }
 
     m_renderer = savedR;
-    m_surface = savedS;
 
     SDL_Texture* texture = SDL_CreateTextureFromSurface(m_renderer, m_surface);
     return texture;

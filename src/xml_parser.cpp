@@ -82,6 +82,7 @@ Presentation parseXml(const std::string& filePath) {
 
     Presentation pres;
     std::filesystem::path base = std::filesystem::path(filePath).parent_path();
+    if (const char* name = root->Attribute("name")) pres.name = name;
 
     const char* stylePath = root->Attribute("style");
     if (stylePath) {

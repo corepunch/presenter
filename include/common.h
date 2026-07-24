@@ -81,6 +81,7 @@ struct Slide {
 };
 
 struct Presentation {
+    std::string name;
     std::vector<Slide> slides;
     int current = 0;
     PresentationStyle style;

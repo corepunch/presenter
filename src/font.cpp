@@ -103,7 +103,11 @@ float Font::drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y
     baseX += xoff;
     baseY += yoff;
 
-    SDL_LockSurface(surface);
+    bool mustLock = SDL_MUSTLOCK(surface);
+    if (mustLock && SDL_LockSurface(surface) != 0) {
+        stbtt_FreeBitmap(bitmap, nullptr);
+        return advance;
+    }
     auto* pixels = static_cast<Uint32*>(surface->pixels);
     int pitch = surface->pitch / 4;
 
@@ -131,7 +135,7 @@ float Font::drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y
         }
     }
 
-    SDL_UnlockSurface(surface);
+    if (mustLock) SDL_UnlockSurface(surface);
     stbtt_FreeBitmap(bitmap, nullptr);
     return advance;
 }

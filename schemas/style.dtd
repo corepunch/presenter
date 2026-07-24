@@ -17,6 +17,7 @@
     title    CDATA #IMPLIED
     subtitle CDATA #IMPLIED
     content  CDATA #IMPLIED
+    bullet   CDATA #IMPLIED
     small    CDATA #IMPLIED>
 
 <!ELEMENT colors EMPTY>
