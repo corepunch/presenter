@@ -5,3 +5,5 @@ build/
 test/test_parser
 images/
 !docs/images/
+*.xcuserstate
+xcuserdata/
