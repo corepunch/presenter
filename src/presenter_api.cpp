@@ -30,6 +30,10 @@ struct PresenterSession {
     Renderer pixelRend;   // software renderer for RGBA pixel-buffer output
 };
 
+static const char* fallbackPresentationTitle(const Presentation& pres) {
+    return pres.name.empty() ? "Presentation" : pres.name.c_str();
+}
+
 static std::string dirOf(const std::string& path) {
     auto pos = path.rfind('/');
     if (pos == std::string::npos) pos = path.rfind('\\');
@@ -132,21 +136,51 @@ void presenter_go_to(PresenterHandle h, int index) {
  * Metadata
  * ----------------------------------------------------------------------- */
 
-const char* presenter_title(PresenterHandle h) {
-    if (!h) return "";
-    return h->pres.name.empty() ? "Presentation" : h->pres.name.c_str();
-}
-
-const char* presenter_notes(PresenterHandle h) {
-    if (!h) return "";
-    return h->pres.currentSlide().notes.c_str();
-}
-
 const char* presenter_slide_label(PresenterHandle h) {
     if (!h) return "0 / 0";
     snprintf(h->labelBuf, sizeof(h->labelBuf),
              "%d / %d", h->pres.current + 1, h->pres.size());
     return h->labelBuf;
+}
+
+PresenterPresentationInfo presenter_presentation_info(PresenterHandle h) {
+    if (!h) {
+        return {"", 0, 0, "0 / 0", 0, 0};
+    }
+
+    return {
+        fallbackPresentationTitle(h->pres),
+        h->pres.size(),
+        h->pres.current,
+        presenter_slide_label(h),
+        (int)h->pres.canGoNext(),
+        (int)h->pres.canGoPrev()
+    };
+}
+
+PresenterSlideData presenter_slide_info(PresenterHandle h, int index) {
+    if (!h || index < 0 || index >= h->pres.size()) {
+        return {"", ""};
+    }
+
+    const Slide& slide = h->pres.slides[index];
+    return {slide.title.c_str(), slide.notes.c_str()};
+}
+
+PresenterSlideData presenter_current_slide_info(PresenterHandle h) {
+    return h ? presenter_slide_info(h, h->pres.current) : PresenterSlideData{"", ""};
+}
+
+const char* presenter_title(PresenterHandle h) {
+    return presenter_presentation_info(h).title;
+}
+
+const char* presenter_notes(PresenterHandle h) {
+    return presenter_current_slide_info(h).notes;
+}
+
+const char* presenter_slide_title(PresenterHandle h, int index) {
+    return presenter_slide_info(h, index).title;
 }
 
 /* --------------------------------------------------------------------------

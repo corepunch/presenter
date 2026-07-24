@@ -4,16 +4,26 @@ import SwiftUI
 /// navigation controls, and slide counter.
 struct PresenterWindowView: View {
     @State var session: PresentationSession
+    @State private var isSidebarVisible = false
 
     var body: some View {
         HSplitView {
-            slidePreview
-                .frame(minWidth: 480)
+            if isSidebarVisible {
+                slideSidebar
+                    .frame(minWidth: 160, idealWidth: 200, maxWidth: 260)
+            }
 
-            notesPanel
-                .frame(minWidth: 200, maxWidth: 340)
+            VStack(spacing: 0) {
+                slidePreview
+                    .frame(minWidth: 520, minHeight: 340)
+
+                Divider()
+
+                notesPanel
+                    .frame(minHeight: 140, idealHeight: 180, maxHeight: 260)
+            }
         }
-        .frame(minWidth: 700, minHeight: 420)
+        .frame(minWidth: 640, idealWidth: 720, minHeight: 640, idealHeight: 720)
         .navigationTitle(session.title)
         .toolbar { toolbarItems }
         .onKeyPress(.rightArrow)  { session.next();    return .handled }
@@ -23,6 +33,24 @@ struct PresenterWindowView: View {
     }
 
     // MARK: - Subviews
+
+    private var slideSidebar: some View {
+        List(selection: Binding<Int?>(
+            get: { session.slideIndex },
+            set: { index in
+                if let index {
+                    session.goTo(index)
+                }
+            }
+        )) {
+            ForEach(0..<session.slideCount, id: \.self) { index in
+                Text(session.slideTitle(at: index))
+                    .lineLimit(1)
+                    .tag(index)
+            }
+        }
+        .listStyle(.sidebar)
+    }
 
     private var slidePreview: some View {
         VStack(spacing: 12) {
@@ -92,6 +120,15 @@ struct PresenterWindowView: View {
 
     @ToolbarContentBuilder
     private var toolbarItems: some ToolbarContent {
+        ToolbarItem(placement: .automatic) {
+            Button {
+                isSidebarVisible.toggle()
+            } label: {
+                Label("Slides", systemImage: "sidebar.left")
+            }
+            .help(isSidebarVisible ? "Hide slide list" : "Show slide list")
+        }
+
         ToolbarItem(placement: .automatic) {
             themeMenu
         }

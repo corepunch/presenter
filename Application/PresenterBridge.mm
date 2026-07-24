@@ -19,13 +19,15 @@
 - (instancetype)initWithHandle:(PresenterHandle)h {
     self = [super init];
     if (self) {
-        _slideIndex        = presenter_current(h);
-        _slideCount        = presenter_count(h);
-        _slideLabel        = @(presenter_slide_label(h));
-        _notes             = @(presenter_notes(h));
-        _presentationTitle = @(presenter_title(h));
-        _canGoNext         = (BOOL)presenter_can_go_next(h);
-        _canGoPrev         = (BOOL)presenter_can_go_prev(h);
+        PresenterPresentationInfo presentationInfo = presenter_presentation_info(h);
+        PresenterSlideData slideInfo = presenter_current_slide_info(h);
+        _slideIndex        = presentationInfo.current_slide_index;
+        _slideCount        = presentationInfo.slide_count;
+        _slideLabel        = @(presentationInfo.current_slide_label);
+        _notes             = @(slideInfo.notes);
+        _presentationTitle = @(presentationInfo.title);
+        _canGoNext         = (BOOL)presentationInfo.can_go_next;
+        _canGoPrev         = (BOOL)presentationInfo.can_go_prev;
     }
     return self;
 }
@@ -92,6 +94,14 @@
     PresenterSlideInfo* info = [[PresenterSlideInfo alloc] initWithHandle:_handle];
     os_unfair_lock_unlock(&_lock);
     return info;
+}
+
+- (NSString*)slideTitleAt:(NSInteger)index {
+    os_unfair_lock_lock(&_lock);
+    PresenterSlideData slideInfo = presenter_slide_info(_handle, (int)index);
+    NSString* title = @(slideInfo.title);
+    os_unfair_lock_unlock(&_lock);
+    return title;
 }
 
 - (NSInteger)themeCount {

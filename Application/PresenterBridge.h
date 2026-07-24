@@ -31,6 +31,7 @@ NS_ASSUME_NONNULL_BEGIN
 - (void)goTo:(NSInteger)index;
 
 - (PresenterSlideInfo*)currentInfo;
+- (NSString*)slideTitleAt:(NSInteger)index;
 
 @property (nonatomic, readonly) NSInteger themeCount;
 - (NSString*)themeNameAt:(NSInteger)index;

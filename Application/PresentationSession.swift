@@ -12,6 +12,7 @@ final class PresentationSession {
     private(set) var slideLabel: String = ""
     private(set) var notes: String = ""
     private(set) var title: String = ""
+    private(set) var slideTitles: [String] = []
     private(set) var canGoNext: Bool = false
     private(set) var canGoPrev: Bool = false
 
@@ -66,6 +67,10 @@ final class PresentationSession {
     func next() { bridge.next(); sync() }
     func prev() { bridge.prev(); sync() }
     func goTo(_ index: Int) { bridge.go(to: index); sync() }
+    func slideTitle(at index: Int) -> String {
+        guard slideTitles.indices.contains(index) else { return "Slide \(index + 1)" }
+        return slideTitles[index]
+    }
 
     // MARK: - Rendering
 
@@ -105,6 +110,10 @@ final class PresentationSession {
         slideLabel = info.slideLabel
         notes      = info.notes
         title      = info.presentationTitle
+        slideTitles = (0..<info.slideCount).map { index in
+            let title = bridge.slideTitle(at: index).trimmingCharacters(in: .whitespacesAndNewlines)
+            return title.isEmpty ? "Slide \(index + 1)" : title
+        }
         canGoNext  = info.canGoNext
         canGoPrev  = info.canGoPrev
         renderToken &+= 1

@@ -35,6 +35,7 @@ NS_ASSUME_NONNULL_BEGIN
 
 // Current state snapshot (safe to call from any thread)
 - (PresenterSlideInfo*)currentInfo;
+- (NSString*)slideTitleAt:(NSInteger)index;
 
 // Theme
 @property (nonatomic, readonly) NSInteger themeCount;

@@ -7,8 +7,8 @@
  *   • The standalone SDL2 executable (src/main.cpp) continues to work
  *     unchanged — it never includes this header.
  *
- * The API is intentionally minimal: navigation + metadata + pixel-buffer
- * rendering.  SDL2 renderer integration (audience window) lives in the
+ * The API is intentionally minimal: lifecycle + navigation + presentation
+ * metadata + rendering.  SDL2 renderer integration (audience window) lives in the
  * SDL-specific layer that calls presenter_render_slide_sdl / presenter_render_presenter_sdl.
  */
 
@@ -22,6 +22,20 @@ extern "C" {
 
 /* Opaque session handle. */
 typedef struct PresenterSession* PresenterHandle;
+
+typedef struct PresenterPresentationInfo {
+    const char* title;
+    int slide_count;
+    int current_slide_index;
+    const char* current_slide_label;
+    int can_go_next;
+    int can_go_prev;
+} PresenterPresentationInfo;
+
+typedef struct PresenterSlideData {
+    const char* title;
+    const char* notes;
+} PresenterSlideData;
 
 /* -------------------------------------------------------------------------
  * Lifecycle
@@ -50,14 +64,20 @@ void presenter_prev(PresenterHandle h);
 void presenter_go_to(PresenterHandle h, int index);  /* 0-based */
 
 /* -------------------------------------------------------------------------
- * Metadata for the current slide
+ * Presentation metadata
  * ---------------------------------------------------------------------- */
 
-/** Presentation name (from <presentation name="…">) */
+/** Snapshot of presentation-level state. Pointers are valid until the session mutates. */
+PresenterPresentationInfo presenter_presentation_info(PresenterHandle h);
+/** Slide metadata by 0-based index. Pointers are valid until the session mutates. */
+PresenterSlideData presenter_slide_info(PresenterHandle h, int index);
+/** Current slide metadata. Pointers are valid until the session mutates. */
+PresenterSlideData presenter_current_slide_info(PresenterHandle h);
+
+/* Compatibility helpers for older call sites. Prefer the snapshot API above. */
 const char* presenter_title(PresenterHandle h);
-/** Speaker notes for the current slide (may be empty). */
 const char* presenter_notes(PresenterHandle h);
-/** Human-readable label e.g. "3 / 12". */
+const char* presenter_slide_title(PresenterHandle h, int index);
 const char* presenter_slide_label(PresenterHandle h);
 
 /* -------------------------------------------------------------------------

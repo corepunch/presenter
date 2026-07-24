@@ -35,7 +35,7 @@ struct RebreifApp: App {
                     .frame(width: 400, height: 200)
             }
         }
-        .defaultSize(width: 900, height: 560)
+        .defaultSize(width: 720, height: 720)
         .windowResizability(.contentMinSize)
     }
 }
