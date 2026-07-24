@@ -372,7 +372,6 @@ private struct AudienceWindowView: View {
 private final class AudienceWindowController: NSObject, NSWindowDelegate {
   private var window: NSWindow?
   private var onClose: (() -> Void)?
-  private var isClosing = false
   
   func show(
     session: PresentationSession,
@@ -386,6 +385,7 @@ private final class AudienceWindowController: NSObject, NSWindowDelegate {
       window.contentView = NSHostingView(
         rootView: AudienceWindowView(session: session)
       )
+      window.delegate = self
       window.makeKeyAndOrderFront(nil)
       return
     }
@@ -401,6 +401,7 @@ private final class AudienceWindowController: NSObject, NSWindowDelegate {
       rootView: AudienceWindowView(session: session)
     )
     window.delegate = self
+    window.isReleasedWhenClosed = false
     window.minSize = NSSize(width: 640, height: 360)
     window.center()
     window.makeKeyAndOrderFront(nil)
@@ -408,43 +409,24 @@ private final class AudienceWindowController: NSObject, NSWindowDelegate {
   }
   
   func hide() {
-    window?.close()
+    guard let window else { return }
+    window.delegate = nil
+    onClose = nil
+    window.orderOut(nil)
+    self.window = nil
   }
   
   func windowWillClose(_ notification: Notification) {
-    closeWindow()
+    let cb = onClose
+    onClose = nil
+    window = nil
+    cb?()
   }
   
   private func audienceTitle(for presentationTitle: String) -> String {
     presentationTitle.isEmpty
     ? "Audience Window"
     : "\(presentationTitle) - Audience"
-  }
-  
-  private func closeWindow() {
-    guard !isClosing else { return }
-    isClosing = true
-    
-    let windowToClose = window
-    let closeCallback = onClose
-    onClose = nil
-    
-    closeCallback?()
-    releaseWindowAfterCloseAnimation(windowToClose)
-  }
-  
-  private func releaseWindowAfterCloseAnimation(
-    _ closingWindow: NSWindow?
-  ) {
-    DispatchQueue.main.async { [weak self, weak closingWindow] in
-      guard let self else { return }
-      if self.window === closingWindow {
-        self.window?.delegate = nil
-        self.window?.contentView = nil
-        self.window = nil
-      }
-      self.isClosing = false
-    }
   }
 }
 

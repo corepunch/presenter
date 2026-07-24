@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import AppKit
 
 private struct ContentViewContainer: View {
     @Environment(\.openWindow) private var openWindow
@@ -16,6 +17,9 @@ private struct ContentViewContainer: View {
         ContentView(openPresenterWindow: { url in
             openWindow(id: "presenter", value: url)
         })
+        .onOpenURL { url in
+            openPresentation(url: url)
+        }
         .task {
             handleInitialLaunch()
         }
@@ -32,6 +36,14 @@ private struct ContentViewContainer: View {
             openWindow(id: "presenter", value: request)
         }
         dismiss()
+    }
+
+    private func openPresentation(url: URL) {
+        guard url.pathExtension == "slides" else { return }
+        openWindow(
+            id: "presenter",
+            value: PresentationOpenRequest(url: url, bookmarkData: nil)
+        )
     }
 }
 
@@ -51,7 +63,7 @@ private enum LaunchArguments {
 
 @main
 struct RebreifApp: App {
-    @Environment(\.openWindow) private var openWindow
+    @NSApplicationDelegateAdaptor(QuickSlidesAppDelegate.self) var appDelegate
 
     var body: some Scene {
         WindowGroup("QuickSlides") {
@@ -59,21 +71,45 @@ struct RebreifApp: App {
         }
         .defaultSize(width: 740, height: 480)
         .windowResizability(.contentMinSize)
-        .onOpenURL { url in
-            guard url.pathExtension == "slides" else { return }
-            let request = PresentationOpenRequest(url: url, bookmarkData: nil)
-            openWindow(id: "presenter", value: request)
-        }
 
         WindowGroup(id: "presenter", for: PresentationOpenRequest.self) { $request in
-            if let request, let session = PresentationSession(request: request) {
-                PresenterWindowView(session: session)
-            } else {
-                Text("Could not open presentation.")
-                    .frame(width: 400, height: 200)
-            }
+            PresenterWindow(request: request)
         }
         .defaultSize(width: 640, height: 800)
         .windowResizability(.contentMinSize)
+    }
+}
+
+private final class QuickSlidesAppDelegate: NSObject, NSApplicationDelegate {
+    func application(_ application: NSApplication,
+                     shouldRestoreApplicationState coder: NSCoder) -> Bool { false }
+}
+
+private final class InvalidWindowCloser: NSView {
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let window {
+            DispatchQueue.main.async { window.close() }
+        }
+    }
+}
+
+private struct InvalidPresenterCleanup: NSViewRepresentable {
+    func makeNSView(context: Context) -> InvalidWindowCloser {
+        InvalidWindowCloser()
+    }
+
+    func updateNSView(_ nsView: InvalidWindowCloser, context: Context) {}
+}
+
+private struct PresenterWindow: View {
+    let request: PresentationOpenRequest?
+
+    var body: some View {
+        if let request, let session = PresentationSession(request: request) {
+            PresenterWindowView(session: session)
+        } else {
+            InvalidPresenterCleanup()
+        }
     }
 }
