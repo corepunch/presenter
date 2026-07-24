@@ -173,17 +173,18 @@ static int renderToPixels(PresenterSession* s, bool presenterView,
                         s->pres.current + 1, s->pres.size());
 
     int ok = 0;
-    if (tex) {
-        // Blit the texture to the surface
-        SDL_RenderPresent(sdlRenderer);
-        SDL_LockSurface(target);
-        const uint8_t* src = static_cast<const uint8_t*>(target->pixels);
-        for (int y = 0; y < height; y++)
-            memcpy(pixels + y * stride, src + y * target->pitch,
-                   (size_t)width * 4);
-        SDL_UnlockSurface(target);
+    SDL_Surface* rendered = r.surface();
+    if (tex && rendered) {
+        if (SDL_LockSurface(rendered) == 0) {
+            const uint8_t* src = static_cast<const uint8_t*>(rendered->pixels);
+            for (int y = 0; y < height; y++) {
+                memcpy(pixels + y * stride, src + y * rendered->pitch,
+                       (size_t)width * 4);
+            }
+            SDL_UnlockSurface(rendered);
+            ok = 1;
+        }
         SDL_DestroyTexture(tex);
-        ok = 1;
     }
 
     r.cleanup();
