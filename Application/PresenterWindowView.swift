@@ -8,25 +8,27 @@ struct PresenterWindowView: View {
     @State private var audienceWindowController = AudienceWindowController()
     @State private var isAudienceWindowVisible = false
     @State private var isSidebarVisible = false
+    @State private var isNotesBodyVisible = true
 
     var body: some View {
         HSplitView {
             if isSidebarVisible {
                 slideSidebar
-                    .frame(minWidth: 160, idealWidth: 200, maxWidth: 260)
+                    .frame(
+                        minWidth: LayoutMetrics.sidebarWidth.minimum,
+                        idealWidth: LayoutMetrics.sidebarWidth.ideal,
+                        maxWidth: LayoutMetrics.sidebarWidth.maximum
+                    )
             }
 
-            VStack(spacing: 0) {
-                slidePreview
-                    .frame(minWidth: 520, minHeight: 340)
-
-                Divider()
-
-                notesPanel
-                    .frame(minHeight: 140, idealHeight: 180, maxHeight: 260)
-            }
+            mainContent
         }
-        .frame(minWidth: 640, idealWidth: 720, minHeight: 640, idealHeight: 720)
+        .frame(
+            minWidth: LayoutMetrics.windowSize.minimum.width,
+            idealWidth: LayoutMetrics.windowSize.ideal.width,
+            minHeight: LayoutMetrics.windowSize.minimum.height,
+            idealHeight: LayoutMetrics.windowSize.ideal.height
+        )
         .navigationTitle(session.title)
         .toolbar { toolbarItems }
         .onKeyPress(.rightArrow) { session.next(); return .handled }
@@ -39,6 +41,41 @@ struct PresenterWindowView: View {
 
     // MARK: - Subviews
 
+    @ViewBuilder
+    private var mainContent: some View {
+        VSplitView {
+            slidePreview
+                .layoutPriority(1)
+
+            notesPanel
+                .frame(
+                    minHeight: isNotesBodyVisible
+                        ? LayoutMetrics.notesHeight.minimum
+                        : LayoutMetrics.notesHeaderHeight,
+                    idealHeight: isNotesBodyVisible
+                        ? LayoutMetrics.notesHeight.ideal
+                        : LayoutMetrics.notesHeaderHeight,
+                    maxHeight: isNotesBodyVisible
+                        ? LayoutMetrics.notesHeight.maximum
+                        : LayoutMetrics.notesHeaderHeight
+                )
+        }
+        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+    }
+
+//    private var presentationHeader: some View {
+//        HStack {
+//            Text(session.title.isEmpty ? "Presentation" : session.title)
+//                .font(.system(size: 14, weight: .semibold))
+//                .lineLimit(1)
+//                .truncationMode(.tail)
+//
+//            Spacer(minLength: 12)
+//        }
+//        .padding(.horizontal, 16)
+//        .padding(.vertical, 10)
+//    }
+
     private var slideSidebar: some View {
         List(selection: Binding<Int?>(
             get: { session.slideIndex },
@@ -50,7 +87,10 @@ struct PresenterWindowView: View {
         )) {
             ForEach(0..<session.slideCount, id: \.self) { index in
                 Text(session.slideTitle(at: index))
-                    .lineLimit(1)
+                    .font(.system(size: 13))
+                    .lineLimit(2)
+                    .truncationMode(.tail)
+                    .padding(.vertical, 2)
                     .tag(index)
             }
         }
@@ -63,34 +103,76 @@ struct PresenterWindowView: View {
     }
 
     private var slidePreviewContent: some View {
-        RenderedSlideView(session: session, presenterView: false)
-            .aspectRatio(16.0 / 9.0, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            .shadow(radius: 6)
-            .padding(20)
+        GeometryReader { proxy in
+            let inset = compactInset(for: proxy.size)
+
+            RenderedSlideView(session: session, presenterView: false)
+                .aspectRatio(16.0 / 9.0, contentMode: .fit)
+                .frame(
+                    width: max(0, proxy.size.width - inset * 2),
+                    height: max(0, proxy.size.height - inset * 2)
+                )
+                .background(Color.black)
+                .clipShape(RoundedRectangle(
+                    cornerRadius: LayoutMetrics.slidePreviewCornerRadius,
+                    style: .continuous
+                ))
+                .overlay {
+                    RoundedRectangle(
+                        cornerRadius: LayoutMetrics.slidePreviewCornerRadius,
+                        style: .continuous
+                    )
+                    .stroke(.separator.opacity(0.5), lineWidth: 1)
+                }
+                .shadow(radius: proxy.size.width < 360 ? 3 : 6)
+                .frame(width: proxy.size.width, height: proxy.size.height, alignment: .center)
+        }
     }
 
     private var notesPanel: some View {
         VStack(alignment: .leading, spacing: 0) {
+            notesHeader
+
+            if isNotesBodyVisible {
+                Divider()
+
+                ScrollView {
+                    Text(session.notes.isEmpty ? "No notes for this slide." : session.notes)
+                        .font(.system(size: 13))
+                        .foregroundStyle(session.notes.isEmpty ? .tertiary : .primary)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(16)
+                }
+            }
+        }
+        .background(.background)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    private var notesHeader: some View {
+        HStack(spacing: 8) {
             Text("Speaker Notes")
                 .font(.system(size: 11, weight: .semibold))
                 .foregroundStyle(.secondary)
                 .textCase(.uppercase)
                 .tracking(0.5)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 10)
 
-            Divider()
+            Spacer(minLength: 8)
 
-            ScrollView {
-                Text(session.notes.isEmpty ? "No notes for this slide." : session.notes)
-                    .font(.system(size: 13))
-                    .foregroundStyle(session.notes.isEmpty ? .tertiary : .primary)
-                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                    .padding(16)
+            Button {
+                isNotesBodyVisible.toggle()
+            } label: {
+                Label(
+                    isNotesBodyVisible ? "Collapse Notes" : "Expand Notes",
+                    systemImage: isNotesBodyVisible ? "chevron.down" : "chevron.up"
+                )
+                    .labelStyle(.iconOnly)
             }
+            .buttonStyle(.borderless)
+            .help(isNotesBodyVisible ? "Collapse speaker notes" : "Expand speaker notes")
         }
-        .background(.background)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 10)
     }
 
     @ToolbarContentBuilder
@@ -103,6 +185,15 @@ struct PresenterWindowView: View {
                     .labelStyle(.iconOnly)
             }
             .help(isSidebarVisible ? "Hide slide list" : "Show slide list")
+
+            Button {
+                isNotesBodyVisible.toggle()
+            } label: {
+                Label(isNotesBodyVisible ? "Collapse Notes" : "Expand Notes",
+                      systemImage: "rectangle.bottomthird.inset.filled")
+                    .labelStyle(.iconOnly)
+            }
+            .help(isNotesBodyVisible ? "Collapse speaker notes" : "Expand speaker notes")
 
             ControlGroup {
                 Button { session.prev() } label: {
@@ -160,6 +251,32 @@ struct PresenterWindowView: View {
             isAudienceWindowVisible = true
         }
     }
+
+    private func compactInset(for size: CGSize) -> CGFloat {
+        size.width < 360 || size.height < 260 ? 12 : 20
+    }
+}
+
+private enum LayoutMetrics {
+    static let sidebarWidth = SizeRange(minimum: 220, ideal: 280, maximum: 380)
+    static let windowSize = WindowSize(
+        minimum: CGSize(width: 320, height: 320),
+        ideal: CGSize(width: 640, height: 480)
+    )
+    static let slidePreviewCornerRadius: CGFloat = 14
+    static let notesHeaderHeight: CGFloat = 40
+    static let notesHeight = SizeRange(minimum: 128, ideal: 320, maximum: 480)
+}
+
+private struct WindowSize {
+    let minimum: CGSize
+    let ideal: CGSize
+}
+
+private struct SizeRange {
+    let minimum: CGFloat
+    let ideal: CGFloat
+    let maximum: CGFloat
 }
 
 // MARK: - Audience Window
@@ -175,10 +292,10 @@ private struct AudienceWindowView: View {
     }
 }
 
-@Observable
 private final class AudienceWindowController: NSObject, NSWindowDelegate {
     private var window: NSWindow?
     private var onClose: (() -> Void)?
+    private var isClosing = false
 
     func show(session: PresentationSession, title: String, onClose: @escaping () -> Void) {
         self.onClose = onClose
@@ -210,13 +327,36 @@ private final class AudienceWindowController: NSObject, NSWindowDelegate {
     }
 
     func windowWillClose(_ notification: Notification) {
-        window = nil
-        onClose?()
-        onClose = nil
+        closeWindow()
     }
 
     private func audienceTitle(for presentationTitle: String) -> String {
         presentationTitle.isEmpty ? "Audience Window" : "\(presentationTitle) - Audience"
+    }
+
+    private func closeWindow() {
+        guard !isClosing else { return }
+        isClosing = true
+
+        let windowToClose = window
+        let closeCallback = onClose
+        onClose = nil
+
+        closeCallback?()
+        releaseWindowAfterCloseAnimation(windowToClose)
+    }
+
+    private func releaseWindowAfterCloseAnimation(_ closingWindow: NSWindow?) {
+        DispatchQueue.main.async { [weak self, weak closingWindow] in
+            guard let self else { return }
+
+            if self.window === closingWindow {
+                self.window?.delegate = nil
+                self.window?.contentView = nil
+                self.window = nil
+            }
+            self.isClosing = false
+        }
     }
 }
 
@@ -290,8 +430,15 @@ struct RenderedSlideView: View {
         request: PresentationOpenRequest(url: previewURL, bookmarkData: nil)
     ) {
         PresenterWindowView(session: session)
+            .frame(
+                width: LayoutMetrics.windowSize.ideal.width,
+                height: LayoutMetrics.windowSize.ideal.height
+            )
     } else {
         Text("Could not load preview presentation.")
-            .frame(width: 900, height: 560)
+            .frame(
+                width: LayoutMetrics.windowSize.ideal.width,
+                height: LayoutMetrics.windowSize.ideal.height
+            )
     }
 }
