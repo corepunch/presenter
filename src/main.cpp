@@ -81,67 +81,86 @@ static SDL_Renderer* createDisplayRenderer(SDL_Window* window) {
     return renderer;
 }
 
-int main(int argc, char* argv[]) {
-    if (argc < 2) {
-        printUsage(argv[0]);
-        return 1;
-    }
+static Presentation makeWelcomePresentation() {
+    Presentation pres;
+    pres.style = PresentationStyle::builtInThemes()[0];
+    Slide welcome;
+    welcome.layout = SlideLayout::Title;
+    welcome.title = "Presenter";
+    welcome.subtitle = "Open a presentation file to get started.\n\n"
+                       "Drag a .slides file onto the app icon,\n"
+                       "or run from terminal:\n"
+                       "  presenter presentation.slides";
+    welcome.notes = "Press Escape to quit.\n"
+                    "Use arrow keys to navigate slides.\n"
+                    "Shift+Arrow to switch themes.\n"
+                    "F5 for fullscreen.";
+    pres.slides.push_back(welcome);
+    return pres;
+}
 
-    std::string xmlPath = argv[1];
+int main(int argc, char* argv[]) {
+    Presentation pres;
+    std::string xmlPath;
     std::string stylePath;
     std::string screenshotPath;
     std::string presenterScreenshotPath;
     int selectedSlide = 1;
 
-    for (int i = 2; i < argc; i++) {
-        std::string arg = argv[i];
-        if (arg == "--style" && i + 1 < argc) {
-            stylePath = argv[++i];
-        } else if (optionValue(arg, "--style", &stylePath)) {
-        } else if (arg == "--screenshot" && i + 1 < argc) {
-            screenshotPath = argv[++i];
-        } else if (optionValue(arg, "--screenshot", &screenshotPath)) {
-        } else if (arg == "--presenter-screenshot" && i + 1 < argc) {
-            presenterScreenshotPath = argv[++i];
-        } else if (optionValue(arg, "--presenter-screenshot",
-                               &presenterScreenshotPath)) {
-        } else if (arg == "--slide" && i + 1 < argc) {
-            selectedSlide = std::atoi(argv[++i]);
-        } else {
-            std::string slideValue;
-            if (optionValue(arg, "--slide", &slideValue)) {
-                selectedSlide = std::atoi(slideValue.c_str());
+    if (argc >= 2) {
+        xmlPath = argv[1];
+
+        for (int i = 2; i < argc; i++) {
+            std::string arg = argv[i];
+            if (arg == "--style" && i + 1 < argc) {
+                stylePath = argv[++i];
+            } else if (optionValue(arg, "--style", &stylePath)) {
+            } else if (arg == "--screenshot" && i + 1 < argc) {
+                screenshotPath = argv[++i];
+            } else if (optionValue(arg, "--screenshot", &screenshotPath)) {
+            } else if (arg == "--presenter-screenshot" && i + 1 < argc) {
+                presenterScreenshotPath = argv[++i];
+            } else if (optionValue(arg, "--presenter-screenshot",
+                                   &presenterScreenshotPath)) {
+            } else if (arg == "--slide" && i + 1 < argc) {
+                selectedSlide = std::atoi(argv[++i]);
             } else {
-                fprintf(stderr, "Unknown or incomplete option: %s\n", arg.c_str());
-                printUsage(argv[0]);
-                return 1;
+                std::string slideValue;
+                if (optionValue(arg, "--slide", &slideValue)) {
+                    selectedSlide = std::atoi(slideValue.c_str());
+                } else {
+                    fprintf(stderr, "Unknown or incomplete option: %s\n", arg.c_str());
+                    printUsage(argv[0]);
+                    return 1;
+                }
             }
         }
-    }
 
-    Presentation pres = parseXml(xmlPath);
-    if (pres.empty()) {
-        fprintf(stderr, "Error: no slides found in %s\n", xmlPath.c_str());
-        return 1;
-    }
+        pres = parseXml(xmlPath);
+        if (pres.empty()) {
+            fprintf(stderr, "Error: no slides found in %s\n", xmlPath.c_str());
+            return 1;
+        }
 
-    // Override style from CLI
-    if (!stylePath.empty()) {
-        pres.style = PresentationStyle::load(stylePath);
+        if (!stylePath.empty()) {
+            pres.style = PresentationStyle::load(stylePath);
+        }
+        if (selectedSlide < 1 || selectedSlide > pres.size()) {
+            fprintf(stderr, "Slide must be between 1 and %d\n", pres.size());
+            return 1;
+        }
+        pres.current = selectedSlide - 1;
+
+        printf("Loaded %d slides from %s\n", pres.size(), xmlPath.c_str());
+    } else {
+        pres = makeWelcomePresentation();
     }
-    if (selectedSlide < 1 || selectedSlide > pres.size()) {
-        fprintf(stderr, "Slide must be between 1 and %d\n", pres.size());
-        return 1;
-    }
-    pres.current = selectedSlide - 1;
 
     const auto& themes = PresentationStyle::builtInThemes();
     auto currentTheme = themes.begin();
     for (auto it = themes.begin(); it != themes.end(); ++it) {
         if (it->name == pres.style.name) { currentTheme = it; break; }
     }
-
-    printf("Loaded %d slides from %s\n", pres.size(), xmlPath.c_str());
 
     bool captureOnly = !screenshotPath.empty() ||
                        !presenterScreenshotPath.empty();
