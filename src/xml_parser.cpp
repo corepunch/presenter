@@ -15,6 +15,15 @@ static SlideLayout parseSlideLayout(const std::string& s) {
     return SlideLayout::Content;
 }
 
+static ChartType parseChartType(const std::string& s) {
+    std::string lower = s;
+    std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+    if (lower == "line") return ChartType::Line;
+    if (lower == "pie") return ChartType::Pie;
+    if (lower == "donut" || lower == "circular") return ChartType::Donut;
+    return ChartType::Bar;
+}
+
 // --- Table-driven slide attribute setters ---
 
 template<auto Member, auto Convert>
@@ -121,6 +130,8 @@ static Slide parseSlideElement(tinyxml2::XMLElement* el, const std::filesystem::
         else if (name == "subtitle") { slide.subtitle = val; }
         else if (name == "text")  {
             slide.texts.push_back(serializeFormatted(c));
+            const char* icon = c->Attribute("icon");
+            slide.textIcons.push_back(icon ? icon : "");
         }
         else if (name == "image") {
             const char* src = c->Attribute("src");
@@ -133,6 +144,31 @@ static Slide parseSlideElement(tinyxml2::XMLElement* el, const std::filesystem::
             std::string lang = langAttr ? langAttr : "";
             const char* codeText = c->GetText();
             slide.codeBlocks.push_back({codeText ? codeText : "", lang});
+        }
+        else if (name == "chart") {
+            Chart chart;
+            if (const char* type = c->Attribute("type"))
+                chart.type = parseChartType(type);
+            if (const char* title = c->Attribute("title"))
+                chart.title = title;
+            if (const char* icon = c->Attribute("icon"))
+                chart.icon = icon;
+            chart.height = std::max(160, c->IntAttribute("height", chart.height));
+            chart.showValues = c->BoolAttribute("showValues", true);
+            for (XMLElement* p = c->FirstChildElement("point"); p;
+                 p = p->NextSiblingElement("point")) {
+                ChartPoint point;
+                if (const char* label = p->Attribute("label")) point.label = label;
+                point.value = p->DoubleAttribute("value", 0.0);
+                chart.points.push_back(point);
+            }
+            slide.charts.push_back(chart);
+        }
+        else if (name == "icon") {
+            IconBlock icon;
+            if (const char* iconName = c->Attribute("name")) icon.name = iconName;
+            icon.text = serializeFormatted(c);
+            slide.icons.push_back(icon);
         }
         else if (name == "slide") {
             slide.children.push_back(parseSlideElement(c, baseDir));

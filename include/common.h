@@ -31,12 +31,41 @@ struct CodeBlock {
     std::string lang;
 };
 
+enum class ChartType {
+    Bar,
+    Line,
+    Pie,
+    Donut
+};
+
+struct ChartPoint {
+    std::string label;
+    double value = 0.0;
+};
+
+struct Chart {
+    ChartType type = ChartType::Bar;
+    std::string title;
+    std::string icon;
+    std::vector<ChartPoint> points;
+    int height = 340;
+    bool showValues = true;
+};
+
+struct IconBlock {
+    std::string name;
+    std::string text;
+};
+
 struct Slide {
     SlideLayout layout = SlideLayout::Content;
     std::string slot;       // "left", "right", "0", "1", ... (for Columns parent)
     std::string title;
     std::string subtitle;
     std::vector<std::string> texts;  // bullet points / captions
+    // Per-text bullet override: empty = standard bullet, "none" = no marker,
+    // otherwise a Font Awesome Free Solid icon name.
+    std::vector<std::string> textIcons;
     std::string notes;
     std::string imagePath;
     std::string imageAlt;
@@ -46,6 +75,8 @@ struct Slide {
     int gap = 24;             // gap between slots (pixels)
 
     std::vector<CodeBlock> codeBlocks;
+    std::vector<Chart> charts;
+    std::vector<IconBlock> icons;
     std::vector<Slide> children;  // recursively nested slides
 };
 

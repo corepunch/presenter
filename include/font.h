@@ -35,6 +35,8 @@ public:
 
     // Get pixel width of a UTF-8 string
     float measureString(const std::string& text) const;
+    float measureGlyph(uint32_t codepoint) const;
+    bool hasGlyph(uint32_t codepoint) const;
 
 private:
     // Returns the stbtt_fontinfo that contains this codepoint (primary or
@@ -70,6 +72,9 @@ struct FontSet {
     Font bulletFallback;
     Font smallFallback;
     Font childTitleFallback;
+    Font iconFont;
+    Font smallIconFont;
+    Font bulletIconFont;
 
     bool load(float contentSize, float titleSize, float subtitleSize,
               float bulletSize, float smallSize, float childTitleSize) {
@@ -78,7 +83,10 @@ struct FontSet {
             && loadGroup(subtitleFonts, subtitleFallback, subtitleSize)
             && loadGroup(bulletFonts, bulletFallback, bulletSize)
             && loadGroup(smallFonts, smallFallback, smallSize)
-            && loadGroup(childTitleFonts, childTitleFallback, childTitleSize);
+            && loadGroup(childTitleFonts, childTitleFallback, childTitleSize)
+            && iconFont.load("assets/FontAwesome-Free-Solid-900.otf", contentSize)
+            && smallIconFont.load("assets/FontAwesome-Free-Solid-900.otf", smallSize)
+            && bulletIconFont.load("assets/FontAwesome-Free-Solid-900.otf", bulletSize);
     }
 
     bool load(const struct PresentationStyle& style) {
@@ -97,6 +105,9 @@ struct FontSet {
     FontVariants bulletVariants() const    { return makeVariants(bulletFonts); }
     FontVariants smallVariants() const     { return makeVariants(smallFonts); }
     FontVariants childTitleVariants() const { return makeVariants(childTitleFonts); }
+    const Font& icons() const { return iconFont; }
+    const Font& smallIcons() const { return smallIconFont; }
+    const Font& bulletIcons() const { return bulletIconFont; }
 
 private:
     static bool loadGroup(std::array<Font, 5>& group, Font& fb, float size) {

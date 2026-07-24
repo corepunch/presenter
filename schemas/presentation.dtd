@@ -19,7 +19,6 @@
   - PPTX placeholders map to our slot="left|right|..." attribute
 
   Examples:
-  --------
 
   Title slide:
     <slide layout="title" title="Q4 Product Roadmap">
@@ -109,12 +108,12 @@
   Recursive nesting:
     <slide layout="columns" title="Deep Comparison">
       <slide slot="left">
-        <!-- Left side is itself a vertical stack -->
+        [Left side is itself a vertical stack]
         <image src="./before.png"/>
         <text>Before the refactor</text>
       </slide>
       <slide slot="right">
-        <!-- Right side has its own columns -->
+        [Right side has its own columns]
         <slide layout="columns" gap="16">
           <slide slot="left">
             <text>Metric A: <b>2x</b> faster</text>
@@ -136,12 +135,12 @@
 <!--
   @style  Path to an external style file (e.g. "./styles/light.xml").
           Overrides any inline <style> element. See schemas/style.dtd.
-          Can also be overridden via CLI: presenter slides.xml --style=theme.xml
+          Can also be overridden with the CLI style option.
 -->
 
 <!-- ===== Inline style (or standalone style file, see schemas/style.dtd) ===== -->
 
-<!ELEMENT style (fonts?, colors?, layout?)>
+<!ELEMENT style (fonts?, colors?, charts?, layout?)>
 
 <!ELEMENT fonts EMPTY>
 <!ATTLIST fonts
@@ -160,6 +159,17 @@
     dim      CDATA #IMPLIED
     line     CDATA #IMPLIED>
 
+<!ELEMENT charts EMPTY>
+<!ATTLIST charts
+    series1 CDATA #IMPLIED
+    series2 CDATA #IMPLIED
+    series3 CDATA #IMPLIED
+    series4 CDATA #IMPLIED
+    series5 CDATA #IMPLIED
+    series6 CDATA #IMPLIED
+    grid    CDATA #IMPLIED
+    label   CDATA #IMPLIED>
+
 <!ELEMENT layout EMPTY>
 <!ATTLIST layout
     margin          CDATA #IMPLIED
@@ -167,11 +177,14 @@
     gap             CDATA #IMPLIED
     columnGap       CDATA #IMPLIED
     linePadding     CDATA #IMPLIED
-    presenterMargin CDATA #IMPLIED>
+    presenterMargin CDATA #IMPLIED
+    cornerRadius    CDATA #IMPLIED
+    presenterCornerRadius CDATA #IMPLIED
+    bulletGap       CDATA #IMPLIED>
 
 <!-- ===== Slide ===== -->
 
-<!ELEMENT slide (notes?, subtitle?, (text | image | code | slide)*)>
+<!ELEMENT slide (notes?, subtitle?, (text | image | code | chart | icon | slide)*)>
 <!ATTLIST slide
     layout (title | section | content | columns | image | blank) #IMPLIED
     title  CDATA                        #IMPLIED
@@ -210,12 +223,16 @@
 
 <!-- ===== Content elements ===== -->
 
-<!ELEMENT text (#PCDATA)>
+<!ELEMENT text (#PCDATA | b | i | code)*>
+<!ATTLIST text
+    icon CDATA #IMPLIED>
 <!--
   Text block with inline formatting tags:
   <b>bold</b>, <i>italic</i>, <code>code</code>
 
   Lines starting with ## render as sub-headings in the block.
+  @icon replaces the standard bullet with a Font Awesome Free Solid icon name.
+        Use icon="none" to render the text without any marker.
 -->
 
 <!ELEMENT image EMPTY>
@@ -235,6 +252,35 @@
          When omitted, code is rendered without syntax coloring.
 -->
 
+<!ELEMENT chart (point+)>
+<!ATTLIST chart
+    type       (bar | line | pie | donut) "bar"
+    title      CDATA #IMPLIED
+    icon       CDATA #IMPLIED
+    height     CDATA #IMPLIED
+    showValues (true | false) "true">
+<!--
+  Data-driven chart rendered using the active style palette.
+  @icon is an optional named Font Awesome icon, such as "chart-line".
+-->
+
+<!ELEMENT point EMPTY>
+<!ATTLIST point
+    label CDATA #REQUIRED
+    value CDATA #REQUIRED>
+
+<!ELEMENT icon (#PCDATA | b | i | code)*>
+<!ATTLIST icon
+    name CDATA #REQUIRED>
+<!--
+  A styled icon-and-text row. Supported names include chart-bar, chart-line,
+  chart-pie, arrow-trend-up, circle-check, dollar-sign, lightbulb, rocket,
+  trophy, and users.
+-->
+
+<!ELEMENT b (#PCDATA | i | code)*>
+<!ELEMENT i (#PCDATA | b | code)*>
+
 <!-- ===== Metadata ===== -->
 
 <!ELEMENT notes (#PCDATA)>
@@ -242,20 +288,3 @@
 
 <!ELEMENT subtitle (#PCDATA)>
 <!-- Secondary heading. Used only with layout="title" (rendered below the title attribute). -->
-
-<!-- ===== Global style ===== -->
-
-<!ELEMENT style EMPTY>
-<!ATTLIST style
-    font        CDATA   #IMPLIED
-    fontSize    CDATA   #IMPLIED
-    bgColor     CDATA   #IMPLIED
-    textColor   CDATA   #IMPLIED
-    accentColor CDATA   #IMPLIED>
-<!--
-  @font         Font family name (e.g. "Inter").
-  @fontSize     Base font size in pixels (default: 24).
-  @bgColor      Background color as #RRGGBB (default: #1E1E28).
-  @textColor    Default text color as #RRGGBB (default: #C8C8D2).
-  @accentColor  Accent color for highlights (default: #FFCC00).
--->

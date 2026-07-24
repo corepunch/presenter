@@ -4,6 +4,7 @@
 #include "ui.hpp"
 #include "constants.h"
 #include "common.h"
+#include "charts.h"
 #include <SDL2/SDL.h>
 #include <algorithm>
 #include <cmath>
@@ -264,6 +265,47 @@ static void test_oversized_body_is_scaled_inside_bounds(SDL_Renderer*,
     TEST_ASSERT(gapIsClear, "scaled body does not overflow into footer gap");
 }
 
+static void test_charts_and_icons(SDL_Renderer*, const FontSet& fonts,
+                                  Renderer& renderer,
+                                  const PresentationStyle& style) {
+    bool allRendered = true;
+    const ChartType types[] = {
+        ChartType::Bar, ChartType::Line, ChartType::Pie, ChartType::Donut
+    };
+    for (ChartType type : types) {
+        Slide slide = makeSlide(SlideLayout::Content, "Chart");
+        Chart chart;
+        chart.type = type;
+        chart.title = "Q3 results";
+        chart.icon = "chart-line";
+        chart.height = 260;
+        chart.points = {{"Q1", 42}, {"Q2", 58}, {"Q3", 81}};
+        slide.charts.push_back(chart);
+        SDL_Texture* texture = renderer.renderSlide(slide, fonts, style);
+        if (!texture) allRendered = false;
+        else SDL_DestroyTexture(texture);
+    }
+
+    Slide icons = makeSlide(SlideLayout::Content, "Icon rows");
+    icons.icons = {
+        {"rocket", "Launch velocity"},
+        {"users", "Customer growth"},
+    };
+    SDL_Texture* texture = renderer.renderSlide(icons, fonts, style);
+    if (!texture) allRendered = false;
+    else SDL_DestroyTexture(texture);
+
+    Slide bullets = makeSlide(SlideLayout::Content, "Custom bullets",
+                              {"Launch", "Source", "Standard"});
+    bullets.textIcons = {"rocket", "none", ""};
+    texture = renderer.renderSlide(bullets, fonts, style);
+    if (!texture) allRendered = false;
+    else SDL_DestroyTexture(texture);
+    if (iconCodepoint("rocket") == 0 || iconCodepoint("camera") == 0)
+        allRendered = false;
+    TEST_ASSERT(allRendered, "bar, line, pie, donut, and icon rows render");
+}
+
 int main() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) { fprintf(stderr, "SDL_Init failed\n"); return 1; }
 
@@ -294,6 +336,7 @@ int main() {
     test_empty_title(sdlR, fonts, renderer, style);
     test_body_vertical_centering(sdlR, fonts, renderer, style);
     test_oversized_body_is_scaled_inside_bounds(sdlR, fonts, renderer, style);
+    test_charts_and_icons(sdlR, fonts, renderer, style);
 
     renderer.cleanup();
     SDL_DestroyRenderer(sdlR);

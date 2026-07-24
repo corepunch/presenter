@@ -60,6 +60,16 @@ struct PresentationStyle {
     Color codeBuiltin    = {229, 192, 123, 255};
     Color codePunctuation = {171, 178, 191, 255};
 
+    // Chart colors. Series colors are cycled in declaration order.
+    Color chartSeries1   = {255, 204, 0,   255};
+    Color chartSeries2   = {86,  182, 194, 255};
+    Color chartSeries3   = {152, 195, 121, 255};
+    Color chartSeries4   = {209, 154, 102, 255};
+    Color chartSeries5   = {198, 120, 221, 255};
+    Color chartSeries6   = {229, 192, 123, 255};
+    Color chartGrid      = {100, 100, 120, 255};
+    Color chartLabel     = {200, 200, 210, 255};
+
     // Layout in pixels
     int slideMargin     = SLIDE_MARGIN;
     int partPadding     = PART_PADDING;

@@ -31,6 +31,15 @@ static const AttrEntry STYLE_ATTRS[] = {
     {"colors", "accent",   [](PresentationStyle& s, const char* v) { s.accentColor = v; }},
     {"colors", "dim",      [](PresentationStyle& s, const char* v) { s.dimColor = v; }},
     {"colors", "line",     [](PresentationStyle& s, const char* v) { s.lineColor = v; }},
+    // charts
+    {"charts", "series1", [](PresentationStyle& s, const char* v) { s.chartSeries1 = v; }},
+    {"charts", "series2", [](PresentationStyle& s, const char* v) { s.chartSeries2 = v; }},
+    {"charts", "series3", [](PresentationStyle& s, const char* v) { s.chartSeries3 = v; }},
+    {"charts", "series4", [](PresentationStyle& s, const char* v) { s.chartSeries4 = v; }},
+    {"charts", "series5", [](PresentationStyle& s, const char* v) { s.chartSeries5 = v; }},
+    {"charts", "series6", [](PresentationStyle& s, const char* v) { s.chartSeries6 = v; }},
+    {"charts", "grid",    [](PresentationStyle& s, const char* v) { s.chartGrid = v; }},
+    {"charts", "label",   [](PresentationStyle& s, const char* v) { s.chartLabel = v; }},
     // layout
     {"layout", "margin",          parseAttr<&PresentationStyle::slideMargin,     atoi>},
     {"layout", "padding",         parseAttr<&PresentationStyle::partPadding,     atoi>},
@@ -109,6 +118,14 @@ static PresentationStyle makeTheme(
     s.codeNumber = codeNumber;
     s.codeBuiltin = codeBuiltin;
     s.codePunctuation = codePunctuation;
+    s.chartSeries1 = accent;
+    s.chartSeries2 = codeType;
+    s.chartSeries3 = codeString;
+    s.chartSeries4 = codeNumber;
+    s.chartSeries5 = codeKeyword;
+    s.chartSeries6 = codeBuiltin;
+    s.chartGrid = line;
+    s.chartLabel = text;
     s.slideMargin = margin;
     s.partPadding = padding;
     s.partGap = gap;

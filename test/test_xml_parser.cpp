@@ -31,7 +31,8 @@ static std::string writeTmp(const char* name, const std::string& content) {
 static void cleanupTmpDir() {
     const char* files[] = {"empty.xml", "title.xml", "content.xml", "columns.xml", "recursive.xml",
                            "formatted.xml", "legacy_title.xml", "nested_title.xml", "no_title.xml",
-                           "style_inherited.xml", "style_explicit.xml"};
+                           "style_inherited.xml", "style_explicit.xml", "charts.xml",
+                           "chart_style.xml"};
     for (auto f : files) unlink((std::string(TMP_DIR) + "/" + f).c_str());
     rmdir(TMP_DIR);
 }
@@ -220,18 +221,56 @@ static int test_presenter_corner_radius_style() {
     return 0;
 }
 
+static int test_charts_and_icons() {
+    fprintf(stderr, "test_charts_and_icons...\n");
+    Presentation p = parseXml(writeTmp("charts.xml",
+        "<?xml version=\"1.0\"?>\n<presentation>\n"
+        "  <slide title=\"Metrics\">\n"
+        "    <text icon=\"rocket\">Launch</text>\n"
+        "    <text icon=\"none\">Source line</text>\n"
+        "    <chart type=\"line\" title=\"Revenue\" icon=\"chart-line\" height=\"300\" showValues=\"false\">\n"
+        "      <point label=\"Q1\" value=\"12.5\"/>\n"
+        "      <point label=\"Q2\" value=\"18\"/>\n"
+        "    </chart>\n"
+        "    <icon name=\"rocket\">Launch velocity</icon>\n"
+        "  </slide>\n</presentation>\n"));
+    ASSERT_EQ(p.slides.size(), (size_t)1, "1 chart slide");
+    ASSERT_EQ(p.slides[0].textIcons.size(), (size_t)2, "2 text icon settings");
+    ASSERT_STR_EQ(p.slides[0].textIcons[0], std::string("rocket"), "custom bullet icon");
+    ASSERT_STR_EQ(p.slides[0].textIcons[1], std::string("none"), "suppressed bullet icon");
+    ASSERT_EQ(p.slides[0].charts.size(), (size_t)1, "1 chart");
+    ASSERT(p.slides[0].charts[0].type == ChartType::Line, "line chart type");
+    ASSERT_EQ(p.slides[0].charts[0].points.size(), (size_t)2, "2 chart points");
+    ASSERT_STR_EQ(p.slides[0].charts[0].points[0].label, std::string("Q1"), "point label");
+    ASSERT(p.slides[0].charts[0].points[0].value == 12.5, "point value");
+    ASSERT_EQ(p.slides[0].charts[0].height, 300, "chart height");
+    ASSERT(!p.slides[0].charts[0].showValues, "showValues false");
+    ASSERT_EQ(p.slides[0].icons.size(), (size_t)1, "1 icon");
+    ASSERT_STR_EQ(p.slides[0].icons[0].name, std::string("rocket"), "icon name");
+    ASSERT_STR_EQ(p.slides[0].icons[0].text, std::string("Launch velocity"), "icon text");
+
+    PresentationStyle style = PresentationStyle::load(writeTmp(
+        "chart_style.xml",
+        "<style><charts series1=\"#123456\" grid=\"#ABCDEF\"/></style>"));
+    ASSERT(style.chartSeries1.r == 0x12 && style.chartSeries1.g == 0x34 &&
+           style.chartSeries1.b == 0x56, "custom first chart series color");
+    ASSERT(style.chartGrid.r == 0xAB && style.chartGrid.g == 0xCD &&
+           style.chartGrid.b == 0xEF, "custom chart grid color");
+    return 0;
+}
+
 int main() {
     ensureTmpDir();
     int failures = 0;
     int results[] = {
         test_empty(), test_title(), test_content(), test_columns(), test_recursive(),
         test_formatted_text(), test_legacy_title_ignored(), test_nested_title_attrs(), test_no_title(),
-        test_presenter_corner_radius_style(),
+        test_presenter_corner_radius_style(), test_charts_and_icons(),
     };
     const char* names[] = {
         "empty", "title", "content", "columns", "recursive",
         "formatted_text", "legacy_title_ignored", "nested_title_attrs", "no_title",
-        "presenter_corner_radius_style",
+        "presenter_corner_radius_style", "charts_and_icons",
     };
     int numTests = sizeof(results) / sizeof(results[0]);
     for (int i = 0; i < numTests; ++i) {

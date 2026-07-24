@@ -121,6 +121,8 @@ When `layout` is omitted, it defaults to `content`. The `title` layout requires 
 | `<text>`    | 0 or more | Text block with optional inline formatting |
 | `<image>`   | 0 or more | Image (self-closing element) |
 | `<code>`    | 0 or more | Preformatted code block with optional syntax language |
+| `<chart>`   | 0 or more | Native bar, line, pie, or donut chart containing `<point>` data |
+| `<icon>`    | 0 or more | Named Font Awesome icon with a short text callout |
 | `<slide>`   | 0 or more | Nested slide, positioned via `slot` when parent is `layout="columns"` |
 
 `<notes>` should appear first, followed by visual elements. Within a slide, elements render in document order — top to bottom in default vertical flow, or into column slots when using `layout="columns"`.
@@ -365,6 +367,109 @@ No header. Children fill the full slide area.
 ```
 
 No footer.
+
+---
+
+## Charts
+
+Use native charts for quantitative comparisons instead of generating chart
+images. Chart colors come from the active presentation style and automatically
+adapt when the theme changes.
+
+```xml
+<chart type="bar" title="Q3 revenue (€k)" icon="chart-bar" height="360">
+  <point label="Jul" value="64"/>
+  <point label="Aug" value="78"/>
+  <point label="Sep" value="92"/>
+</chart>
+```
+
+Supported chart types are `bar`, `line`, `pie`, and `donut`.
+
+| Chart attribute | Required | Default | Description |
+|-----------------|----------|---------|-------------|
+| `type` | No | `bar` | `bar`, `line`, `pie`, or `donut` |
+| `title` | No | — | Heading displayed inside the chart card |
+| `icon` | No | — | Named icon displayed beside the chart heading |
+| `height` | No | `340` | Natural chart height in pixels; minimum 160 |
+| `showValues` | No | `true` | Show values above points/bars or percentages in a circular chart |
+
+Every `<point>` requires a `label` and numeric `value`:
+
+```xml
+<chart type="line" title="Monthly active users" icon="arrow-trend-up">
+  <point label="Apr" value="18"/>
+  <point label="May" value="24"/>
+  <point label="Jun" value="31"/>
+</chart>
+```
+
+Use pie or donut charts only for parts of one meaningful whole, ideally with
+two to five segments. Use bars for discrete comparisons and lines for ordered
+time series. Charts also compose inside column slides:
+
+```xml
+<slide layout="columns" title="Q3 Results">
+  <slide slot="left">
+    <chart type="bar" title="Revenue">
+      <point label="Jul" value="64"/>
+      <point label="Aug" value="78"/>
+      <point label="Sep" value="92"/>
+    </chart>
+  </slide>
+  <slide slot="right">
+    <chart type="donut" title="Acquisition mix">
+      <point label="Referral" value="42"/>
+      <point label="Social" value="31"/>
+      <point label="Other" value="27"/>
+    </chart>
+  </slide>
+</slide>
+```
+
+### Icons
+
+Presenter bundles the Font Awesome Free Solid font under the SIL OFL 1.1
+license. Find canonical icon names in Font Awesome's
+[Free + Solid gallery](https://fontawesome.com/search?ic=free&s=solid), then
+copy the displayed name without the `fa-` prefix. For example, `fa-rocket`
+becomes `icon="rocket"`. Presenter bundles the official name map, including
+aliases.
+
+The most common use is overriding the marker on a normal bullet:
+
+```xml
+<text icon="rocket"><b>Launch complete</b> — all regions are live</text>
+<text icon="users"><b>12,400 readers</b> — up 38% quarter over quarter</text>
+<text icon="none"><i>Source: Q3 operating review</i></text>
+```
+
+| `<text>` icon value | Result |
+|---------------------|--------|
+| Attribute omitted | Standard round bullet |
+| `icon="none"` | No bullet or icon; useful for sources and footnotes |
+| `icon="rocket"` | Named Font Awesome Free Solid icon in the theme accent color |
+
+Prefer custom icons when they make categories faster to scan; do not decorate
+every bullet. Unknown names and names not present in the bundled Free Solid
+font leave the marker position empty instead of rendering an arbitrary glyph.
+The same names work in the optional `icon` attribute on `<chart>`.
+
+For a card-like icon callout rather than a normal bullet, use `<icon>`:
+
+```xml
+<icon name="lightbulb"><b>Key insight</b> — retention now drives growth</icon>
+```
+
+Chart palettes are configurable in a style file:
+
+```xml
+<style>
+  <charts series1="#BD93F9" series2="#8BE9FD" series3="#F1FA8C"
+          series4="#BD93F9" series5="#FF79C6" series6="#FFB86C"
+          grid="#44475A" label="#F8F8F2"/>
+</style>
+```
 
 ---
 

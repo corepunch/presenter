@@ -4,6 +4,7 @@
 #include "utf8.h"
 
 #include "renderer.h"
+#include "charts.h"
 #include "layout.h"
 #include "image.h"
 #include "highlight.h"
@@ -17,6 +18,7 @@ Renderer::~Renderer() {
 }
 
 bool Renderer::init(SDL_Renderer* renderer, int width, int height) {
+    cleanup();
     m_renderer = renderer;
     m_width = width;
     m_height = height;
@@ -577,6 +579,15 @@ static int codeNaturalWidth(const CodeBlock& cb, const Font& font, int padding) 
     return width + 2 * padding;
 }
 
+static int customBulletWidth(const std::string& icon, const FontSet& fonts,
+                             const PresentationStyle& style) {
+    if (icon.empty() || icon == "none") return 0;
+    uint32_t codepoint = iconCodepoint(icon);
+    float advance = fonts.bulletIcons().measureGlyph(codepoint);
+    if (advance <= 0) advance = fonts.bulletIcons().getFontSize();
+    return static_cast<int>(std::ceil(advance)) + style.partGap / 2;
+}
+
 static int measureBodyHeight(Renderer* r, const Slide& slide,
                              const FontSet& fonts, const FontVariants& titleV,
                              int contentW) {
@@ -592,20 +603,43 @@ static int measureBodyHeight(Renderer* r, const Slide& slide,
 
     int contentH = 0;
     bool hasContent = false;
-    for (const auto& text : slide.texts) {
+    for (size_t i = 0; i < slide.texts.size(); ++i) {
+        const auto& text = slide.texts[i];
         if (hasContent) contentH += s.bulletGap;
         std::string heading;
         if (isHeadingLine(text, &heading)) {
             contentH += titleLineH;
         } else {
-            std::string line = "\xE2\x80\xA2 " + text;
-            contentH += static_cast<int>(r->wordWrap(line, bulletV, contentW).size()) * bulletLineH;
+            std::string icon = i < slide.textIcons.size()
+                ? slide.textIcons[i] : std::string();
+            if (icon.empty()) {
+                std::string line = "\xE2\x80\xA2 " + text;
+                contentH += static_cast<int>(
+                    r->wordWrap(line, bulletV, contentW).size()) * bulletLineH;
+            } else {
+                int markerW = customBulletWidth(icon, fonts, s);
+                contentH += static_cast<int>(
+                    r->wordWrap(text, bulletV,
+                                std::max(1, contentW - markerW)).size()) *
+                    bulletLineH;
+            }
         }
         hasContent = true;
     }
     for (const auto& cb : slide.codeBlocks) {
         if (hasContent) contentH += s.partGap;
         contentH += codeLineCount(cb.code) * monoLineH + 2 * codePad;
+        hasContent = true;
+    }
+    for (const auto& icon : slide.icons) {
+        (void)icon;
+        if (hasContent) contentH += s.bulletGap;
+        contentH += iconBlockNaturalHeight(r, fonts);
+        hasContent = true;
+    }
+    for (const auto& chart : slide.charts) {
+        if (hasContent) contentH += s.partGap;
+        contentH += chartNaturalHeight(chart);
         hasContent = true;
     }
     return contentH;
@@ -636,11 +670,27 @@ static void renderBodyContent(Renderer* r, SDL_Surface* surf,
                                titleV, s.titleColor.toSDLColor());
             y += titleLineH;
         } else {
-            std::string line = "\xE2\x80\xA2 " + slide.texts[i];
-            int wrappedLines = static_cast<int>(r->wordWrap(line, bulletV, contentW).size());
-            r->renderFormattedBlock(line, contentX,
+            std::string icon = i < slide.textIcons.size()
+                ? slide.textIcons[i] : std::string();
+            std::string line = icon.empty()
+                ? "\xE2\x80\xA2 " + slide.texts[i]
+                : slide.texts[i];
+            int markerW = customBulletWidth(icon, fonts, s);
+            int textW = std::max(1, contentW - markerW);
+            int wrappedLines = static_cast<int>(
+                r->wordWrap(line, bulletV, textW).size());
+            if (markerW > 0) {
+                uint32_t codepoint = iconCodepoint(icon);
+                if (codepoint && fonts.bulletIcons().hasGlyph(codepoint)) {
+                    fonts.bulletIcons().drawGlyph(
+                        surf, codepoint, static_cast<float>(contentX),
+                        y + bulletFont.getAscent(),
+                        s.accentColor.toSDLColor());
+                }
+            }
+            r->renderFormattedBlock(line, contentX + markerW,
                                     y + static_cast<int>(bulletFont.getAscent()),
-                                    bulletV, s.textColor.toSDLColor(), contentW);
+                                    bulletV, s.textColor.toSDLColor(), textW);
             y += wrappedLines * bulletLineH;
         }
         renderedContent = true;
@@ -653,6 +703,21 @@ static void renderBodyContent(Renderer* r, SDL_Surface* surf,
         renderCodeBlock(r, surf, cb, monoFont,
                         contentX, y, contentW, blockH);
         y += blockH;
+        renderedContent = true;
+    }
+
+    for (const auto& icon : slide.icons) {
+        if (renderedContent) y += s.bulletGap;
+        renderIconBlock(r, surf, icon, fonts, contentX, y, contentW);
+        y += iconBlockNaturalHeight(r, fonts);
+        renderedContent = true;
+    }
+
+    for (const auto& chart : slide.charts) {
+        if (renderedContent) y += s.partGap;
+        int chartH = chartNaturalHeight(chart);
+        renderChart(r, surf, chart, fonts, contentX, y, contentW, chartH);
+        y += chartH;
         renderedContent = true;
     }
 }

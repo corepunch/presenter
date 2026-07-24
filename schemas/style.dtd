@@ -1,16 +1,16 @@
 <!--
   Presenter Style DTD
   ===================
-  Standalone style files referenced via <presentation style="..."> or --style= CLI flag.
+  Standalone style files referenced via <presentation style="..."> or the CLI style option.
   All attributes are optional — omitted values keep the built-in default.
 
   Example usage:
     <presentation style="./styles/dark.xml">
     or
-    presenter demo.xml --style=styles/light.xml
+    presenter demo.xml [style option] styles/light.xml
 -->
 
-<!ELEMENT style (fonts?, colors?, layout?)>
+<!ELEMENT style (fonts?, colors?, charts?, layout?)>
 
 <!ELEMENT fonts EMPTY>
 <!ATTLIST fonts
@@ -29,6 +29,17 @@
     dim      CDATA #IMPLIED
     line     CDATA #IMPLIED>
 
+<!ELEMENT charts EMPTY>
+<!ATTLIST charts
+    series1 CDATA #IMPLIED
+    series2 CDATA #IMPLIED
+    series3 CDATA #IMPLIED
+    series4 CDATA #IMPLIED
+    series5 CDATA #IMPLIED
+    series6 CDATA #IMPLIED
+    grid    CDATA #IMPLIED
+    label   CDATA #IMPLIED>
+
 <!ELEMENT layout EMPTY>
 <!ATTLIST layout
     margin          CDATA #IMPLIED
@@ -38,4 +49,5 @@
     linePadding     CDATA #IMPLIED
     presenterMargin CDATA #IMPLIED
     cornerRadius    CDATA #IMPLIED
-    presenterCornerRadius CDATA #IMPLIED>
+    presenterCornerRadius CDATA #IMPLIED
+    bulletGap       CDATA #IMPLIED>

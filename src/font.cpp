@@ -181,3 +181,19 @@ float Font::measureString(const std::string& text) const {
     }
     return width;
 }
+
+float Font::measureGlyph(uint32_t codepoint) const {
+    float scale = 0;
+    auto* info = static_cast<const stbtt_fontinfo*>(
+        resolveFont(codepoint, &scale));
+    if (!info) return 0;
+    int advanceWidth = 0;
+    stbtt_GetCodepointHMetrics(
+        info, static_cast<int>(codepoint), &advanceWidth, nullptr);
+    return static_cast<float>(advanceWidth) * scale;
+}
+
+bool Font::hasGlyph(uint32_t codepoint) const {
+    float scale = 0;
+    return resolveFont(codepoint, &scale) != nullptr;
+}

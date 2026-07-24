@@ -67,6 +67,8 @@ Typical workflow:
 - **Dual-window output**: full audience screen + smaller presenter view with notes
 - **Inline formatting**: `<b>bold</b>`, `<i>italic</i>`, `<code>code</code>` in text blocks
 - **Image support**: PNG, JPG, JPEG, GIF, BMP with fit/fill scaling
+- **Native charts**: themed bar, line, pie, and donut charts directly from XML data
+- **Named icons**: bundled Font Awesome Free icons for clear visual callouts
 - **Screenshot capture**: render slides to image files for embedding in other docs
 - **Themeable**: XML style files for colors, fonts, and spacing; 8 built-in themes switchable at runtime
 - **Keyboard controls**: arrow keys to navigate, Shift+Arrows to switch themes, F5 fullscreen, Escape to quit
@@ -192,9 +194,18 @@ Include the DTD in your presentation files for validation:
 
   <slide layout="content" title="Key Points">
     <notes>These points form the core of the talk. I will start with the first and show how each one leads to the next.</notes>
-    <text><b>Bold</b> point one</text>
-    <text>Point two</text>
-    <text>Point three</text>
+    <text icon="rocket"><b>Bold</b> point one</text>
+    <text icon="none">Unmarked source or footnote</text>
+    <text>Standard bullet</text>
+  </slide>
+
+  <slide layout="content" title="Q3 Results">
+    <notes>Revenue accelerated through Q3, with September closing at 92 thousand euros.</notes>
+    <chart type="bar" title="Revenue (€k)" icon="chart-bar">
+      <point label="Jul" value="64"/>
+      <point label="Aug" value="78"/>
+      <point label="Sep" value="92"/>
+    </chart>
   </slide>
 </presentation>
 ```
@@ -243,6 +254,8 @@ Custom styles use the format defined in [schemas/style.dtd](https://corepunch.gi
 ```xml
 <style>
   <colors bg="#1E1E28" text="#C8C8D2" accent="#FFCC00"/>
+  <charts series1="#FFCC00" series2="#56B6C2" series3="#98C379"
+          grid="#646478" label="#C8C8D2"/>
   <fonts title="48" content="28"/>
   <layout margin="40" gap="24" cornerRadius="24" presenterCornerRadius="12"/>
 </style>
@@ -263,6 +276,7 @@ presenter/
 │   ├── renderer.cpp    # Slide + presenter view rendering
 │   ├── layout.cpp      # Slide part layout computation
 │   ├── image.cpp       # Image loading and scaling
+│   ├── charts.cpp      # Bar, line, pie, donut, and icon rendering
 │   ├── font.cpp        # TTF font loading via stb_truetype
 │   ├── highlight.cpp   # Syntax highlighting
 │   ├── xml_parser.cpp  # XML → Presentation tree
@@ -279,10 +293,16 @@ presenter/
 ├── demo/           # Example presentation and styles
 ├── docs/           # DTD schemas and format spec
 ├── test/           # Test executables
-├── assets/         # Bundled fonts (Inter, JetBrains Mono)
+├── assets/         # Bundled fonts (Inter, JetBrains Mono, Font Awesome Free)
 ├── examples/       # Markdown-format demo
 └── CMakeLists.txt
 ```
+
+Font Awesome Free is bundled under the SIL Open Font License 1.1, with its
+MIT-licensed name map. Browse the official
+[Free + Solid icon gallery](https://fontawesome.com/search?ic=free&s=solid) and
+use the displayed name in `icon="..."`. The upstream license is included at
+[`assets/LICENSE-Font-Awesome.txt`](assets/LICENSE-Font-Awesome.txt).
 
 ## Architecture
 

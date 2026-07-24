@@ -8,11 +8,52 @@
 
   <slide layout="content" title="The Route">
     <notes>These five locations span 120km of trail. Start with the iconic Matterhorn reflection in Riffelsee at dawn, then the Aletsch glacier panorama from Eggishorn, the Engadin forest near St. Moritz, an alpine meadow at 2200m in Zermatt, and finish with the Ligurian coast near Portofino. Each slide has one photo — use the arrow keys to advance.</notes>
-    <text><b>Mountain</b> — Matterhorn reflection, Riffelsee (2800m)</text>
-    <text><b>Lake</b> — Aletsch glacier panorama, Eggishorn (2900m)</text>
-    <text><b>Forest</b> — Engadin pine forest, St. Moritz (1800m)</text>
-    <text><b>Meadow</b> — Alpine wildflowers, Zermatt valley (2200m)</text>
-    <text><b>Coast</b> — Ligurian shoreline, Portofino (sea level)</text>
+    <text icon="mountain"><b>Mountain</b> — Matterhorn reflection, Riffelsee (2800m)</text>
+    <text icon="snowflake"><b>Lake</b> — Aletsch glacier panorama, Eggishorn (2900m)</text>
+    <text icon="tree"><b>Forest</b> — Engadin pine forest, St. Moritz (1800m)</text>
+    <text icon="seedling"><b>Meadow</b> — Alpine wildflowers, Zermatt valley (2200m)</text>
+    <text icon="water"><b>Coast</b> — Ligurian shoreline, Portofino (sea level)</text>
+  </slide>
+
+  <slide layout="section" title="Charts &amp; Icons"/>
+
+  <slide layout="columns" gap="24" title="Q3 Portfolio Results">
+    <notes>Q3 was our strongest quarter. Print revenue rose every month, finishing at 92 thousand euros in September. On the right, direct referrals and social together account for nearly three quarters of new clients. The point is not just growth; it is increasingly diversified, repeatable growth.</notes>
+    <slide slot="left" title="Print revenue">
+      <chart type="bar" title="Revenue (€k)" icon="chart-bar" height="330">
+        <point label="Jul" value="64"/>
+        <point label="Aug" value="78"/>
+        <point label="Sep" value="92"/>
+      </chart>
+    </slide>
+    <slide slot="right" title="New clients">
+      <chart type="donut" title="Acquisition mix" icon="chart-pie" height="330">
+        <point label="Referral" value="42"/>
+        <point label="Social" value="31"/>
+        <point label="Gallery" value="17"/>
+        <point label="Other" value="10"/>
+      </chart>
+    </slide>
+  </slide>
+
+  <slide layout="content" title="Momentum Is Compounding">
+    <notes>Portfolio reach has more than doubled since April, from 18 thousand to 49 thousand monthly viewers. The acceleration begins after the Alpine series launches in July. Use the slope of the final three points to underline that the work is finding a larger audience each month.</notes>
+    <chart type="line" title="Monthly portfolio viewers (thousands)" icon="arrow-trend-up" height="390">
+      <point label="Apr" value="18"/>
+      <point label="May" value="21"/>
+      <point label="Jun" value="24"/>
+      <point label="Jul" value="31"/>
+      <point label="Aug" value="39"/>
+      <point label="Sep" value="49"/>
+    </chart>
+  </slide>
+
+  <slide layout="content" title="Signals at a Glance">
+    <notes>Custom bullet icons are useful when a slide needs fast visual anchors rather than another chart. We crossed one hundred print orders, reached twelve thousand newsletter readers, and won the Alpine Photo Award. The final source line deliberately has no marker.</notes>
+    <text icon="rocket"><b>100+ print orders</b> — the Alpine collection launched ahead of plan</text>
+    <text icon="users"><b>12,400 readers</b> — newsletter reach grew 38% quarter over quarter</text>
+    <text icon="trophy"><b>Alpine Photo Award</b> — landscape series selected as the jury winner</text>
+    <text icon="none"><i>Source: Q3 portfolio analytics, October 2026</i></text>
   </slide>
 
   <slide layout="image" title="Mountain — Matterhorn at Dawn">
