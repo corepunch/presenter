@@ -80,7 +80,7 @@ struct RebreifApp: App {
     }
 }
 
-private final class QuickSlidesAppDelegate: NSObject, NSApplicationDelegate {
+fileprivate final class QuickSlidesAppDelegate: NSObject, NSApplicationDelegate {
     func application(_ application: NSApplication,
                      shouldRestoreApplicationState coder: NSCoder) -> Bool { false }
 }
