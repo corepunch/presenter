@@ -76,7 +76,7 @@ Typical workflow:
 ## Prerequisites
 
 - C++17 compiler
-- CMake >= 3.10
+- pkg-config
 - SDL2
 
 tinyxml2 is vendored in `third_party/` and built from source.
@@ -84,20 +84,19 @@ tinyxml2 is vendored in `third_party/` and built from source.
 ### macOS (Homebrew)
 
 ```bash
-brew install cmake sdl2
+brew install sdl2
 ```
 
 ### Ubuntu/Debian
 
 ```bash
-sudo apt install cmake libsdl2-dev
+sudo apt install pkg-config libsdl2-dev
 ```
 
 ## Build
 
 ```bash
-cmake -B build
-cmake --build build
+make
 ```
 
 ## Run
@@ -311,7 +310,7 @@ presenter/
 ├── test/           # Test executables
 ├── assets/         # Bundled fonts (Inter, JetBrains Mono, Font Awesome Free)
 ├── examples/       # Markdown-format demo
-└── CMakeLists.txt
+└── Makefile
 ```
 
 Font Awesome Free is bundled under the SIL Open Font License 1.1, with its
@@ -355,7 +354,7 @@ Stack (root, margin = presenterMargin, gap = partGap)
 ## Testing
 
 ```bash
-cmake --build build
+make
 ./build/test_textbounds
 ./build/test_layout
 ./build/test_xml_parser

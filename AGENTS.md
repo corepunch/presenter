@@ -10,7 +10,7 @@ Instructions for AI agents working on this codebase.
 
 ```bash
 # Build
-cmake -B build && cmake --build build
+make
 
 # Run
 ./build/presenter "demo/Nature Portfolio.slides"
@@ -22,7 +22,7 @@ cmake -B build && cmake --build build
 ./build/test_image
 
 # Lint (if clang-tidy is available)
-clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2 tinyxml2)
+clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2)
 ```
 
 ## Architecture
