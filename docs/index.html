@@ -12,6 +12,7 @@
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Presenter — AI-powered presentations">
   <meta name="twitter:description" content="A lightweight presentation renderer for AI-generated decks and live screen sharing.">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism.min.css" rel="stylesheet">
   <style>
     :root {
       --bg: #ffffff;
@@ -290,6 +291,43 @@
       .install-block code { font-size: 0.85rem; }
       section { padding: 40px 0; }
     }
+
+    /* Prism overrides to match site theme */
+    pre[class*="language-"] {
+      background: var(--code-bg) !important;
+      border: 1px solid var(--code-border) !important;
+      border-radius: 8px !important;
+      margin-bottom: 16px !important;
+      font-size: 0.9rem !important;
+      line-height: 1.5 !important;
+    }
+    code[class*="language-"] {
+      font-family: "SF Mono", "JetBrains Mono", "Fira Code", monospace !important;
+      font-size: 0.9em !important;
+      text-shadow: none !important;
+    }
+    :not(pre) > code[class*="language-"] {
+      background: var(--code-bg) !important;
+      border: 1px solid var(--code-border) !important;
+      border-radius: 4px !important;
+      padding: 2px 6px !important;
+    }
+    @media (prefers-color-scheme: dark) {
+      pre[class*="language-"] {
+        background: var(--code-bg) !important;
+      }
+      code[class*="language-"] {
+        text-shadow: none !important;
+      }
+     .token.comment, .token.prolog, .token.doctype, .token.cdata { color: #8b949e !important; }
+      .token.punctuation { color: #8b949e !important; }
+      .token.property, .token.tag, .token.boolean, .token.number, .token.constant, .token.symbol { color: #79c0ff !important; }
+      .token.selector, .token.attr-name, .token.string, .token.char, .token.builtin { color: #a5d6ff !important; }
+      .token.operator, .token.entity, .token.url { color: #d2a8ff !important; }
+      .token.atrule, .token.attr-value, .token.keyword { color: #ff7b72 !important; }
+      .token.function, .token.class-name { color: #d2a8ff !important; }
+      .token.regex, .token.important, .token.variable { color: #7ee787 !important; }
+    }
   </style>
 </head>
 <body>
@@ -327,13 +365,13 @@
 
     <h3>1. Install</h3>
     <p>One command. Detects your OS and architecture automatically.</p>
-    <pre><code>curl -fsSL https://corepunch.github.io/presenter/install.sh | sh</code></pre>
+    <pre><code class="language-bash">curl -fsSL https://corepunch.github.io/presenter/install.sh | sh</code></pre>
     <p>Or specify a version:</p>
-    <pre><code>curl -fsSL https://corepunch.github.io/presenter/install.sh | sh -s v1.0.0</code></pre>
+    <pre><code class="language-bash">curl -fsSL https://corepunch.github.io/presenter/install.sh | sh -s v1.0.0</code></pre>
 
     <h3>2. Generate a presentation</h3>
     <p>Ask an AI agent to create a <code>.slides</code> package. Or use the included demo:</p>
-    <pre><code>presenter "demo/Nature Portfolio.slides"</code></pre>
+    <pre><code class="language-bash">presenter "demo/Nature Portfolio.slides"</code></pre>
 
     <h3>3. Present</h3>
     <p>In your meeting app (Teams, Zoom, Meet), choose <strong>Share &rarr; Window</strong> and select the <strong>Presentation</strong> window. Keep <strong>Presenter View</strong> visible only to yourself.</p>
@@ -379,7 +417,7 @@
 
     <h3>Output format</h3>
     <p>The agent creates a <code>.slides</code> directory package:</p>
-    <pre><code>My Talk.slides/
+    <pre><code class="language-none">My Talk.slides/
 ├── presentation.xml
 ├── images/
 │   └── diagram.png
@@ -387,7 +425,7 @@
     └── custom.style</code></pre>
 
     <h3>Minimal XML example</h3>
-    <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+    <pre><code class="language-xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;!DOCTYPE presentation SYSTEM
   "https://corepunch.github.io/presenter/schemas/presentation.dtd"&gt;
 &lt;presentation name="My Talk"&gt;
@@ -419,7 +457,7 @@
 
     <h3>Screenshots</h3>
     <p>The agent can capture slides to PNG without a display:</p>
-    <pre><code>presenter my-talk.slides --slide 3 --screenshot output/slide.png
+    <pre><code class="language-bash">presenter my-talk.slides --slide 3 --screenshot output/slide.png
 presenter my-talk.slides --slide 3 \
   --screenshot output/slide.png \
   --presenter-screenshot output/notes.png</code></pre>
@@ -512,7 +550,7 @@ presenter my-talk.slides --slide 3 \
 
     <h3>DOCTYPE declaration</h3>
     <p>Include the DTD in your presentation files for validation:</p>
-    <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+    <pre><code class="language-xml">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
 &lt;!DOCTYPE presentation SYSTEM
   "https://corepunch.github.io/presenter/schemas/presentation.dtd"&gt;
 &lt;presentation name="My Talk"&gt;
@@ -544,7 +582,7 @@ presenter my-talk.slides --slide 3 \
 
     <h3>Custom styles</h3>
     <p>Define your own theme with an XML style file:</p>
-    <pre><code>&lt;style&gt;
+    <pre><code class="language-xml">&lt;style&gt;
   &lt;colors bg="#1E1E28" text="#C8C8D2" accent="#FFCC00"/&gt;
   &lt;charts series1="#FFCC00" series2="#56B6C2" series3="#98C379"
           grid="#646478" label="#C8C8D2"/&gt;
@@ -554,7 +592,7 @@ presenter my-talk.slides --slide 3 \
 &lt;/style&gt;</code></pre>
 
     <p>Reference from your presentation:</p>
-    <pre><code>&lt;presentation style="./styles/dark.style"&gt;</code></pre>
+    <pre><code class="language-xml">&lt;presentation style="./styles/dark.style"&gt;</code></pre>
   </div>
 </section>
 
@@ -587,7 +625,7 @@ presenter my-talk.slides --slide 3 \
   <div class="container">
     <h2>Screenshots</h2>
     <p>Capture slides headlessly to PNG:</p>
-    <pre><code># Single slide
+    <pre><code class="language-bash"># Single slide
 presenter my-talk.slides --slide 7 --screenshot output/slide.png
 
 # Both views
@@ -616,22 +654,22 @@ presenter my-talk.slides --slide 7 \
     <p>tinyxml2 is vendored and built from source.</p>
 
     <h3>macOS (Homebrew)</h3>
-    <pre><code>brew install sdl2
+    <pre><code class="language-bash">brew install sdl2
 make</code></pre>
 
     <h3>Ubuntu / Debian</h3>
-    <pre><code>sudo apt install pkg-config libsdl2-dev
+    <pre><code class="language-bash">sudo apt install pkg-config libsdl2-dev
 make</code></pre>
 
     <h3>Run</h3>
-    <pre><code>./build/presenter "demo/Nature Portfolio.slides"
+    <pre><code class="language-bash">./build/presenter "demo/Nature Portfolio.slides"
 
 # Override theme
 ./build/presenter "demo/Nature Portfolio.slides" \
   --style "demo/Nature Portfolio.slides/styles/light.style"</code></pre>
 
     <h3>Tests</h3>
-    <pre><code>make
+    <pre><code class="language-bash">make
 ./build/test_textbounds
 ./build/test_layout
 ./build/test_xml_parser
@@ -639,7 +677,7 @@ make</code></pre>
 ./build/test_highlight</code></pre>
 
     <h3>Project structure</h3>
-    <pre><code>presenter/
+    <pre><code class="language-none">presenter/
 ├── src/            # Source files
 │   ├── main.cpp        # Entry point, SDL windows, event loop
 │   ├── renderer.cpp    # Slide + presenter view rendering
@@ -674,6 +712,10 @@ make</code></pre>
   </div>
 </footer>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-xml.min.js"></script>
 </body>
 </html>
 
