@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Presenter — AI-powered presentations</title>
+  <meta name="description" content="A lightweight presentation renderer for AI-generated decks and live screen sharing. Dual-window: audience slides + private presenter notes.">
+  <meta property="og:title" content="Presenter — AI-powered presentations">
+  <meta property="og:description" content="A lightweight presentation renderer for AI-generated decks and live screen sharing.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://corepunch.github.io/presenter/">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Presenter — AI-powered presentations">
+  <meta name="twitter:description" content="A lightweight presentation renderer for AI-generated decks and live screen sharing.">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f6f8fa;
+      --bg-tertiary: #eef1f5;
+      --text: #1f2328;
+      --text-secondary: #57606a;
+      --border: #d0d7de;
+      --accent: #0969da;
+      --accent-hover: #0550ae;
+      --code-bg: #f6f8fa;
+      --code-border: #d0d7de;
+      --shadow: rgba(31,35,40,0.08);
+      --hero-bg: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      --hero-text: #ffffff;
+      --install-bg: #1b1f24;
+      --install-text: #e6edf3;
+      --card-bg: #ffffff;
+      --tag-bg: #ddf4ff;
+      --tag-text: #0969da;
+      --img-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0d1117;
+        --bg-secondary: #161b22;
+        --bg-tertiary: #21262d;
+        --text: #e6edf3;
+        --text-secondary: #8b949e;
+        --border: #30363d;
+        --accent: #58a6ff;
+        --accent-hover: #79c0ff;
+        --code-bg: #161b22;
+        --code-border: #30363d;
+        --shadow: rgba(0,0,0,0.3);
+        --hero-bg: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+        --hero-text: #e6edf3;
+        --install-bg: #0d1117;
+        --install-text: #e6edf3;
+        --card-bg: #161b22;
+        --tag-bg: #1f3a5f;
+        --tag-text: #58a6ff;
+        --img-shadow: 0 8px 32px rgba(0,0,0,0.4);
+      }
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--accent); text-decoration: none; }
+    a:hover { color: var(--accent-hover); text-decoration: underline; }
+
+    .container {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: var(--hero-bg);
+      color: var(--hero-text);
+      padding: 80px 24px 60px;
+      text-align: center;
+    }
+    .hero h1 {
+      font-size: 3rem;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 16px;
+    }
+    .hero p {
+      font-size: 1.25rem;
+      opacity: 0.9;
+      max-width: 640px;
+      margin: 0 auto 40px;
+      line-height: 1.5;
+    }
+
+    /* ── Install block ── */
+    .install-block {
+      background: var(--install-bg);
+      border-radius: 12px;
+      padding: 32px;
+      max-width: 620px;
+      margin: 0 auto;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.2);
+    }
+    .install-block .label {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-secondary);
+      margin-bottom: 12px;
+      display: block;
+    }
+    .install-block code {
+      display: block;
+      background: var(--bg-tertiary);
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+      font-size: 1rem;
+      color: var(--install-text);
+      overflow-x: auto;
+      white-space: nowrap;
+      user-select: all;
+    }
+    .install-block .copy-hint {
+      font-size: 0.75rem;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      text-align: right;
+    }
+
+    /* ── Nav ── */
+    nav {
+      background: var(--bg-secondary);
+      border-bottom: 1px solid var(--border);
+      padding: 12px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    nav .container {
+      display: flex;
+      gap: 24px;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+    nav a {
+      color: var(--text-secondary);
+      font-size: 0.9rem;
+      font-weight: 500;
+      padding: 4px 0;
+      border-bottom: 2px solid transparent;
+      transition: all 0.15s;
+    }
+    nav a:hover { color: var(--text); text-decoration: none; border-bottom-color: var(--accent); }
+
+    /* ── Sections ── */
+    section {
+      padding: 64px 0;
+      border-bottom: 1px solid var(--border);
+    }
+    section:last-of-type { border-bottom: none; }
+
+    h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      letter-spacing: -0.01em;
+    }
+    h3 {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin: 32px 0 12px;
+    }
+    h4 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 24px 0 8px;
+    }
+    p { margin-bottom: 16px; color: var(--text); }
+    ul, ol { margin: 0 0 16px 24px; }
+    li { margin-bottom: 6px; }
+    li strong { color: var(--text); }
+
+    /* ── Code blocks ── */
+    pre {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      overflow-x: auto;
+      margin-bottom: 16px;
+      font-family: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+    code {
+      font-family: "SF Mono", "JetBrains Mono", "Fira Code", monospace;
+      font-size: 0.9em;
+    }
+    :not(pre) > code {
+      background: var(--code-bg);
+      border: 1px solid var(--code-border);
+      border-radius: 4px;
+      padding: 2px 6px;
+    }
+
+    /* ── Cards ── */
+    .card-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 24px 0;
+    }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 2px 8px var(--shadow);
+    }
+    .card h4 { margin-top: 0; }
+
+    /* ── Tables ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 16px;
+      font-size: 0.95rem;
+    }
+    th, td {
+      text-align: left;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    th {
+      font-weight: 600;
+      background: var(--bg-secondary);
+    }
+
+    /* ── Tags ── */
+    .tag {
+      display: inline-block;
+      background: var(--tag-bg);
+      color: var(--tag-text);
+      padding: 2px 10px;
+      border-radius: 16px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      margin-right: 4px;
+    }
+
+    /* ── Images ── */
+    img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: var(--img-shadow);
+    }
+    .screenshot-row {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      margin: 24px 0;
+    }
+    .screenshot-row img {
+      width: 100%;
+    }
+    .caption {
+      text-align: center;
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      margin-top: 8px;
+    }
+    .wide-img {
+      margin: 24px 0;
+    }
+
+    @media (max-width: 640px) {
+      .screenshot-row { grid-template-columns: 1fr; }
+      .hero h1 { font-size: 2rem; }
+      .hero p { font-size: 1.1rem; }
+      .install-block code { font-size: 0.85rem; }
+      section { padding: 40px 0; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════ HERO ═══════════════════ -->
+<header class="hero">
+  <h1>Presenter</h1>
+  <p>AI-powered presentations with private speaker notes. Let an agent build the deck, you just read the script.</p>
+  <div class="install-block">
+    <span class="label">Install</span>
+    <code>curl -fsSL https://corepunch.github.io/presenter/install.sh | sh</code>
+    <div class="copy-hint">Linux &middot; macOS &middot; x86_64 &middot; arm64</div>
+  </div>
+</header>
+
+<!-- ═══════════════════ NAV ═══════════════════ -->
+<nav>
+  <div class="container">
+    <a href="#quick-start">Quick Start</a>
+    <a href="#agents">For AI Agents</a>
+    <a href="#features">Features</a>
+    <a href="#layouts">Layouts</a>
+    <a href="#theming">Theming</a>
+    <a href="#controls">Controls</a>
+    <a href="#screenshots">Screenshots</a>
+    <a href="#build">Build from Source</a>
+    <a href="https://github.com/corepunch/presenter">GitHub</a>
+  </div>
+</nav>
+
+<!-- ═══════════════════ QUICK START ═══════════════════ -->
+<section id="quick-start">
+  <div class="container">
+    <h2>Quick Start</h2>
+
+    <h3>1. Install</h3>
+    <p>One command. Detects your OS and architecture automatically.</p>
+    <pre><code>curl -fsSL https://corepunch.github.io/presenter/install.sh | sh</code></pre>
+    <p>Or specify a version:</p>
+    <pre><code>curl -fsSL https://corepunch.github.io/presenter/install.sh | sh -s v1.0.0</code></pre>
+
+    <h3>2. Generate a presentation</h3>
+    <p>Ask an AI agent to create a <code>.slides</code> package. Or use the included demo:</p>
+    <pre><code>presenter "demo/Nature Portfolio.slides"</code></pre>
+
+    <h3>3. Present</h3>
+    <p>In your meeting app (Teams, Zoom, Meet), choose <strong>Share &rarr; Window</strong> and select the <strong>Presentation</strong> window. Keep <strong>Presenter View</strong> visible only to yourself.</p>
+
+    <div class="screenshot-row">
+      <div>
+        <img src="images/presenter-code-slide.png" alt="Audience presentation window showing a syntax-highlighted slide">
+        <p class="caption"><strong>Audience window</strong> &mdash; share this</p>
+      </div>
+      <div>
+        <img src="images/presenter-notes-view.png" alt="Private presenter window showing notes and next slide">
+        <p class="caption"><strong>Presenter View</strong> &mdash; keep this</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ FOR AI AGENTS ═══════════════════ -->
+<section id="agents">
+  <div class="container">
+    <h2>For AI Agents</h2>
+    <p>Presenter is designed for agents that generate complete presentations from source material. The agent needs nothing installed locally &mdash; it fetches everything from this website.</p>
+
+    <div class="wide-img">
+      <img src="images/presenter-ai-workflow.png" alt="Presenter workflow: AI generates slides and notes, presenter shares only the audience window">
+    </div>
+
+    <h3>What the agent fetches</h3>
+    <ul>
+      <li><strong>Slide format reference</strong>: <a href="https://corepunch.github.io/presenter/skills/presentation.md"><code>skills/presentation.md</code></a> &mdash; the complete XML format spec with examples</li>
+      <li><strong>DTD schemas</strong>: <a href="https://corepunch.github.io/presenter/schemas/presentation.dtd"><code>schemas/presentation.dtd</code></a> and <a href="https://corepunch.github.io/presenter/schemas/style.dtd"><code>schemas/style.dtd</code></a> &mdash; formal XML validation</li>
+    </ul>
+
+    <h3>Agent workflow</h3>
+    <ol>
+      <li>Gather all source material into an intermediate Markdown file &mdash; facts, evidence, links, quotes, metrics, screenshots</li>
+      <li>Define audience, objective, central message, narrative arc, and slide outline</li>
+      <li>Convert the outline into XML using the <a href="https://corepunch.github.io/presenter/skills/presentation.md">slide format reference</a></li>
+      <li>Capture or create visuals and reference them in <code>&lt;image&gt;</code> elements with relative paths</li>
+      <li>Include <code>&lt;notes&gt;</code> on every slide with a natural, ready-to-say script: context, evidence, what to emphasize, transition to the next slide</li>
+      <li>Validate and review, then present live or render to images</li>
+    </ol>
+
+    <h3>Output format</h3>
+    <p>The agent creates a <code>.slides</code> directory package:</p>
+    <pre><code>My Talk.slides/
+├── presentation.xml
+├── images/
+│   └── diagram.png
+└── styles/
+    └── custom.style</code></pre>
+
+    <h3>Minimal XML example</h3>
+    <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE presentation SYSTEM
+  "https://corepunch.github.io/presenter/schemas/presentation.dtd"&gt;
+&lt;presentation name="My Talk"&gt;
+  &lt;slide layout="title" title="My Talk"&gt;
+    &lt;notes&gt;Welcome everyone. Today I will explain
+    the three ideas that matter most.&lt;/notes&gt;
+    &lt;subtitle&gt;Subtitle here&lt;/subtitle&gt;
+  &lt;/slide&gt;
+
+  &lt;slide layout="content" title="Key Points"&gt;
+    &lt;notes&gt;These points form the core of the talk.&lt;/notes&gt;
+    &lt;text icon="rocket"&gt;&lt;b&gt;Bold&lt;/b&gt; point one&lt;/text&gt;
+    &lt;text icon="none"&gt;Unmarked source or footnote&lt;/text&gt;
+    &lt;text&gt;Standard bullet&lt;/text&gt;
+  &lt;/slide&gt;
+
+  &lt;slide layout="content" title="Q3 Results"&gt;
+    &lt;notes&gt;Revenue accelerated through Q3.&lt;/notes&gt;
+    &lt;chart type="bar" title="Revenue (EUR k)" icon="chart-bar"&gt;
+      &lt;point label="Jul" value="64"/&gt;
+      &lt;point label="Aug" value="78"/&gt;
+      &lt;point label="Sep" value="92"/&gt;
+    &lt;/chart&gt;
+  &lt;/slide&gt;
+&lt;/presentation&gt;</code></pre>
+
+    <h3>Inline formatting</h3>
+    <p>Use <code>&lt;b&gt;</code>, <code>&lt;i&gt;</code>, <code>&lt;code&gt;</code> for inline text formatting within <code>&lt;text&gt;</code> elements. Not markdown.</p>
+
+    <h3>Screenshots</h3>
+    <p>The agent can capture slides to PNG without a display:</p>
+    <pre><code>presenter my-talk.slides --slide 3 --screenshot output/slide.png
+presenter my-talk.slides --slide 3 \
+  --screenshot output/slide.png \
+  --presenter-screenshot output/notes.png</code></pre>
+  </div>
+</section>
+
+<!-- ═══════════════════ USE CASES ═══════════════════ -->
+<section id="use-cases">
+  <div class="container">
+    <h2>Use Cases</h2>
+    <p><strong>AI agents generating ready-to-deliver presentations</strong> &mdash; the primary use case. An agent creates XML slide files from structured data such as git history, project status, or sprint summaries, writes what the presenter should say in the notes for every slide, and optionally captures screenshots of app states as rich visual content.</p>
+
+    <div class="wide-img">
+      <img src="images/presenter-hypothetical-scenarios.jpg" alt="Three AI-generated presentation scenarios: a competitor landscape report, a conference talk from blog posts, and a product launch recap from social reactions">
+    </div>
+
+    <h3>1. Competitor landscape report</h3>
+    <p>You need to brief your team on 5 rival products in 10 minutes. An agent fetches each competitor's homepage, extracts their pricing, positioning, and key features, scrapes their hero screenshots, and assembles a structured deck &mdash; title slide per competitor, side-by-side comparison table, and screenshot-backed talking points. What would take a human 2 hours is a single prompt.</p>
+
+    <h3>2. Conference talk from a blog series</h3>
+    <p>You wrote 4 blog posts about a technical deep-dive and got asked to give a talk on it tomorrow. An agent pulls the articles, rewrites verbose prose into bullet-pointed slides, pulls inline diagrams as standalone images, and produces a presenter-ready deck with speaker notes drawn from the original post intros. No copy-pasting, no slide design.</p>
+
+    <h3>3. Product launch recap from social media</h3>
+    <p>Your team shipped a feature and reactions are flying across Twitter, Reddit, and HN. An agent scrapes the top threads, pulls quote-worthy praise, downloads screenshots of the best reactions, and weaves them into a "launch recap" deck &mdash; timeline slide, highlight quotes, sentiment summary, and a closing slide with follow-up actions. Ready for the all-hands meeting in minutes.</p>
+
+    <div class="wide-img">
+      <img src="images/presenter-multilang-slide.png" alt="Multi-language presentation slide with syntax highlighting">
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ FEATURES ═══════════════════ -->
+<section id="features">
+  <div class="container">
+    <h2>Features</h2>
+    <div class="card-grid">
+      <div class="card">
+        <h4>XML Slide Format</h4>
+        <p>Recursive composition &mdash; slides nest inside slides. Directory packages keep XML, images, and styles together.</p>
+      </div>
+      <div class="card">
+        <h4>Dual-Window Output</h4>
+        <p>Full audience screen + smaller presenter view with notes. Share only the audience window in meetings.</p>
+      </div>
+      <div class="card">
+        <h4>6 Layout Types</h4>
+        <p><span class="tag">title</span> <span class="tag">content</span> <span class="tag">image</span> <span class="tag">columns</span> <span class="tag">section</span> <span class="tag">blank</span></p>
+      </div>
+      <div class="card">
+        <h4>Native Charts</h4>
+        <p>Themed bar, line, pie, and donut charts directly from XML data. No external tools needed.</p>
+      </div>
+      <div class="card">
+        <h4>Named Icons</h4>
+        <p>Bundled Font Awesome Free icons. Use any icon by name: <code>icon="rocket"</code>, <code>icon="chart-bar"</code>.</p>
+      </div>
+      <div class="card">
+        <h4>8 Built-in Themes</h4>
+        <p>Switchable at runtime with Shift+Arrows. Dracula, Monokai, Solarized, Nord, and more.</p>
+      </div>
+      <div class="card">
+        <h4>Screenshot Capture</h4>
+        <p>Render slides to PNG headlessly. Perfect for CI pipelines, documentation, and before/after demos.</p>
+      </div>
+      <div class="card">
+        <h4>Inline Formatting</h4>
+        <p><code>&lt;b&gt;bold&lt;/b&gt;</code>, <code>&lt;i&gt;italic&lt;/i&gt;</code>, <code>&lt;code&gt;code&lt;/code&gt;</code> in text blocks.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ LAYOUTS ═══════════════════ -->
+<section id="layouts">
+  <div class="container">
+    <h2>Layouts</h2>
+    <table>
+      <thead>
+        <tr><th>Layout</th><th>Description</th></tr>
+      </thead>
+      <tbody>
+        <tr><td><code>title</code></td><td>Centered title + optional subtitle (opening/closing slides)</td></tr>
+        <tr><td><code>content</code></td><td>Title + vertical stack of text blocks (default)</td></tr>
+        <tr><td><code>image</code></td><td>Title + full-width image + caption</td></tr>
+        <tr><td><code>columns</code></td><td>Title + horizontal slots via child slides with <code>slot</code> attribute</td></tr>
+        <tr><td><code>section</code></td><td>Centered title only (divider)</td></tr>
+        <tr><td><code>blank</code></td><td>No header, children fill full area</td></tr>
+      </tbody>
+    </table>
+
+    <h3>DOCTYPE declaration</h3>
+    <p>Include the DTD in your presentation files for validation:</p>
+    <pre><code>&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE presentation SYSTEM
+  "https://corepunch.github.io/presenter/schemas/presentation.dtd"&gt;
+&lt;presentation name="My Talk"&gt;
+  ...
+&lt;/presentation&gt;</code></pre>
+  </div>
+</section>
+
+<!-- ═══════════════════ THEMING ═══════════════════ -->
+<section id="theming">
+  <div class="container">
+    <h2>Theming</h2>
+    <p>8 built-in themes, switchable at runtime with <code>Shift+Left</code> / <code>Shift+Right</code>:</p>
+    <table>
+      <thead>
+        <tr><th>#</th><th>Theme</th><th>Style</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>1</td><td>Dracula</td><td>Dark (default)</td></tr>
+        <tr><td>2</td><td>Monokai</td><td>Dark</td></tr>
+        <tr><td>3</td><td>Solarized Dark</td><td>Dark</td></tr>
+        <tr><td>4</td><td>GitHub Light</td><td>Light</td></tr>
+        <tr><td>5</td><td>Solarized Light</td><td>Light</td></tr>
+        <tr><td>6</td><td>Nord</td><td>Neutral</td></tr>
+        <tr><td>7</td><td>Sunset</td><td>Warm</td></tr>
+        <tr><td>8</td><td>Arc</td><td>Cool</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Custom styles</h3>
+    <p>Define your own theme with an XML style file:</p>
+    <pre><code>&lt;style&gt;
+  &lt;colors bg="#1E1E28" text="#C8C8D2" accent="#FFCC00"/&gt;
+  &lt;charts series1="#FFCC00" series2="#56B6C2" series3="#98C379"
+          grid="#646478" label="#C8C8D2"/&gt;
+  &lt;fonts title="48" content="28"/&gt;
+  &lt;layout margin="40" gap="24" cornerRadius="24"
+          presenterCornerRadius="12"/&gt;
+&lt;/style&gt;</code></pre>
+
+    <p>Reference from your presentation:</p>
+    <pre><code>&lt;presentation style="./styles/dark.style"&gt;</code></pre>
+  </div>
+</section>
+
+<!-- ═══════════════════ CONTROLS ═══════════════════ -->
+<section id="controls">
+  <div class="container">
+    <h2>Controls</h2>
+    <table>
+      <thead>
+        <tr><th>Key</th><th>Action</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Right / Space / Enter</td><td>Next slide</td></tr>
+        <tr><td>Left / Backspace</td><td>Previous slide</td></tr>
+        <tr><td>Shift+Right</td><td>Next built-in theme</td></tr>
+        <tr><td>Shift+Left</td><td>Previous built-in theme</td></tr>
+        <tr><td>Home</td><td>First slide</td></tr>
+        <tr><td>End</td><td>Last slide</td></tr>
+        <tr><td>F5</td><td>Toggle audience fullscreen</td></tr>
+        <tr><td>S</td><td>Save audience view as PNG</td></tr>
+        <tr><td>Shift+S</td><td>Save presenter view as PNG</td></tr>
+        <tr><td>Escape</td><td>Quit</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- ═══════════════════ SCREENSHOTS ═══════════════════ -->
+<section id="screenshots">
+  <div class="container">
+    <h2>Screenshots</h2>
+    <p>Capture slides headlessly to PNG:</p>
+    <pre><code># Single slide
+presenter my-talk.slides --slide 7 --screenshot output/slide.png
+
+# Both views
+presenter my-talk.slides --slide 7 \
+  --screenshot output/slide.png \
+  --presenter-screenshot output/notes.png</code></pre>
+    <p>During a live presentation, press <code>S</code> to save the audience window or <code>Shift+S</code> for the presenter view.</p>
+
+    <div class="wide-img">
+      <img src="images/presenter-live-infographic.png" alt="Presenter workflow: AI generates slides and notes, presenter shares only the audience window">
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════ BUILD FROM SOURCE ═══════════════════ -->
+<section id="build">
+  <div class="container">
+    <h2>Build from Source</h2>
+
+    <h3>Prerequisites</h3>
+    <ul>
+      <li>C++17 compiler</li>
+      <li>pkg-config</li>
+      <li>SDL2</li>
+    </ul>
+    <p>tinyxml2 is vendored and built from source.</p>
+
+    <h3>macOS (Homebrew)</h3>
+    <pre><code>brew install sdl2
+make</code></pre>
+
+    <h3>Ubuntu / Debian</h3>
+    <pre><code>sudo apt install pkg-config libsdl2-dev
+make</code></pre>
+
+    <h3>Run</h3>
+    <pre><code>./build/presenter "demo/Nature Portfolio.slides"
+
+# Override theme
+./build/presenter "demo/Nature Portfolio.slides" \
+  --style "demo/Nature Portfolio.slides/styles/light.style"</code></pre>
+
+    <h3>Tests</h3>
+    <pre><code>make
+./build/test_textbounds
+./build/test_layout
+./build/test_xml_parser
+./build/test_image
+./build/test_highlight</code></pre>
+
+    <h3>Project structure</h3>
+    <pre><code>presenter/
+├── src/            # Source files
+│   ├── main.cpp        # Entry point, SDL windows, event loop
+│   ├── renderer.cpp    # Slide + presenter view rendering
+│   ├── layout.cpp      # Slide part layout computation
+│   ├── ui.cpp          # Declarative UI layout engine
+│   ├── image.cpp       # Image loading and scaling
+│   ├── charts.cpp      # Bar, line, pie, donut, and icon rendering
+│   ├── font.cpp        # TTF font loading via stb_truetype
+│   ├── highlight.cpp   # Syntax highlighting
+│   ├── xml_parser.cpp  # XML → Presentation tree
+│   └── style.cpp       # Theme loading + 8 built-in themes
+├── include/        # Headers
+├── demo/           # Example presentation and styles
+├── docs/           # Website
+├── test/           # Test executables
+├── assets/         # Bundled fonts (Inter, JetBrains Mono, Font Awesome Free)
+├── skills/         # Slide format specification
+├── schemas/        # DTD validation schemas
+└── Makefile</code></pre>
+  </div>
+</section>
+
+<!-- ═══════════════════ FOOTER ═══════════════════ -->
+<footer style="padding:40px 0; text-align:center; color:var(--text-secondary); font-size:0.9rem; border-top:1px solid var(--border);">
+  <div class="container">
+    <p>Presenter is open source under the MIT License.</p>
+    <p style="margin-top:8px;">
+      <a href="https://github.com/corepunch/presenter">GitHub</a> &middot;
+      <a href="https://github.com/corepunch/presenter/blob/main/LICENSE">License</a> &middot;
+      <a href="https://github.com/corepunch/presenter/issues">Issues</a>
+    </p>
+  </div>
+</footer>
+
+</body>
+</html>
