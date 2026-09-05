@@ -166,8 +166,8 @@ agent generate-sprint-demo --output=scenes/sprint23.slides
 
 ## Slide Format
 
-Presentations are macOS document packages. Finder shows the package as one `.slides`
-document, while its contents keep the XML, images, and custom styles together:
+Presentations are directory packages. The `.slides` extension keeps the XML,
+images, and custom styles together:
 
 ```text
 My Talk.slides/

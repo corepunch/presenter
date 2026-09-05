@@ -17,8 +17,7 @@ target_include_directories(tinyxml2_vendor PUBLIC
 add_library(tinyxml2::tinyxml2 ALIAS tinyxml2_vendor)
 
 # ---------------------------------------------------------------------------
-# presenter_core  —  static library used by both the SDL2 executable and the
-# macOS SwiftUI application (via presenter_api).
+# presenter_core  —  static library used by the SDL2 executable.
 # ---------------------------------------------------------------------------
 add_library(presenter_core STATIC
     src/xml_parser.cpp
@@ -41,20 +40,7 @@ target_include_directories(presenter_core PUBLIC
 target_link_libraries(presenter_core PUBLIC SDL2::SDL2 tinyxml2::tinyxml2)
 
 # ---------------------------------------------------------------------------
-# presenter_api  —  C-API wrapper (links presenter_core; consumed by the app)
-# ---------------------------------------------------------------------------
-add_library(presenter_api STATIC
-    src/presenter_api.cpp
-)
-
-target_include_directories(presenter_api PUBLIC
-    ${CMAKE_SOURCE_DIR}/include
-)
-
-target_link_libraries(presenter_api PUBLIC presenter_core)
-
-# ---------------------------------------------------------------------------
-# presenter  —  standalone SDL2 executable (unchanged behaviour)
+# presenter  —  standalone SDL2 executable
 # ---------------------------------------------------------------------------
 add_executable(presenter
     src/main.cpp

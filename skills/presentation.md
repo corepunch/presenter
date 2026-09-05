@@ -9,9 +9,8 @@ An XML-based format for creating presentations. Each `<slide>` element represent
 
 ## Document Package
 
-Create each presentation as a `.slides` directory package. macOS presents the
-directory as one document, while Presenter can access all of its supporting
-files through the permission granted for that document.
+Create each presentation as a `.slides` directory package. The directory keeps
+the XML, images, and custom styles together in one portable bundle.
 
 ```text
 My Presentation.slides/
