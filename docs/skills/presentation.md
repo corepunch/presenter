@@ -1,0 +1,956 @@
+# Slide Format Specification
+
+> **DTD schema**: [schemas/presentation.dtd](../schemas/presentation.dtd)  
+> **Style DTD**: [schemas/style.dtd](../schemas/style.dtd)
+
+An XML-based format for creating presentations. Each `<slide>` element represents one slide. The root element is `<presentation>`.
+
+---
+
+## Document Package
+
+Create each presentation as a `.slides` directory package. The directory keeps
+the XML, images, and custom styles together in one portable bundle.
+
+```text
+My Presentation.slides/
+├── presentation.xml
+├── images/
+│   └── diagram.png
+└── styles/
+    └── custom.style
+```
+
+Write the presentation XML to `presentation.xml`. Keep referenced images and
+styles inside the package and use paths relative to `presentation.xml`, such as
+`./images/diagram.png`. The command-line renderer still accepts legacy
+single-file `.slides` XML decks for compatibility.
+
+---
+
+## Structure Overview
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
+<presentation name="My Presentation">
+  <slide layout="title" title="My Presentation">
+    <notes>Presenter-only notes</notes>
+    <subtitle>Optional tagline</subtitle>
+  </slide>
+
+  <slide layout="content" title="Agenda">
+    <notes>We will cover two connected topics, then close with the decision they support.</notes>
+    <text>First topic</text>
+    <text>Second topic</text>
+  </slide>
+</presentation>
+```
+
+Slides are separated by `<slide>` elements — no delimiter characters. The XML structure itself defines slide boundaries.
+
+---
+
+## Presentation Attributes
+
+### Theme selection
+
+Use `<style theme="Studio"/>` before the first slide, or reference a portable
+style file with the presentation's `style` attribute. New decks default to Studio.
+The editorial presets are Studio (Inter, midnight/gold), Porcelain (Source Serif 4
+and Source Sans 3, ivory/plum), Tidal (Source Sans 3, ocean/mint), and Ember
+(Source Serif 4 and Inter, aubergine/peach). Eight classic palettes remain available.
+
+Theme overrides use ordered optional children: fonts, colors, charts, syntax,
+layout. See [the theme reference](../docs/themes.md) for the complete syntax.
+Family names select bundled fonts; no download or machine-specific path is needed.
+`fonts` supports `titleFamily`, `bodyFamily`, `codeFamily`, `boldTitles`,
+and role sizes. `colors bg2` adds a subtle title/section background gradient.
+Use compact headings and review rendered slides before delivery.
+
+| Attribute | Required | Default | Description |
+|-----------|----------|---------|-------------|
+| `name` | No | `Presentation` | Audience window title |
+| `style` | No | Built-in theme | Path to an external style XML file |
+
+```xml
+<presentation name="Q3 Product Review" style="./styles/dark.style">
+```
+
+The presenter-notes window keeps the title `Presenter View`; `name` changes
+only the audience window.
+
+---
+
+## Agent Workflow: Research First, XML Second
+
+Do not generate the presentation XML directly from scattered inputs. First accumulate and synthesize all available information into an intermediate Markdown file such as `presentation-source.md`. Treat this file as the factual and narrative source of truth for the deck.
+
+### 1. Gather the source material
+
+Read all relevant material available to the task: documents, articles, reports, webpages, issue trackers, git history, PR descriptions, metrics, screenshots, diagrams, and user instructions. In `presentation-source.md`, record:
+
+- Audience, occasion, desired outcome, duration, and any required call to action
+- Key facts, dates, metrics, quotes, examples, and decisions
+- Source links, file paths, commit hashes, or other provenance for important claims
+- Candidate visuals and where their original files can be found
+- Contradictions, missing context, assumptions, and open questions
+
+Keep verified facts distinct from inference. Never invent a number, quote, user reaction, or source. If a claim cannot be verified, label it as an assumption or omit it.
+
+A practical intermediate file can use this structure:
+
+```markdown
+# Presentation brief
+- Audience:
+- Occasion and duration:
+- Desired outcome:
+- Central message:
+
+# Evidence and source notes
+## Theme or question
+- Fact or quotation — source/provenance
+- Metric and measurement context — source/provenance
+- Candidate visual — file path or URL
+
+# Gaps and assumptions
+- Open question:
+- Explicit assumption:
+
+# Slide plan
+1. Takeaway — evidence — visual — narrative role
+2. Takeaway — evidence — visual — narrative role
+```
+
+### 2. Synthesize before outlining
+
+Organize the intermediate Markdown by theme rather than by input file. Remove duplication, reconcile conflicts where the evidence allows it, and identify:
+
+- The single sentence the audience should remember
+- The audience's starting context and likely questions
+- The 2-4 supporting ideas that prove the central message
+- The strongest evidence or visual for each idea
+- The decision, behavior, or next step the presentation should produce
+
+Then add a slide plan to the Markdown file. For every proposed slide, record its takeaway, supporting evidence, intended visual, and role in the narrative. This makes it possible to review the story before encoding it as XML.
+
+### 3. Convert the source file into Presenter XML
+
+Only after the source and outline are complete, translate them into the format below. Follow the repository's [`presentation.dtd`](../schemas/presentation.dtd) and [`style.dtd`](../schemas/style.dtd); use this document's layout examples rather than inventing elements or attributes.
+
+- Start every deck with the XML declaration and required DOCTYPE shown above.
+- Use `title="..."` on `<slide>`; there is no `<title>` child element.
+- Put `<notes>` first inside each slide, before visible content.
+- Use relative image paths and descriptive `alt` text.
+- Escape XML-sensitive characters: `&amp;`, `&lt;`, `&gt;`, `&quot;`, and `&apos;` where needed.
+- Keep the intermediate `.md` file beside the presentation when practical so facts, sources, and future revisions remain traceable.
+
+Review the XML against the DTD and render the deck before delivery. Fix structural errors, overflowing text, weak image crops, repetitive layouts, and presenter notes that do not match the visible slide.
+
+---
+
+## Slide Attributes
+
+| Attribute | Required | Values | Default | Description |
+|-----------|----------|--------|---------|-------------|
+| `layout`  | No       | `title`, `section`, `content`, `columns`, `image`, `blank` | `content` | How the layout engine arranges children |
+| `title`   | No       | Text string | — | Slide heading, rendered prominently per layout type |
+| `cols`    | No       | Integer | `2` | Number of columns when `layout="columns"` |
+| `gap`     | No       | Integer | `24` | Gap between columns/slots in pixels |
+| `fit`     | No       | `fit`, `fill` | `fit` | Image scaling: `fit` (contain) or `fill` (cover-crop) |
+| `slot`    | No       | `left`, `right`, `center`, `top`, `bottom`, `fill`, `0`, `1`, `2`, … | — | Placement hint when parent has `layout="columns"` |
+
+When `layout` is omitted, it defaults to `content`. The `title` layout requires explicit `layout="title"`.
+
+---
+
+## Slide Child Elements
+
+| Element     | Count     | Description |
+|-------------|-----------|-------------|
+| `<notes>`   | 0 or 1    | Presenter-only speaking notes |
+| `<subtitle>` | 0 or 1   | Secondary heading, used with `layout="title"` |
+| `<text>`    | 0 or more | Text block with optional inline formatting |
+| `<image>`   | 0 or more | Image (self-closing element) |
+| `<code>`    | 0 or more | Preformatted code block with optional syntax language |
+| `<chart>`   | 0 or more | Native bar, line, pie, or donut chart containing `<point>` data |
+| `<icon>`    | 0 or more | Named Font Awesome icon with a short text callout |
+| `<slide>`   | 0 or more | Nested slide, positioned via `slot` when parent is `layout="columns"` |
+
+`<notes>` should appear first. In a body slide, Presenter groups visible
+elements as text, code blocks, icon cards, then charts; XML interleaving does
+not change that order. A slide containing an image automatically uses the
+image-and-caption layout. Use nested `<slide slot="...">` children only inside
+a `columns` parent.
+
+---
+
+## Layout Types
+
+### title — Opening and Closing Slides
+
+Large centered heading. Use `title` attribute for the headline, `<subtitle>` for the tagline.
+
+```xml
+<slide layout="title" title="Q4 Product Roadmap">
+  <notes>Welcome everyone. Today we're walking through what shipped in Q4 — 
+    4 major wins, 12 engineers contributed, 87 PRs merged.</notes>
+  <subtitle>Engineering Team — July 2026</subtitle>
+</slide>
+```
+
+```xml
+<slide layout="title" title="Thank You">
+  <subtitle>Questions?</subtitle>
+</slide>
+```
+
+No footer (no slide numbers). No `<text>` or `<image>` children.
+
+---
+
+### content — Bullet Lists and General Text
+
+The default layout. Each `<text>` element renders as a separate block.
+
+```xml
+<slide layout="content" title="Recent Wins">
+  <notes>
+    Dashboards used to reload on every filter change — 3-4 second spinner.
+    Lazy loading cut that to under 200ms. The mobile crash was our #1
+    support ticket — now zero crashes in 2 weeks.
+  </notes>
+  <text><b>50%</b> latency reduction — dashboards respond instantly</text>
+  <text>Zero mobile crashes for 2 weeks (was <b>#1</b> support ticket)</text>
+  <text>SAML 2.0 SSO unblocked enterprise deal</text>
+  <text>CI builds finish 3x faster — saves 90 hrs/week across team</text>
+</slide>
+```
+
+Footer: slide number `N / total` in bottom-right corner.
+
+---
+
+### section — Section Dividers
+
+Heading-only slide to separate major sections. The `title` attribute is rendered large and centered.
+
+```xml
+<slide layout="section" title="What We Shipped"/>
+```
+
+```xml
+<slide layout="section" title="What's Next"/>
+```
+
+No footer. No child elements other than optional `<notes>`.
+
+---
+
+### image — Full-Width Image with Caption
+
+Displays a large image with optional caption text below.
+
+```xml
+<slide layout="image" title="System Architecture" fit="fit">
+  <notes>Walk through the diagram — point to the new gateway service.</notes>
+  <image src="./images/arch.png" alt="Architecture diagram"/>
+  <text>Current state after Q3 microservices migration</text>
+</slide>
+```
+
+#### Image Scaling Modes
+
+- **`fit` (default):** Scale to fit within available area, preserve aspect ratio, center. Empty space shows the slide background.
+- **`fill`:** Scale to cover entire area, center-crop if aspect ratios differ. Best for full-bleed photography.
+
+```xml
+<slide layout="image" title="Matterhorn at Dawn" fit="fill">
+  <image src="./images/mountain.jpg" alt="Matterhorn reflected in Riffelsee"/>
+  <text>The Matterhorn mirrored in Riffelsee — 6:15 AM, zero wind</text>
+</slide>
+```
+
+Footer: slide number `N / total`.
+
+---
+
+### columns — Side-by-Side Layouts
+
+The most flexible layout. Children with a `slot` attribute are placed into columns. Each slotted child is a `<slide>` that can contain any content.
+
+#### Two-Column Default (`cols="2"`)
+
+```xml
+<slide layout="columns" gap="24" title="Dashboard: Before and After">
+  <notes>
+    Left = old (3 clicks), right = new (1 click).
+    Point to the search bar difference.
+  </notes>
+  <slide slot="left" title="Before">
+    <image src="./commits/abc123_before.png" alt="Old dashboard"/>
+    <text>3 clicks to find a report</text>
+  </slide>
+  <slide slot="right" title="After">
+    <image src="./commits/abc123_after.png" alt="New dashboard"/>
+    <text>Reports one click from home</text>
+  </slide>
+</slide>
+```
+
+#### Two-Column Text-Only
+
+```xml
+<slide layout="columns" gap="24" title="Q1 Priorities">
+  <slide slot="left" title="This Quarter">
+    <text>Dark mode rollout — most-requested feature</text>
+    <text>Real-time collaboration on dashboards</text>
+    <text>Error budget tracking dashboard</text>
+  </slide>
+  <slide slot="right" title="Backlog">
+    <text>CLI v2 with plugin system</text>
+    <text>Self-hosted option for enterprise</text>
+    <text>Accessibility audit and fixes</text>
+  </slide>
+</slide>
+```
+
+#### Image + Text Side by Side
+
+```xml
+<slide layout="columns" gap="24" title="Feature Highlight">
+  <slide slot="left">
+    <image src="./images/screenshot.png" alt="Feature screenshot"/>
+  </slide>
+  <slide slot="right">
+    <text><b>Faster</b> — loads in under 200ms</text>
+    <text><b>Simpler</b> — export to PDF in 3 clicks</text>
+    <text><b>Accessible</b> — WCAG 2.1 AA compliant</text>
+  </slide>
+</slide>
+```
+
+#### Three Columns
+
+```xml
+<slide layout="columns" cols="3" gap="16" title="From Alps to Sea">
+  <notes>Three perspectives from the last day of the trek.</notes>
+  <slide slot="left" title="Alpine Meadow">
+    <image src="./images/meadow.jpg" alt="Alpine meadow"/>
+    <text>2200m, blooming wildflowers</text>
+  </slide>
+  <slide slot="center" title="Ligurian Coast">
+    <image src="./images/coast.jpg" alt="Ligurian coast"/>
+    <text>Golden hour, Portofino</text>
+  </slide>
+  <slide slot="right" title="Matterhorn">
+    <image src="./images/mountain.jpg" alt="Matterhorn alpenglow"/>
+    <text>Alpenglow, 8-minute window</text>
+  </slide>
+</slide>
+```
+
+#### Numeric Slots (Grid Layout)
+
+Numeric slots wrap by `cols`. Slot `0`→col0-row0, `1`→col1-row0, `2`→col0-row1, `3`→col1-row1, etc.
+
+```xml
+<slide layout="columns" cols="2" gap="12" title="Screenshots">
+  <slide slot="0"><image src="./1.png" alt="First"/></slide>
+  <slide slot="1"><image src="./2.png" alt="Second"/></slide>
+  <slide slot="2"><image src="./3.png" alt="Third"/></slide>
+  <slide slot="3"><image src="./4.png" alt="Fourth"/></slide>
+</slide>
+```
+
+#### Three-Way Comparison (Named Slots with `cols="3"`)
+
+Named slots also work: `left`, `center`, `right`.
+
+```xml
+<slide layout="columns" cols="3" gap="16" title="Font Rendering Options">
+  <slide slot="left" title="Bitmap">
+    <image src="./bitmap.png" alt="Bitmap rendering"/>
+    <text>Sharp at 1x, blurry scaled</text>
+  </slide>
+  <slide slot="center" title="SDF">
+    <image src="./sdf.png" alt="SDF rendering"/>
+    <text>Crisp at any scale</text>
+  </slide>
+  <slide slot="right" title="MSDF">
+    <image src="./msdf.png" alt="MSDF rendering"/>
+    <text>Crisp + sharp corners</text>
+  </slide>
+</slide>
+```
+
+#### Recursive Nesting
+
+Columns can contain nested columns for arbitrarily complex layouts.
+
+```xml
+<slide layout="columns" gap="24" title="Deep Comparison">
+  <slide slot="left">
+    <image src="./before.png" alt="Before refactor"/>
+    <text>Before the refactor</text>
+  </slide>
+  <slide slot="right">
+    <slide layout="columns" gap="16">
+      <slide slot="left">
+        <text><b>2x</b> faster response time</text>
+        <text><b>40%</b> less memory usage</text>
+      </slide>
+      <slide slot="right">
+        <image src="./chart.png" alt="Performance chart"/>
+      </slide>
+    </slide>
+  </slide>
+</slide>
+```
+
+Footer: slide number `N / total`.
+
+---
+
+### blank — Freeform Layout
+
+No header. Children fill the full slide area.
+
+```xml
+<slide layout="blank">
+  <image src="./hero.jpg" alt="Full-slide hero image"/>
+</slide>
+```
+
+No footer.
+
+---
+
+## Charts
+
+Use native charts for quantitative comparisons instead of generating chart
+images. Chart colors come from the active presentation style and automatically
+adapt when the theme changes.
+
+```xml
+<chart type="bar" title="Q3 revenue (€k)" icon="chart-bar" height="360">
+  <point label="Jul" value="64"/>
+  <point label="Aug" value="78"/>
+  <point label="Sep" value="92"/>
+</chart>
+```
+
+Supported chart types are `bar`, `line`, `pie`, and `donut`. `circular` is an
+alias for `donut`.
+
+| Chart attribute | Required | Default | Description |
+|-----------------|----------|---------|-------------|
+| `type` | No | `bar` | `bar`, `line`, `pie`, `donut`, or the `circular` donut alias |
+| `title` | No | — | Heading displayed inside the chart card |
+| `icon` | No | — | Named icon displayed beside the chart heading |
+| `height` | No | `340` | Natural chart height in pixels; minimum 160 |
+| `showValues` | No | `true` | Show values above points/bars or percentages in a circular chart |
+
+Every `<point>` requires a `label` and numeric `value`:
+
+```xml
+<chart type="line" title="Monthly active users" icon="arrow-trend-up">
+  <point label="Apr" value="18"/>
+  <point label="May" value="24"/>
+  <point label="Jun" value="31"/>
+</chart>
+```
+
+Use pie or donut charts only for parts of one meaningful whole, ideally with
+two to five segments. Use bars for discrete comparisons and lines for ordered
+time series. Charts also compose inside column slides:
+
+```xml
+<slide layout="columns" title="Q3 Results">
+  <slide slot="left">
+    <chart type="bar" title="Revenue">
+      <point label="Jul" value="64"/>
+      <point label="Aug" value="78"/>
+      <point label="Sep" value="92"/>
+    </chart>
+  </slide>
+  <slide slot="right">
+    <chart type="donut" title="Acquisition mix">
+      <point label="Referral" value="42"/>
+      <point label="Social" value="31"/>
+      <point label="Other" value="27"/>
+    </chart>
+  </slide>
+</slide>
+```
+
+### Icons
+
+Presenter bundles the Font Awesome Free Solid font under the SIL OFL 1.1
+license. Find canonical icon names in Font Awesome's
+[Free + Solid gallery](https://fontawesome.com/search?ic=free&s=solid), then
+copy the displayed name without the `fa-` prefix. For example, `fa-rocket`
+becomes `icon="rocket"`. Presenter bundles the official name map, including
+aliases.
+
+The most common use is overriding the marker on a normal bullet:
+
+```xml
+<text icon="rocket"><b>Launch complete</b> — all regions are live</text>
+<text icon="users"><b>12,400 readers</b> — up 38% quarter over quarter</text>
+<text icon="none"><i>Source: Q3 operating review</i></text>
+```
+
+| `<text>` icon value | Result |
+|---------------------|--------|
+| Attribute omitted | Standard round bullet |
+| `icon="none"` | No bullet or icon; useful for sources and footnotes |
+| `icon="rocket"` | Named Font Awesome Free Solid icon in the theme accent color |
+
+Prefer custom icons when they make categories faster to scan; do not decorate
+every bullet. Unknown names and names not present in the bundled Free Solid
+font leave the marker position empty instead of rendering an arbitrary glyph.
+The same names work in the optional `icon` attribute on `<chart>`.
+
+For a card-like icon callout rather than a normal bullet, use `<icon>`:
+
+```xml
+<icon name="lightbulb"><b>Key insight</b> — retention now drives growth</icon>
+```
+
+Chart palettes are configurable in a style file:
+
+```xml
+<style>
+  <charts series1="#BD93F9" series2="#8BE9FD" series3="#F1FA8C"
+          series4="#BD93F9" series5="#FF79C6" series6="#FFB86C"
+          grid="#44475A" label="#F8F8F2"/>
+</style>
+```
+
+---
+
+## Text Formatting
+
+Visible text inside `<text>` elements supports HTML-like inline tags:
+
+| Tag | Effect | Example |
+|-----|--------|---------|
+| `<b>` | Bold | `<text><b>Important</b> finding</text>` |
+| `<i>` | Italic | `<text>Species: <i>Homo sapiens</i></text>` |
+| `<code>` | Monospace | `<text>Run <code>npm install</code> first</text>` |
+
+**Markdown markers (`**bold**`, `_italic_`, `` `code` ``) are not supported.** Use the XML tags inside `<text>`. Slide titles are plain text supplied through the `title` attribute, and presenter notes are plain text inside `<notes>`.
+
+Long text wraps automatically. For paragraph breaks, use separate `<text>` elements:
+
+```xml
+<text>First paragraph of text.</text>
+<text>Second paragraph, rendered below the first.</text>
+```
+
+Empty `<text/>` elements add vertical spacing:
+
+```xml
+<text>Section A</text>
+<text/>
+<text>Section B (with extra gap above)</text>
+```
+
+---
+
+## Images
+
+Self-closing element. Supported formats: PNG, JPG, JPEG, GIF, BMP.
+
+```xml
+<image src="./images/photo.jpg" alt="Description of the image"/>
+```
+
+| Attribute | Required | Description |
+|-----------|----------|-------------|
+| `src`     | Yes      | Path relative to the XML file's directory |
+| `alt`     | No       | Accessible text description |
+
+### Image Paths
+
+Paths are relative to the XML file:
+
+```
+./images/photo.jpg           — same directory
+../shared/assets/fig.png     — parent directory
+subdir/chart.png             — relative path
+```
+
+### Image Placement by Layout
+
+| Layout | Image behavior |
+|--------|---------------|
+| `image` | First `<image>` fills the available content area; `<text>` elements render as captions below |
+| `content` | A slide with an image automatically becomes an image-and-caption slide |
+| `columns` | Images inside slotted child slides fill their column's allocated space |
+| `blank` | Images fill the full slide area |
+
+---
+
+## Presenter Notes
+
+The `<notes>` element is only shown in the presenter window, never on the audience display.
+
+```xml
+<slide layout="content" title="Performance Gains">
+  <notes>We were losing 2 hours/week per developer on slow CI.
+    After profiling, found the test DB init was the bottleneck.
+    Replaced with container snapshots — now 90% of builds
+    finish in under 4 min. Mention that Jane from infra
+    did the heavy lifting here.</notes>
+  <text>Build time reduced from 22 min to 4 min</text>
+  <text>Test DB init now uses container snapshots</text>
+  <text>All 60 engineers affected — 2 hrs/week saved each</text>
+</slide>
+```
+
+Write notes for every top-level slide, including title, section, image, and closing slides. Notes are the presenter's private, ready-to-say script—not a copy of the visible bullets and not a collection of vague reminders.
+
+### What strong notes contain
+
+Use this sequence when it fits the slide:
+
+1. **Opening sentence:** State the slide's takeaway in natural spoken language.
+2. **Context and meaning:** Explain why the audience should care and define anything the slide cannot show succinctly.
+3. **Evidence:** Give the relevant number, example, quote, comparison, or source context.
+4. **Visual cue:** Add a short bracketed direction such as `[Point to the latency drop on the right]` when the slide contains an image or comparison.
+5. **Transition:** End with a sentence that creates a logical bridge to the next slide.
+
+The script should sound like speech: short sentences, contractions where
+natural, and clear signposting. Write enough to let the presenter deliver the
+slide without returning to the source material, while leaving room to speak
+naturally. Start with roughly 50-110 words for a normal content slide, adjust
+to the requested talk length, and give title or section slides much less.
+Render the presenter view at 640×480 and split or tighten notes that do not fit.
+
+### Notes quality rules
+
+- Expand the slide instead of reading it aloud. Slides show the headline and evidence; notes explain the story, nuance, and implications.
+- Preserve exact facts from `presentation-source.md`. Do not introduce unsupported claims while making the script conversational.
+- Explain acronyms and specialist terms the first time they are spoken.
+- Include attribution where it matters: who said a quote, when a metric was measured, or which source supports a surprising claim.
+- Tell the presenter what to emphasize, point at, pause on, or ask the audience.
+- Use a specific transition that previews the next idea; avoid repeatedly ending with "next slide."
+- Keep delivery directions brief and in square brackets so they are not mistaken for spoken words.
+- Use plain text inside `<notes>`. Escape XML-sensitive characters, especially `&` as `&amp;` and `<` as `&lt;`.
+
+### Weak and strong notes
+
+Weak:
+
+```xml
+<notes>Talk about performance. Mention the chart.</notes>
+```
+
+Strong:
+
+```xml
+<notes>Cold starts were the delay users felt most often: every new session
+  took 22 seconds before the dashboard became usable. Container snapshots
+  bring that down to 4 seconds for 90% of builds. [Point from the gray bar
+  to the blue bar.] That speedup fixes the first impression; now let's look
+  at what changed for users after they signed in.</notes>
+```
+
+---
+
+## Complete Example
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
+<presentation name="Q4 Product Roadmap">
+  <slide layout="title" title="Q4 Product Roadmap">
+    <notes>Welcome everyone. Today we're walking through what shipped
+      in Q4 — 4 major wins, 12 engineers contributed, 87 PRs merged.</notes>
+    <subtitle>Engineering Team — July 2026</subtitle>
+  </slide>
+
+  <slide layout="section" title="What We Shipped">
+    <notes>Let's start with the changes users can already experience.</notes>
+  </slide>
+
+  <slide layout="content" title="Recent Wins">
+    <notes>Dashboards used to reload on every filter change — 3-4 second
+      spinner. Lazy loading cut that to under 200ms.</notes>
+    <text>Dashboards respond in under 200ms (was 3-4s)</text>
+    <text>Zero mobile crashes for 2 weeks (was <b>#1</b> support ticket)</text>
+    <text>SAML 2.0 auth unlocked enterprise deal</text>
+    <text>CI builds finish 3x faster</text>
+  </slide>
+
+  <slide layout="columns" gap="24" title="Search: Before and After">
+    <notes>Left side is the old search — every keystroke triggered a full
+      page reload with a 2-second spinner. Right side is after —
+      debounced at 200ms with cached results.</notes>
+    <slide slot="left" title="Before">
+      <image src="./commits/abc123_before.png" alt="Old search page"/>
+      <text>Full page reload on every keystroke</text>
+    </slide>
+    <slide slot="right" title="After">
+      <image src="./commits/abc123_after.png" alt="New search page"/>
+      <text>Instant results, debounced 200ms</text>
+    </slide>
+  </slide>
+
+  <slide layout="content" title="What Users Can Now Do">
+    <notes>Users can now export any dashboard to PDF in one click.</notes>
+    <text>Export any dashboard to PDF with one click</text>
+    <text>Complete onboarding in 3 steps (was 8)</text>
+    <text>Cold start under 5 seconds (was 22s)</text>
+    <text>Search across all projects from home screen</text>
+  </slide>
+
+  <slide layout="section" title="What's Next">
+    <notes>Those results give us a strong base. Now I'll turn to the next priorities.</notes>
+  </slide>
+
+  <slide layout="columns" gap="24" title="Q1 Priorities">
+    <notes>Dark mode was our most-requested feature this quarter.</notes>
+    <slide slot="left" title="This Quarter">
+      <text>Dark mode rollout — most-requested feature</text>
+      <text>Real-time collaboration on dashboards</text>
+      <text>Error budget tracking dashboard</text>
+    </slide>
+    <slide slot="right" title="Backlog">
+      <text>CLI v2 with plugin system</text>
+      <text>Self-hosted option for enterprise</text>
+      <text>Accessibility audit and fixes</text>
+    </slide>
+  </slide>
+
+  <slide layout="title" title="Thank You">
+    <notes>Thanks everyone. We shipped more this quarter than any
+      previous one.</notes>
+    <subtitle>Questions?</subtitle>
+  </slide>
+</presentation>
+```
+
+---
+
+## Style
+
+Presentation styling (fonts, colors, layout metrics) is configured via an external style file or one of 8 built-in themes (Dracula, Monokai, Solarized Dark/Light, GitHub Light, Nord, Sunset, Arc). Built-in themes can be cycled at runtime with `Shift+Left` / `Shift+Right`.
+
+See [schemas/style.dtd](../schemas/style.dtd) for the full style format.
+
+Style files can be referenced in two ways:
+
+1. **Inline attribute:**
+   ```xml
+  <presentation name="Q4 Product Roadmap" style="./styles/dark.style">
+     ...
+   </presentation>
+   ```
+
+2. **CLI flag:**
+   ```
+   presenter demo.slides --style=styles/light.style
+   ```
+
+If no style is specified, the built-in Dracula theme is used.
+
+---
+
+## Presentation Best Practices
+
+### Bullet Point Guidelines
+
+**Limit each slide to 3-5 `<text>` elements.** Audiences disengage with walls of text. Keep bullet text short — one line each, 6-8 words maximum. Each bullet should be a prompt for you to talk, not a sentence to read aloud.
+
+| Do | Don't |
+|---|---|
+| `<text>50% faster cold start after lazy-load refactor</text>` | `<text>We refactored the initialization code by introducing lazy loading for the user module which makes the app start 50% faster</text>` |
+| `<text>Auth now supports SAML 2.0</text>` | `<text>Implemented support for SAML 2.0 authentication protocol</text>` |
+
+**Avoid list dumps.** If you have 12 bullet points, split them across 2-3 slides or group them under a single takeaway sentence.
+
+### Writing Impact-Oriented Messages
+
+Every text block should answer **"so what?"** — don't just describe what changed, explain what is now possible.
+
+| Weak (what was done) | Strong (why it matters) |
+|---|---|
+| Updated the onboarding flow | New users complete onboarding in 60 seconds |
+| Added search indexing | Full-text search returns results in under 100ms |
+| Migrated to PostgreSQL 16 | App can now handle 10x concurrent queries |
+| Fixed memory leak in rendering | Dashboard stays responsive after 8+ hours of uptime |
+
+**Use specific numbers and timeframes.** "3 weeks saved per quarter" beats "faster workflow".
+
+**Frame text as outcomes, not actions:**
+- "Users can now..." instead of "Added ability to..."
+- "Pages load 2x faster because..." instead of "Optimized rendering..."
+
+### Using Screenshots Effectively
+
+**Before/after pairs (most powerful):**
+
+```xml
+<slide layout="columns" gap="24" title="Dashboard Redesign">
+  <notes>Point out the old version was 3 clicks, now it's 1.</notes>
+  <slide slot="left" title="Before">
+    <image src="./commits/abc123_before.png" alt="Old dashboard"/>
+    <text>3 clicks to find a report</text>
+  </slide>
+  <slide slot="right" title="After">
+    <image src="./commits/abc123_after.png" alt="New dashboard"/>
+    <text>Reports one click from home</text>
+  </slide>
+</slide>
+```
+
+Always add a short caption telling the audience **what to notice**: "Before: 3 clicks. After: 1 click from home."
+
+**Single screenshot:**
+
+```xml
+<slide layout="image" title="Pull Request Diff View" fit="fill">
+  <notes>The new diff view was the main request from users.</notes>
+  <image src="./commits/diff.png" alt="PR diff view"/>
+  <text>New side-by-side diff with syntax highlighting</text>
+</slide>
+```
+
+**When to include screenshots:**
+- UI components, style changes, layout updates
+- Charts, dashboards, analytics views
+- CLI output showing before/after benchmarks
+- Diagrams of architecture changes
+- Error states → fixed states (before/after)
+
+**When to skip screenshots:**
+- Refactors with no visual change (describe the outcome instead)
+- Configuration or CI changes (use a status badge or log snippet)
+- Purely backend work with no UI surface
+
+### Structuring a Presentation
+
+Design the deck as one argument, not a sequence of facts. Every slide should advance the audience from what they know now to what they should understand, believe, decide, or do at the end.
+
+### Build the narrative arc
+
+1. **Opening:** Establish the subject, audience relevance, and promise of the talk. A title slide should orient quickly; the first substantive slide should create interest with a problem, change, question, or surprising result.
+2. **Thesis and roadmap:** State the central message early. Preview the 2-4 ideas needed to support it when the audience benefits from a roadmap.
+3. **Main chapters:** Group evidence into a few coherent sections. Within each section, move from claim → evidence → implication rather than listing everything discovered.
+4. **Synthesis:** Reconnect the chapters and explain what the combined evidence means. Do not make the audience assemble the conclusion themselves.
+5. **Close:** Restate the central message in fresh language, give explicit next steps or a call to action, and make the final slide useful during questions.
+
+For a status or release presentation, that can become:
+
+1. Title and one-sentence outcome
+2. Highlights: the 2-3 biggest wins
+3. What shipped, grouped by audience-relevant theme
+4. Optional deep dives with before/after evidence
+5. Metrics, risks, and lessons
+6. Next priorities, owners, and decisions needed
+7. Summary and questions
+
+### Shape the slide sequence
+
+- Give each slide one job and one takeaway. If its purpose needs "and," consider splitting it.
+- Use conclusion-style titles such as "Checkout time fell by 40%" instead of topic labels such as "Performance."
+- Put context before detail, evidence immediately after claims, and implications immediately after evidence.
+- Alternate layouts with purpose. Use `content` for concise arguments, `image` for visual evidence, `columns` for genuine comparisons, and `section` only at meaningful chapter boundaries.
+- Use section slides as pacing devices, not decoration. In a short deck, headings alone may provide enough structure.
+- Prefer the strongest evidence over exhaustive coverage. Move supporting detail into notes.
+- Create continuity: the final sentence in one slide's notes should make the next slide feel inevitable.
+- Estimate timing from the requested duration before writing XML. Reserve time for the opening, transitions, close, and questions; then trim the outline rather than rushing overloaded slides.
+
+### Review the whole story
+
+Read only the slide titles in order. They should form a coherent summary of the presentation. Then read the notes continuously as a script and check that:
+
+- The opening promise is fulfilled
+- Important claims have evidence
+- Terms and acronyms appear only after they are introduced
+- No slide repeats the previous slide without adding meaning
+- Transitions match the actual next slide
+- The conclusion follows from the material presented
+- The call to action names the decision, owner, or next step when one exists
+
+### Before/After Slide Pattern for Commits
+
+For any commit labeled "improved X" or "updated component X", generate a two-column before/after slide:
+
+```xml
+<slide layout="columns" gap="24" title="Search: Before and After">
+  <notes>Before — the search page reloaded on every keystroke.
+    After — debounced queries with cached results. Show the latency number.</notes>
+  <slide slot="left" title="Before">
+    <image src="./commits/d4e5f6_before.png" alt="Old search"/>
+    <text>Keystroke → page reload → 2s wait</text>
+  </slide>
+  <slide slot="right" title="After">
+    <image src="./commits/d4e5f6_after.png" alt="New search"/>
+    <text>Instant results, debounced at 200ms</text>
+  </slide>
+</slide>
+```
+
+**What makes a good before/after slide:**
+- Both screenshots cropped to the same area of the UI
+- Caption on each side states the **user experience**, not the technical change
+- Presenter notes guide the speaker to the specific difference
+
+### Content Slide Anti-Patterns
+
+| Avoid | Why | Do instead |
+|---|---|---|
+| Raw commit messages as bullets | "fix: stuff" means nothing | Rewrite as outcome: "Login edge case resolved" |
+| Technical jargon on slides | Audience may not understand | Keep slides plain-language; put technical detail in notes |
+| More than 5 `<text>` elements | Eyes glaze over | Split into 2 slides or group under a theme |
+| Full-sentence bullets | You'll read them verbatim | Use 4-6 word prompts and elaborate verbally |
+| Listing every commit | Most commits are noise | Curate to highlight wins, fixes, and blocked work |
+
+### Visual Quality Checklist
+
+- [ ] Intermediate `.md` contains the audience, objective, evidence, provenance, visuals, open questions, and slide plan
+- [ ] XML declaration and required presentation DOCTYPE are present
+- [ ] Each slide has a clear, action-oriented `title`
+- [ ] 3-5 `<text>` elements max, under 8 words each
+- [ ] At least one numeric metric per section ("40% faster", "120 engineers affected")
+- [ ] Every bullet answers "so what?"
+- [ ] Images have descriptive `alt` text and captions
+- [ ] Every top-level slide has ready-to-say `<notes>` with context, evidence, delivery cues where useful, and a transition
+- [ ] One clear narrative thread from first slide to last
+- [ ] Slide titles alone form a coherent summary
+- [ ] Facts and notes agree with the intermediate source file
+- [ ] XML matches `schemas/presentation.dtd` and renders without overflow or broken image paths
+
+---
+
+## Git History Use Case
+
+An AI agent generating slides from git history should follow this mapping:
+
+1. **Section slides** — from version tags or release branches
+2. **Content slides** — from commit messages; group related commits under a heading, rewrite each message as an impact-oriented bullet
+3. **Notes** — from detailed commit bodies or PR descriptions, enriched with context from the git diff (files changed, metrics)
+4. **Before/after image slides** — for commits tagged "improved", "updated", "redesigned"; capture screenshots at both parent and target commit
+5. **Title slides** — from release names or changelog entries
+
+### Screenshot Strategy for Git History
+
+When encountering commits that changed UI code:
+
+1. Check out the parent commit, capture screenshot → save as `<hash>_before.png`
+2. Check out the target commit, capture screenshot → save as `<hash>_after.png`
+3. Generate a `columns` slide with both screenshots side by side
+4. Write a caption for each side describing the user experience, not the code change
+5. Add presenter notes pointing to the specific visual differences
+
+Example mapping:
+
+```
+git log --oneline --since="2 weeks ago"
+```
+
+Each commit message becomes an impact-oriented `<text>` element. Presenter notes pull from commit bodies, PR descriptions, and git diff stats (e.g. "Changed 12 files, +230 -45 lines"). For UI commits, the agent automatically generates before/after screenshot slides.
