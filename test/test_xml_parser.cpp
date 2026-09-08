@@ -284,18 +284,45 @@ static int test_charts_and_icons() {
     return 0;
 }
 
+static int test_theme_overrides() {
+    auto style = PresentationStyle::load(writeTmp("editorial.xml",
+        "<style theme=\"Porcelain\"><colors bg=\"#F0E0D0\"/>"
+        "<fonts boldTitles=\"false\"/><layout cornerRadius=\"30\"/></style>"));
+    ASSERT_STR_EQ(style.name, std::string("Porcelain"), "select named theme");
+    ASSERT(!style.boldTitles, "override heading weight");
+    ASSERT(style.bgColor2.r == style.bgColor.r &&
+           style.bgColor2.g == style.bgColor.g, "background override disables gradient");
+    ASSERT_EQ(style.presenterCornerRadius, 15, "theme radius override propagates");
+    auto gradient = PresentationStyle::load(writeTmp("gradient.xml",
+        "<style theme=\"Studio\"><colors bg=\"#102030\" bg2=\"#405060\"/></style>"));
+    ASSERT_EQ(gradient.bgColor2.r, 0x40, "explicit gradient end tone");
+    ASSERT(gradient.boldTitles, "studio uses bold headings");
+    auto typography = PresentationStyle::load(writeTmp("typography.xml",
+        "<style theme=\"Ember\" name=\"Custom\">"
+        "<fonts titleFamily=\"Source Sans 3\" bodyFamily=\"Source Serif 4\" "
+        "codeFamily=\"JetBrains Mono\" childTitle=\"42\"/>"
+        "<syntax bg=\"#123456\" keyword=\"#ABCDEF\"/></style>"));
+    ASSERT_STR_EQ(typography.name, std::string("Custom"), "custom theme name");
+    ASSERT_STR_EQ(typography.titleFamily, std::string("Source Sans 3"), "heading family");
+    ASSERT_STR_EQ(typography.bodyFamily, std::string("Source Serif 4"), "body family");
+    ASSERT_EQ(typography.childTitleFontSize, 42, "child heading size");
+    ASSERT_EQ(typography.codeBg.r, 0x12, "syntax surface");
+    ASSERT_EQ(typography.codeKeyword.g, 0xCD, "syntax keyword");
+    return 0;
+}
+
 int main() {
     ensureTmpDir();
     int failures = 0;
     int results[] = {
         test_empty(), test_package(), test_title(), test_content(), test_columns(), test_recursive(),
         test_formatted_text(), test_legacy_title_ignored(), test_nested_title_attrs(), test_no_title(),
-        test_presenter_corner_radius_style(), test_charts_and_icons(),
+        test_presenter_corner_radius_style(), test_charts_and_icons(), test_theme_overrides(),
     };
     const char* names[] = {
         "empty", "package", "title", "content", "columns", "recursive",
         "formatted_text", "legacy_title_ignored", "nested_title_attrs", "no_title",
-        "presenter_corner_radius_style", "charts_and_icons",
+        "presenter_corner_radius_style", "charts_and_icons", "theme_overrides",
     };
     int numTests = sizeof(results) / sizeof(results[0]);
     for (int i = 0; i < numTests; ++i) {

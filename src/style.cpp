@@ -17,6 +17,20 @@ struct AttrEntry {
 };
 
 static const AttrEntry STYLE_ATTRS[] = {
+    {"fonts", "titleFamily", [](PresentationStyle& s, const char* v) { s.titleFamily = v; }},
+    {"fonts", "bodyFamily", [](PresentationStyle& s, const char* v) { s.bodyFamily = v; }},
+    {"fonts", "codeFamily", [](PresentationStyle& s, const char* v) { s.codeFamily = v; }},
+    {"fonts", "childTitle", parseAttr<&PresentationStyle::childTitleFontSize, atof>},
+    {"syntax", "bg", [](PresentationStyle& s, const char* v) { s.codeBg = v; }},
+    {"syntax", "border", [](PresentationStyle& s, const char* v) { s.codeBorder = v; }},
+    {"syntax", "text", [](PresentationStyle& s, const char* v) { s.codeText = v; }},
+    {"syntax", "keyword", [](PresentationStyle& s, const char* v) { s.codeKeyword = v; }},
+    {"syntax", "type", [](PresentationStyle& s, const char* v) { s.codeType = v; }},
+    {"syntax", "string", [](PresentationStyle& s, const char* v) { s.codeString = v; }},
+    {"syntax", "comment", [](PresentationStyle& s, const char* v) { s.codeComment = v; }},
+    {"syntax", "number", [](PresentationStyle& s, const char* v) { s.codeNumber = v; }},
+    {"syntax", "builtin", [](PresentationStyle& s, const char* v) { s.codeBuiltin = v; }},
+    {"syntax", "punctuation", [](PresentationStyle& s, const char* v) { s.codePunctuation = v; }},
     // fonts
     {"fonts", "title",    parseAttr<&PresentationStyle::titleFontSize,    atof>},
     {"fonts", "subtitle", parseAttr<&PresentationStyle::subtitleFontSize, atof>},
@@ -24,7 +38,8 @@ static const AttrEntry STYLE_ATTRS[] = {
     {"fonts", "bullet",  parseAttr<&PresentationStyle::bulletFontSize,  atof>},
     {"fonts", "small",    parseAttr<&PresentationStyle::smallFontSize,    atof>},
     // colors — Color has implicit constructor from "const char*"
-    {"colors", "bg",       [](PresentationStyle& s, const char* v) { s.bgColor = v; }},
+    {"colors", "bg",       [](PresentationStyle& s, const char* v) { s.bgColor = s.bgColor2 = v; }},
+    {"colors", "bg2",      [](PresentationStyle& s, const char* v) { s.bgColor2 = v; }},
     {"colors", "text",     [](PresentationStyle& s, const char* v) { s.textColor = v; }},
     {"colors", "title",    [](PresentationStyle& s, const char* v) { s.titleColor = v; }},
     {"colors", "subtitle", [](PresentationStyle& s, const char* v) { s.subtitleColor = v; }},
@@ -55,6 +70,16 @@ static const AttrEntry STYLE_ATTRS[] = {
 void PresentationStyle::applyXmlElement(const void* el) {
     auto* root = static_cast<const tinyxml2::XMLElement*>(el);
     if (!root) return;
+    if (const char* theme = root->Attribute("theme")) {
+        for (const auto& preset : builtInThemes()) {
+            if (preset.name == theme) { *this = preset; break; }
+        }
+    }
+    if (auto* fonts = root->FirstChildElement("fonts")) {
+        if (fonts->Attribute("boldTitles"))
+            boldTitles = fonts->BoolAttribute("boldTitles", boldTitles);
+    }
+    if (const char* customName = root->Attribute("name")) name = customName;
     for (auto& [elem, attr, set] : STYLE_ATTRS) {
         auto* child = root->FirstChildElement(elem);
         if (!child) continue;
@@ -72,7 +97,7 @@ void PresentationStyle::applyXmlElement(const void* el) {
 }
 
 PresentationStyle PresentationStyle::defaults() {
-    return PresentationStyle{};
+    return builtInThemes().front();
 }
 
 PresentationStyle PresentationStyle::load(const std::string& xmlPath) {
@@ -102,6 +127,7 @@ static PresentationStyle makeTheme(
     s.smallFontSize = smallFs;
     s.childTitleFontSize = childTitleFs;
     s.bgColor = bg;
+    s.bgColor2 = bg;
     s.textColor = text;
     s.titleColor = title;
     s.subtitleColor = subtitle;
@@ -137,9 +163,51 @@ static PresentationStyle makeTheme(
     return s;
 }
 
+// Editorial presets share bundled Inter Bold headings and JetBrains Mono code.
+// Separate chart colors avoid repeating the accent as a second data series.
+static PresentationStyle editorialTheme(const char* name, Color bg, Color glow,
+    Color title, Color text, Color muted, Color accent, Color panel, Color border,
+    Color teal, Color rose, Color violet, Color orange, Color green) {
+    auto s = makeTheme(name, 88, 36, 32, 20, 48,
+        bg, text, title, muted, accent, muted, border,
+        panel, border, text, rose, teal, green, muted, orange, violet, text,
+        56, 24, 28, 32, 8, 20, 28);
+    s.boldTitles = true;
+    if (std::string(name) == "Porcelain") {
+        s.titleFamily = "Source Serif 4";
+        s.bodyFamily = "Source Sans 3";
+    } else if (std::string(name) == "Tidal") {
+        s.titleFamily = s.bodyFamily = "Source Sans 3";
+    } else if (std::string(name) == "Ember") {
+        s.titleFamily = "Source Serif 4";
+    }
+    s.subtitleColor = accent;
+    s.bulletFontSize = 40;
+    s.bgColor2 = glow;
+    s.chartSeries1 = accent;
+    s.chartSeries2 = teal;
+    s.chartSeries3 = rose;
+    s.chartSeries4 = violet;
+    s.chartSeries5 = orange;
+    s.chartSeries6 = green;
+    return s;
+}
+
 const std::vector<PresentationStyle>& PresentationStyle::builtInThemes() {
     static const std::vector<PresentationStyle> themes = {
-        // 1. Dracula (default, dark)
+        editorialTheme("Studio", "#090C16", "#302943", "#F5F3EE", "#DDDCE5",
+            "#AAA7B8", "#FFD166", "#171A2B", "#393C51",
+            "#6EE7DF", "#FF91B6", "#B5A4FF", "#FFAD80", "#A3DCAD"),
+        editorialTheme("Porcelain", "#FAF7F0", "#E9DFED", "#252332", "#41404E",
+            "#696475", "#88502D", "#F0EBE3", "#D6CED0",
+            "#167B7B", "#B43D63", "#7253AB", "#B15D26", "#46743D"),
+        editorialTheme("Tidal", "#081E27", "#164956", "#EFFAF5", "#D0E4E4",
+            "#9FBCC0", "#8AE6CC", "#102F3A", "#34525C",
+            "#7DC9FF", "#F9A7B5", "#B7AFF4", "#F4C184", "#C3DA8B"),
+        editorialTheme("Ember", "#21131C", "#59303C", "#FFF3E8", "#EAD8D7",
+            "#C1A5AE", "#FFBE85", "#321E2A", "#62404C",
+            "#9EDBD4", "#F298BA", "#CAAEF4", "#EBDD91", "#BADAAD"),
+        // Classic palettes remain available after the editorial presets.
         makeTheme("Dracula",
             FONT_TITLE_SIZE, FONT_SUBTITLE_SIZE, FONT_CONTENT_SIZE, FONT_SMALL_SIZE, FONT_CHILD_TITLE_SIZE,
             "#282A36", "#F8F8F2", "#FF79C6",

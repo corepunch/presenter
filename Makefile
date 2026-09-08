@@ -54,6 +54,11 @@ $(BUILD)/test_screenshot: test/test_screenshot.cpp src/screenshot.cpp | $(BUILD)
 
 # --- convenience ------------------------------------------------------------
 
+# Theme/font headers affect every consumer even when no .cpp file changes.
+$(BUILD)/presenter $(BUILD)/test_textbounds $(BUILD)/test_layout \
+$(BUILD)/test_xml_parser $(BUILD)/test_image $(BUILD)/test_highlight \
+$(BUILD)/test_screenshot: $(wildcard include/*.h include/*.hpp)
+
 demo: $(BUILD)/presenter
 	./$(BUILD)/presenter "demo/Nature Portfolio.slides"
 

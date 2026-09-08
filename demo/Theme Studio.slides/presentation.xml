@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
+<presentation name="Theme Studio" style="./styles/Studio.style">
+  <slide layout="title" title="Beautiful slides.">
+    <notes>Presenter pairs a polished deck with private speaker notes. Let your agent organize the source material and write a natural script, then review the result before your meeting.</notes>
+    <subtitle>Words to say.</subtitle>
+  </slide>
+  <slide layout="columns" title="Ready for the room." cols="2">
+    <notes>The audience sees your slides. Your speaking notes stay in a separate window. Share only the audience window in your meeting app.</notes>
+    <slide slot="left" title="A clear story">
+      <icon name="layer-group">Six native layouts</icon>
+      <icon name="palette">Coordinated themes</icon>
+      <icon name="chart-bar">Charts from your data</icon>
+    </slide>
+    <slide slot="right" title="A confident delivery">
+      <icon name="comment">Private speaker notes</icon>
+      <icon name="desktop">Separate audience window</icon>
+      <icon name="folder">Portable slide packages</icon>
+    </slide>
+  </slide>
+  <slide layout="content" title="Make the numbers legible.">
+    <notes>This chart uses illustrative data to demonstrate the theme palette. These values are not product measurements.</notes>
+    <chart type="bar" title="Illustrative project milestones">
+      <point label="Discover" value="24"/>
+      <point label="Design" value="48"/>
+      <point label="Build" value="72"/>
+      <point label="Launch" value="92"/>
+    </chart>
+  </slide>
+  <slide layout="content" title="A format your agent can read.">
+    <notes>The XML package holds slides, notes and relative paths to assets. The code panel uses JetBrains Mono and a syntax palette coordinated with the theme.</notes>
+    <code lang="xml">&lt;slide layout="title" title="Your next idea"&gt;
+  &lt;notes&gt;Start with the one thing that matters.&lt;/notes&gt;
+  &lt;subtitle&gt;Ready to share.&lt;/subtitle&gt;
+&lt;/slide&gt;</code>
+  </slide>
+</presentation>

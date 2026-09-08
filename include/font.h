@@ -8,6 +8,7 @@
 #include <array>
 
 const char* getFontPath(FontType type);
+std::string getFamilyFontPath(const std::string& family, FontType type);
 
 class Font {
 public:
@@ -60,6 +61,8 @@ struct FontVariants {
 };
 
 struct FontSet {
+    bool boldTitles = false;
+    std::string titleFamily = "Inter", bodyFamily = "Inter", codeFamily = "JetBrains Mono";
     std::array<Font, 5> fonts;             // content size
     std::array<Font, 5> titleFonts;        // title size
     std::array<Font, 5> subtitleFonts;     // subtitle size
@@ -78,18 +81,22 @@ struct FontSet {
 
     bool load(float contentSize, float titleSize, float subtitleSize,
               float bulletSize, float smallSize, float childTitleSize) {
-        return loadGroup(fonts, fallback, contentSize)
-            && loadGroup(titleFonts, titleFallback, titleSize)
-            && loadGroup(subtitleFonts, subtitleFallback, subtitleSize)
-            && loadGroup(bulletFonts, bulletFallback, bulletSize)
-            && loadGroup(smallFonts, smallFallback, smallSize)
-            && loadGroup(childTitleFonts, childTitleFallback, childTitleSize)
+        return loadGroup(fonts, fallback, contentSize, bodyFamily)
+            && loadGroup(titleFonts, titleFallback, titleSize, titleFamily)
+            && loadGroup(subtitleFonts, subtitleFallback, subtitleSize, bodyFamily)
+            && loadGroup(bulletFonts, bulletFallback, bulletSize, bodyFamily)
+            && loadGroup(smallFonts, smallFallback, smallSize, bodyFamily)
+            && loadGroup(childTitleFonts, childTitleFallback, childTitleSize, titleFamily)
             && iconFont.load("assets/FontAwesome-Free-Solid-900.otf", contentSize)
             && smallIconFont.load("assets/FontAwesome-Free-Solid-900.otf", smallSize)
             && bulletIconFont.load("assets/FontAwesome-Free-Solid-900.otf", bulletSize);
     }
 
     bool load(const struct PresentationStyle& style) {
+        boldTitles = style.boldTitles;
+        titleFamily = style.titleFamily;
+        bodyFamily = style.bodyFamily;
+        codeFamily = style.codeFamily;
         return load(style.contentFontSize, style.titleFontSize,
                     style.subtitleFontSize, style.bulletFontSize,
                     style.smallFontSize, style.childTitleFontSize);
@@ -100,19 +107,30 @@ struct FontSet {
     }
 
     FontVariants variants() const          { return makeVariants(fonts); }
-    FontVariants titleVariants() const     { return makeVariants(titleFonts); }
+    FontVariants titleVariants() const     { return headingVariants(titleFonts); }
     FontVariants subtitleVariants() const  { return makeVariants(subtitleFonts); }
     FontVariants bulletVariants() const    { return makeVariants(bulletFonts); }
     FontVariants smallVariants() const     { return makeVariants(smallFonts); }
-    FontVariants childTitleVariants() const { return makeVariants(childTitleFonts); }
+    FontVariants childTitleVariants() const { return headingVariants(childTitleFonts); }
     const Font& icons() const { return iconFont; }
     const Font& smallIcons() const { return smallIconFont; }
     const Font& bulletIcons() const { return bulletIconFont; }
 
 private:
-    static bool loadGroup(std::array<Font, 5>& group, Font& fb, float size) {
+    FontVariants headingVariants(const std::array<Font, 5>& group) const {
+        auto v = makeVariants(group);
+        if (boldTitles) {
+            v.fonts[static_cast<int>(FontType::Regular)] = &group[static_cast<int>(FontType::Bold)];
+            v.fonts[static_cast<int>(FontType::Italic)] = &group[static_cast<int>(FontType::BoldItalic)];
+        }
+        return v;
+    }
+    bool loadGroup(std::array<Font, 5>& group, Font& fb, float size, const std::string& family) {
         for (int i = 0; i < 5; i++) {
-            if (!group[i].load(getFontPath(static_cast<FontType>(i)), size))
+            auto type = static_cast<FontType>(i);
+            auto path = getFamilyFontPath(type == FontType::Monospace ? codeFamily : family,
+                                          type == FontType::Monospace ? FontType::Regular : type);
+            if (path.empty() || !group[i].load(path, size))
                 return false;
         }
         // Fallback is best-effort: the app still works without it

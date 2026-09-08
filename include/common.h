@@ -84,7 +84,7 @@ struct Presentation {
     std::string name;
     std::vector<Slide> slides;
     int current = 0;
-    PresentationStyle style;
+    PresentationStyle style = PresentationStyle::defaults();
 
     bool empty() const { return slides.empty(); }
     int size() const { return static_cast<int>(slides.size()); }

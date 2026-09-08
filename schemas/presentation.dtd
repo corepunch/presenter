@@ -142,10 +142,16 @@
 
 <!-- ===== Inline style (or standalone style file, see schemas/style.dtd) ===== -->
 
-<!ELEMENT style (fonts?, colors?, charts?, layout?)>
+<!ELEMENT style (fonts?, colors?, charts?, syntax?, layout?)>
+<!ATTLIST style theme CDATA #IMPLIED name CDATA #IMPLIED>
 
 <!ELEMENT fonts EMPTY>
 <!ATTLIST fonts
+    titleFamily CDATA #IMPLIED
+    bodyFamily CDATA #IMPLIED
+    codeFamily CDATA #IMPLIED
+    childTitle CDATA #IMPLIED
+    boldTitles (true|false) #IMPLIED
     title    CDATA #IMPLIED
     subtitle CDATA #IMPLIED
     content  CDATA #IMPLIED
@@ -155,6 +161,7 @@
 <!ELEMENT colors EMPTY>
 <!ATTLIST colors
     bg       CDATA #IMPLIED
+    bg2      CDATA #IMPLIED
     text     CDATA #IMPLIED
     title    CDATA #IMPLIED
     subtitle CDATA #IMPLIED
@@ -174,6 +181,18 @@
     label   CDATA #IMPLIED>
 
 <!ELEMENT layout EMPTY>
+<!ELEMENT syntax EMPTY>
+<!ATTLIST syntax
+    bg CDATA #IMPLIED
+    border CDATA #IMPLIED
+    text CDATA #IMPLIED
+    keyword CDATA #IMPLIED
+    type CDATA #IMPLIED
+    string CDATA #IMPLIED
+    comment CDATA #IMPLIED
+    number CDATA #IMPLIED
+    builtin CDATA #IMPLIED
+    punctuation CDATA #IMPLIED>
 <!ATTLIST layout
     margin          CDATA #IMPLIED
     padding         CDATA #IMPLIED

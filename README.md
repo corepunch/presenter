@@ -251,18 +251,23 @@ Recommended workflow:
 
 ## Theming
 
-8 built-in themes ship with the presenter, switchable at runtime with `Shift+Left` / `Shift+Right`:
+12 built-in themes ship with the presenter, switchable at runtime with `Shift+Left` / `Shift+Right`.
+Studio is the default for new decks. See [theme examples and overrides](docs/themes.md).
 
 | # | Theme | Style |
 |---|-------|-------|
-| 1 | Dracula | Dark (default) |
-| 2 | Monokai | Dark |
-| 3 | Solarized Dark | Dark |
-| 4 | GitHub Light | Light |
-| 5 | Solarized Light | Light |
-| 6 | Nord | Neutral |
-| 7 | Sunset | Warm |
-| 8 | Arc | Cool |
+| 1 | Studio | Midnight and gold (default) |
+| 2 | Porcelain | Ivory and plum |
+| 3 | Tidal | Ocean and mint |
+| 4 | Ember | Aubergine and peach |
+| 5 | Dracula | Dark |
+| 6 | Monokai | Dark |
+| 7 | Solarized Dark | Dark |
+| 8 | GitHub Light | Light |
+| 9 | Solarized Light | Light |
+| 10 | Nord | Neutral |
+| 11 | Sunset | Warm |
+| 12 | Arc | Cool |
 
 Custom styles use the format defined in [schemas/style.dtd](https://corepunch.github.io/presenter/schemas/style.dtd):
 

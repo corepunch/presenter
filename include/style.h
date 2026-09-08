@@ -38,9 +38,15 @@ struct PresentationStyle {
     float bulletFontSize = FONT_BULLET_SIZE;
     float smallFontSize = FONT_SMALL_SIZE;
     float childTitleFontSize = FONT_CHILD_TITLE_SIZE;
+    bool boldTitles = false;
+    std::string titleFamily = "Inter";
+    std::string bodyFamily = "Inter";
+    std::string codeFamily = "JetBrains Mono";
 
     // Colors (RGBA)
     Color bgColor        = {30,  30,  40,  255};
+    // Atmospheric tone at the top of title/section slide gradients.
+    Color bgColor2       = {30,  30,  40,  255};
     Color textColor      = {200, 200, 210, 255};
     Color titleColor     = {255, 255, 255, 255};
     Color subtitleColor  = {160, 160, 176, 255};

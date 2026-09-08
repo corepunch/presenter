@@ -38,6 +38,20 @@ void Renderer::clear(int r, int g, int b) {
     SDL_FillRect(m_surface, nullptr, Color(r, g, b).toUint32(m_surface->format));
 }
 
+static void fillVerticalGradient(SDL_Surface* surface, Color top, Color bottom) {
+    if (!surface) return;
+    for (int y = 0; y < surface->h; ++y) {
+        float t = surface->h <= 1 ? 0.0f : static_cast<float>(y) / (surface->h - 1);
+        Color row(
+            static_cast<unsigned char>(top.r + (bottom.r - top.r) * t),
+            static_cast<unsigned char>(top.g + (bottom.g - top.g) * t),
+            static_cast<unsigned char>(top.b + (bottom.b - top.b) * t),
+            255);
+        SDL_Rect rect = {0, y, surface->w, 1};
+        SDL_FillRect(surface, &rect, row.toUint32(surface->format));
+    }
+}
+
 static void blendPixel(SDL_Surface* surf, int x, int y, Uint32 color, float coverage) {
     if (x < 0 || x >= surf->w || y < 0 || y >= surf->h) return;
     coverage = std::max(0.0f, std::min(1.0f, coverage));
@@ -252,7 +266,7 @@ static float measureFormatted(const FontVariants& fonts, const std::string& text
 
 void Renderer::renderFormatted(const std::string& text, float x, float y,
                                 const FontVariants& fonts, SDL_Color color) {
-    SDL_Color codeColor = {255, 255, 0, 255};
+    SDL_Color codeColor = style().accentColor.toSDLColor();
     float curX = x;
     TextFormat fmt;
     size_t pos = 0;
@@ -1018,35 +1032,30 @@ static void renderPartFooter(Renderer* r, SDL_Surface* surf,
 static void renderPartFullSlide(Renderer* r, SDL_Surface* surf,
                                 const Slide& slide, const SlidePart& part,
                                 const FontSet& fonts, const FontVariants& titleV) {
-    FontVariants baseV = fonts.variants();
     const auto& s = r->style();
-
-    const Font& titleFont = titleV.get(FontType::Regular);
-    float ascent = titleFont.getAscent();
-    float descent = titleFont.getDescent();
-    float titleLineH = ascent - descent;
-
-    std::string subtitleText = slide.subtitle;
-
-    float totalH = titleLineH;
-    if (!subtitleText.empty()) {
-        const Font& baseFont = baseV.get(FontType::Regular);
-        float baseAscent = baseFont.getAscent();
-        float baseDescent = baseFont.getDescent();
-        float subtitleLineH = baseAscent - baseDescent;
-        totalH += s.partGap + subtitleLineH;
+    auto subtitleV = fonts.subtitleVariants();
+    const auto titleLines = r->wordWrap(slide.title, titleV, part.rect.w);
+    const auto subtitleLines = r->wordWrap(slide.subtitle, subtitleV, part.rect.w);
+    const auto& titleFont = titleV.get(FontType::Regular);
+    const auto& subtitleFont = subtitleV.get(FontType::Regular);
+    int titleH = r->textHeight(titleFont);
+    int subtitleH = r->textHeight(subtitleFont);
+    int totalH = static_cast<int>(titleLines.size()) * titleH;
+    if (!slide.subtitle.empty())
+        totalH += s.partGap + static_cast<int>(subtitleLines.size()) * subtitleH;
+    int y = part.rect.y + std::max(0, (part.rect.h - totalH) / 2);
+    for (const auto& line : titleLines) {
+        r->renderFormatted(line, part.rect.x, y + titleFont.getAscent(),
+                           titleV, s.titleColor.toSDLColor());
+        y += titleH;
     }
-
-    int startY = part.rect.y + (part.rect.h - static_cast<int>(totalH)) / 2;
-    int titleY = startY + static_cast<int>(ascent);
-    r->renderFormatted(slide.title, static_cast<float>(part.rect.x),
-                       static_cast<float>(titleY), titleV, s.titleColor.toSDLColor());
-
-    if (!subtitleText.empty()) {
-        const Font& baseFont = baseV.get(FontType::Regular);
-        float baseAscent2 = baseFont.getAscent();
-        int subtitleY = startY + static_cast<int>(titleLineH) + s.partGap + static_cast<int>(baseAscent2);
-        r->renderFormattedBlock(subtitleText, part.rect.x, subtitleY, baseV, s.subtitleColor.toSDLColor(), part.rect.w);
+    if (!slide.subtitle.empty()) {
+        y += s.partGap;
+        for (const auto& line : subtitleLines) {
+            r->renderFormatted(line, part.rect.x, y + subtitleFont.getAscent(),
+                               subtitleV, s.subtitleColor.toSDLColor());
+            y += subtitleH;
+        }
     }
 }
 
@@ -1061,7 +1070,13 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
     // pixel, and freed it again for every slide change.
     SDL_Surface* surf = m_surface;
     if (surf) {
-        fillRect({0, 0, m_width, m_height}, style.bgColor);
+        // Atmospheric backgrounds belong on opening and section slides.
+        // Content surfaces stay flat so nested/scaled content and image masks
+        // compose seamlessly.
+        if (slide.layout == SlideLayout::Title || slide.layout == SlideLayout::Section)
+            fillVerticalGradient(surf, style.bgColor2, style.bgColor);
+        else
+            fillRect({0, 0, m_width, m_height}, style.bgColor);
 
         // Compute layout metrics
         FontVariants titleV = fonts.titleVariants();
@@ -1131,7 +1146,7 @@ SDL_Texture* Renderer::renderSlide(const Slide& slide, const FontSet& fonts, con
 SDL_Texture* Renderer::renderPresenterView(const Presentation& pres, const FontSet& fonts) {
     const auto& s = pres.style;
     setStyle(&s);
-    clear(s.bgColor.r, s.bgColor.g, s.bgColor.b);
+    fillVerticalGradient(m_surface, s.bgColor, s.bgColor2);
 
     char numBuf[64];
     snprintf(numBuf, sizeof(numBuf), "Slide %d / %d", pres.current + 1, pres.size());

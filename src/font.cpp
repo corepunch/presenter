@@ -6,6 +6,25 @@
 #include "font.h"
 #include <fstream>
 #include <algorithm>
+#include <filesystem>
+
+std::string getFamilyFontPath(const std::string& family, FontType type) {
+    if (family == "Inter") return getFontPath(type);
+    if (family == "JetBrains Mono") return getFontPath(FontType::Monospace);
+    std::string prefix;
+    if (family == "Source Serif 4") prefix = "share/fonts/source-serif/SourceSerif4-";
+    else if (family == "Source Sans 3") prefix = "share/fonts/source-sans/SourceSans3-";
+    else {
+        fprintf(stderr, "Unknown bundled font family: %s\n", family.c_str());
+        return {};
+    }
+    switch (type) {
+        case FontType::Bold: return prefix + "Bold.ttf";
+        case FontType::Italic: return prefix + "It.ttf";
+        case FontType::BoldItalic: return prefix + "BoldIt.ttf";
+        default: return prefix + "Regular.ttf";
+    }
+}
 
 const char* getFontPath(FontType type) {
     switch (type) {
@@ -24,6 +43,15 @@ Font::~Font() {
 
 bool Font::load(const std::string& ttfPath, float fontSize) {
     std::ifstream file(ttfPath, std::ios::binary | std::ios::ate);
+    // Installed binaries find bundled resources beside the executable even
+    // when launched from a deck directory or an unrelated working directory.
+    if (!file.is_open() && !std::filesystem::path(ttfPath).is_absolute()) {
+        char* base = SDL_GetBasePath();
+        if (base) {
+            file.open(std::string(base) + ttfPath, std::ios::binary | std::ios::ate);
+            SDL_free(base);
+        }
+    }
     if (!file.is_open()) return false;
 
     std::streamsize size = file.tellg();

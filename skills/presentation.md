@@ -53,6 +53,21 @@ Slides are separated by `<slide>` elements — no delimiter characters. The XML 
 
 ## Presentation Attributes
 
+### Theme selection
+
+Use `<style theme="Studio"/>` before the first slide, or reference a portable
+style file with the presentation's `style` attribute. New decks default to Studio.
+The editorial presets are Studio (Inter, midnight/gold), Porcelain (Source Serif 4
+and Source Sans 3, ivory/plum), Tidal (Source Sans 3, ocean/mint), and Ember
+(Source Serif 4 and Inter, aubergine/peach). Eight classic palettes remain available.
+
+Theme overrides use ordered optional children: fonts, colors, charts, syntax,
+layout. See [the theme reference](../docs/themes.md) for the complete syntax.
+Family names select bundled fonts; no download or machine-specific path is needed.
+`fonts` supports `titleFamily`, `bodyFamily`, `codeFamily`, `boldTitles`,
+and role sizes. `colors bg2` adds a subtle title/section background gradient.
+Use compact headings and review rendered slides before delivery.
+
 | Attribute | Required | Default | Description |
 |-----------|----------|---------|-------------|
 | `name` | No | `Presentation` | Audience window title |
