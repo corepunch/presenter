@@ -306,6 +306,40 @@ static void test_charts_and_icons(SDL_Renderer*, const FontSet& fonts,
     TEST_ASSERT(allRendered, "bar, line, pie, donut, and icon rows render");
 }
 
+static void test_icon_ink_centering(Renderer& renderer) {
+    const IconBlock labels[] = {
+        {"layer-group", "Six native layouts"}, {"palette", "Coordinated themes"},
+        {"chart-bar", "Charts from your data"}, {"comment", "Private speaker notes"},
+        {"desktop", "Separate audience window"}, {"folder", "Portable slide packages"}
+    };
+    for (const auto& theme : PresentationStyle::builtInThemes()) {
+        FontSet faces;
+        TEST_ASSERT(faces.load(theme), "theme fonts load for centering check");
+        renderer.setStyle(&theme);
+        const int y = 20, x = 20, width = 560;
+        const int height = iconBlockNaturalHeight(&renderer, faces);
+        for (const auto& label : labels) {
+            renderer.fillRect({0, 0, 640, 480}, theme.bgColor);
+            renderIconBlock(&renderer, renderer.surface(), label, faces, x, y, width);
+            for (const Color ink : {theme.textColor, theme.chartSeries1}) {
+                int top = 480, bottom = -1;
+                auto* surface = renderer.surface();
+                auto* pixels = static_cast<Uint32*>(surface->pixels);
+                Uint32 target = ink.toUint32(surface->format);
+                for (int row = y + 1; row < y + height - 1; ++row)
+                    for (int col = x + 8; col < x + width - 8; ++col)
+                        if (pixels[row * (surface->pitch / 4) + col] == target) {
+                            top = std::min(top, row);
+                            bottom = std::max(bottom, row);
+                        }
+                TEST_ASSERT(bottom >= top, "panel has visible label/icon ink");
+                TEST_ASSERT(std::abs((top + bottom) - (2 * y + height - 1)) <= 3,
+                            "label and icon ink are independently vertically centered");
+            }
+        }
+    }
+}
+
 int main() {
     if (SDL_Init(SDL_INIT_VIDEO) < 0) { fprintf(stderr, "SDL_Init failed\n"); return 1; }
 
@@ -337,6 +371,7 @@ int main() {
     test_body_vertical_centering(sdlR, fonts, renderer, style);
     test_oversized_body_is_scaled_inside_bounds(sdlR, fonts, renderer, style);
     test_charts_and_icons(sdlR, fonts, renderer, style);
+    test_icon_ink_centering(renderer);
 
     renderer.cleanup();
     SDL_DestroyRenderer(sdlR);

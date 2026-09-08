@@ -366,19 +366,54 @@ void renderIconBlock(Renderer* renderer, SDL_Surface* surface,
                               style.cornerRadius);
     uint32_t codepoint = iconCodepoint(icon.name);
     int iconX = x + pad;
-    float baseline = y + (height - renderer->textHeight(fonts.icons())) / 2.0f
-        + fonts.icons().getAscent();
-    if (codepoint && fonts.icons().hasGlyph(codepoint))
-        fonts.icons().drawGlyph(surface, codepoint, static_cast<float>(iconX),
-                                baseline, style.chartSeries1.toSDLColor());
-
     int textX = iconX + static_cast<int>(fonts.icons().getFontSize()) + pad;
     FontVariants variants = fonts.variants();
     const Font& textFont = variants.get(FontType::Regular);
-    renderer->renderFormattedBlock(
-        icon.text, textX,
-        y + (height - renderer->textHeight(textFont)) / 2 +
-            static_cast<int>(textFont.getAscent()),
-        variants, style.textColor.toSDLColor(),
-        std::max(0, x + width - pad - textX));
+    int textWidth = x + width - pad - textX;
+    if (textWidth <= 0) return;
+
+    // Center the actual visible ink, not the font's em box and line spacing.
+    // Fonts reserve different amounts of empty ascent/descent; using those
+    // metrics made both labels and icons visibly top-heavy inside the pills.
+    // A transparent layer also handles formatted/wrapped labels consistently.
+    auto lines = renderer->wordWrap(icon.text, variants, textWidth);
+    int layerHeight = std::max(height, static_cast<int>(lines.size() + 2) *
+                                      renderer->textHeight(textFont));
+    SDL_Surface* layer = SDL_CreateRGBSurfaceWithFormat(
+        0, width, layerHeight, 32, SDL_PIXELFORMAT_RGBA32);
+    if (!layer) return;
+    Color transparentPanel = style.codeBg;
+    transparentPanel.a = 0;
+    SDL_FillRect(layer, nullptr, transparentPanel.toUint32(layer->format));
+    SDL_Surface* saved = renderer->surface();
+    renderer->setSurface(layer);
+    int localTextX = textX - x;
+    renderer->renderFormattedBlock(icon.text, localTextX,
+        static_cast<int>(std::ceil(textFont.getAscent())) + pad,
+        variants, style.textColor.toSDLColor(), textWidth);
+    if (codepoint && fonts.icons().hasGlyph(codepoint))
+        fonts.icons().drawGlyph(layer, codepoint, pad,
+            std::ceil(fonts.icons().getAscent()) + pad,
+            style.chartSeries1.toSDLColor());
+    renderer->setSurface(saved);
+
+    auto centerInk = [&](int left, int right) {
+        int top = layerHeight, bottom = -1;
+        auto* pixels = static_cast<Uint32*>(layer->pixels);
+        for (int row = 0; row < layerHeight; ++row) {
+            for (int col = left; col < right; ++col) {
+                Uint8 red, green, blue, alpha;
+                SDL_GetRGBA(pixels[row * (layer->pitch / 4) + col],
+                            layer->format, &red, &green, &blue, &alpha);
+                if (alpha) { top = std::min(top, row); bottom = std::max(bottom, row); }
+            }
+        }
+        if (bottom < top) return;
+        SDL_Rect source = {left, top, right - left, bottom - top + 1};
+        SDL_Rect target = {x + left, y + (height - source.h) / 2, source.w, source.h};
+        SDL_BlitSurface(layer, &source, surface, &target);
+    };
+    centerInk(0, localTextX);
+    centerInk(localTextX, width);
+    SDL_FreeSurface(layer);
 }
