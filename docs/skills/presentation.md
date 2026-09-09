@@ -62,7 +62,7 @@ and Source Sans 3, ivory/plum), Tidal (Source Sans 3, ocean/mint), and Ember
 (Source Serif 4 and Inter, aubergine/peach). Eight classic palettes remain available.
 
 Theme overrides use ordered optional children: fonts, colors, charts, syntax,
-layout. See [the theme reference](../docs/themes.md) for the complete syntax.
+layout. See [the theme reference](../themes.md) for the complete syntax.
 Family names select bundled fonts; no download or machine-specific path is needed.
 `fonts` supports `titleFamily`, `bodyFamily`, `codeFamily`, `boldTitles`,
 and role sizes. `colors bg2` adds a subtle title/section background gradient.

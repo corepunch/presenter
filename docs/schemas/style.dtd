@@ -1,0 +1,73 @@
+<!--
+  Presenter Style DTD
+  ===================
+  Standalone style files referenced via <presentation style="..."> or the CLI style option.
+  All attributes are optional — omitted values keep the built-in default.
+
+  Example usage:
+    <presentation style="./styles/dark.style">
+    or
+    presenter demo.slides [style option] styles/light.style
+-->
+
+<!ELEMENT style (fonts?, colors?, charts?, syntax?, layout?)>
+<!ATTLIST style theme CDATA #IMPLIED name CDATA #IMPLIED>
+
+<!ELEMENT fonts EMPTY>
+<!ATTLIST fonts
+    titleFamily CDATA #IMPLIED
+    bodyFamily CDATA #IMPLIED
+    codeFamily CDATA #IMPLIED
+    childTitle CDATA #IMPLIED
+    boldTitles (true|false) #IMPLIED
+    title    CDATA #IMPLIED
+    subtitle CDATA #IMPLIED
+    content  CDATA #IMPLIED
+    bullet   CDATA #IMPLIED
+    small    CDATA #IMPLIED>
+
+<!ELEMENT colors EMPTY>
+<!ATTLIST colors
+    bg       CDATA #IMPLIED
+    bg2      CDATA #IMPLIED
+    text     CDATA #IMPLIED
+    title    CDATA #IMPLIED
+    subtitle CDATA #IMPLIED
+    accent   CDATA #IMPLIED
+    dim      CDATA #IMPLIED
+    line     CDATA #IMPLIED>
+
+<!ELEMENT charts EMPTY>
+<!ATTLIST charts
+    series1 CDATA #IMPLIED
+    series2 CDATA #IMPLIED
+    series3 CDATA #IMPLIED
+    series4 CDATA #IMPLIED
+    series5 CDATA #IMPLIED
+    series6 CDATA #IMPLIED
+    grid    CDATA #IMPLIED
+    label   CDATA #IMPLIED>
+
+<!ELEMENT layout EMPTY>
+<!ELEMENT syntax EMPTY>
+<!ATTLIST syntax
+    bg CDATA #IMPLIED
+    border CDATA #IMPLIED
+    text CDATA #IMPLIED
+    keyword CDATA #IMPLIED
+    type CDATA #IMPLIED
+    string CDATA #IMPLIED
+    comment CDATA #IMPLIED
+    number CDATA #IMPLIED
+    builtin CDATA #IMPLIED
+    punctuation CDATA #IMPLIED>
+<!ATTLIST layout
+    margin          CDATA #IMPLIED
+    padding         CDATA #IMPLIED
+    gap             CDATA #IMPLIED
+    columnGap       CDATA #IMPLIED
+    linePadding     CDATA #IMPLIED
+    presenterMargin CDATA #IMPLIED
+    cornerRadius    CDATA #IMPLIED
+    presenterCornerRadius CDATA #IMPLIED
+    bulletGap       CDATA #IMPLIED>

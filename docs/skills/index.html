@@ -1,19 +1,34 @@
 <!doctype html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Presenter Skills</title>
-<style>
-:root{--ink:#f5f3ee;--muted:#a5a7b5;--night:#090c16;--yellow:#ffd166;--line:rgba(255,255,255,.12)}
-*{box-sizing:border-box}body{margin:0;background:var(--night);color:var(--ink);font:16px/1.6 system-ui,-apple-system,"Segoe UI",sans-serif}main{width:min(760px,calc(100% - 40px));margin:0 auto;padding:15vh 0}a{color:var(--yellow)}.eyebrow{color:var(--yellow);font:700 .72rem/1.2 ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}h1{margin:18px 0 20px;font-size:clamp(3rem,8vw,5.5rem);line-height:.95;letter-spacing:-.07em}p{color:var(--muted);font-size:1.08rem}.skill{display:block;margin-top:38px;padding:26px;border:1px solid var(--line);border-radius:16px;background:#151a2d;text-decoration:none}.skill h2{margin:0 0 8px;color:var(--ink);font-size:1.35rem}.skill p{margin:0;font-size:.95rem}.back{display:inline-block;margin-top:42px;font-size:.9rem}
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Presenter — AI agent skill and format reference</title>
+  <meta name="description" content="Public instructions for AI agents creating Presenter decks: presentation skill, XML format reference, slide and style schemas, and a copyable generation prompt.">
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="../site.css">
+  <script src="../site.js" defer></script>
 </head>
-<body><main>
-<div class="eyebrow">Presenter · agent skills</div>
-<h1>Make the story, then make the slides.</h1>
-<p>Use these instructions when an AI agent is creating a Presenter deck. They cover research synthesis, narrative structure, visuals, presenter notes, and the XML format.</p>
-<a class="skill" href="presentation.md"><h2>Presentation skill ↗</h2><p>Research first, outline the story, then create and review a portable <code>.slides</code> package.</p></a>
-<a class="back" href="../">← Back to Presenter</a>
-</main></body>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<nav aria-label="Main navigation"><div class="wrap nav-inner"><a class="brand" href="../"><span class="mark" aria-hidden="true">P</span>Presenter</a><a class="text-link" href="../">← Back to the website</a></div></nav>
+<main id="main" class="resources-page wrap">
+  <p class="eyebrow">For AI agents</p><h1>Everything your agent<br><em>needs to make a deck.</em></h1>
+  <p class="lead">Point your agent to the public Markdown skill below. It contains both the generation workflow and the XML format reference, including a spoken transcript in every slide’s notes.</p>
+  <a class="resource-link" href="presentation.md"><span>Start here: presentation skill + format reference</span><code>https://corepunch.github.io/presenter/skills/presentation.md</code><span aria-hidden="true">↗</span></a>
+  <div class="resource-links"><a href="../schemas/presentation.dtd">Slide schema (DTD) ↗</a><a href="../schemas/style.dtd">Style schema (DTD) ↗</a><a href="../themes.md">Theme reference ↗</a></div>
+  <div class="resources-prompt"><h2>Give it the brief.</h2><p>Attach your source material to an agent that can read URLs and write files, then paste this prompt.</p><div class="prompt-card">
+  <div class="card-top"><span>Paste into your AI agent</span><button class="button small primary" type="button" data-copy="agent-prompt">Copy prompt <span aria-hidden="true">↗</span></button></div>
+  <label class="sr-only" for="agent-prompt">Presentation generation prompt</label>
+  <textarea id="agent-prompt" readonly spellcheck="false">Read https://corepunch.github.io/presenter/skills/presentation.md and follow its workflow and XML format. Use https://corepunch.github.io/presenter/schemas/presentation.dtd and https://corepunch.github.io/presenter/schemas/style.dtd to validate the result.
+
+Turn my attached source material into a 10-minute presentation for my team. Create a portable &quot;My Talk.slides&quot; directory containing presentation.xml and all referenced images and styles. Include the required DOCTYPE and a natural, ready-to-read spoken transcript in &lt;notes&gt; for every slide.
+
+Review the rendered slides and presenter notes before delivery. Tell me how to open the deck in Presenter, share only the audience window, and read the transcript from the separate Presenter View.</textarea>
+  <p class="prompt-hint">Attach your material, then adjust the audience and duration.</p>
+</div></div>
+  <p class="resource-footer">The agent creates the slides and transcript. <a href="../#start">Open the result in Presenter</a> to share the audience window and read from your private Presenter View.</p>
+</main>
+<p id="copy-status" class="copy-status" role="status" aria-live="polite"></p>
+</body>
 </html>
