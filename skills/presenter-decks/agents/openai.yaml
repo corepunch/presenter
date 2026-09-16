@@ -1,4 +1,0 @@
-interface:
-  display_name: "Presenter Decks"
-  short_description: "Create and validate portable Presenter decks"
-  default_prompt: "Use $presenter-decks to create a portable .slides presentation with speaker notes."
