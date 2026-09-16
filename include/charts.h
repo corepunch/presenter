@@ -17,6 +17,6 @@ void renderChart(Renderer* renderer, SDL_Surface* surface,
 
 void renderIconBlock(Renderer* renderer, SDL_Surface* surface,
                      const IconBlock& icon, const FontSet& fonts,
-                     int x, int y, int width);
+                     int x, int y, int width, int height = 0);
 
 uint32_t iconCodepoint(const std::string& name);

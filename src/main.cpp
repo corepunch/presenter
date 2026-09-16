@@ -85,12 +85,16 @@ static Presentation makeWelcomePresentation() {
     Presentation pres;
     pres.style = PresentationStyle::builtInThemes()[0];
     Slide welcome;
-    welcome.layout = SlideLayout::Title;
     welcome.title = "Presenter";
-    welcome.subtitle = "Open a presentation file to get started.\n\n"
-                       "Drag a .slides file onto the app icon,\n"
-                       "or run from terminal:\n"
-                       "  presenter presentation.slides";
+    LayoutNode root;
+    root.kind = "stack";
+    root.attributes = {{"margin", "60"}, {"gap", "24"}, {"verticalAlignment", "center"}};
+    LayoutNode title; title.kind = "text"; title.text = "Presenter";
+    title.attributes["role"] = "title";
+    LayoutNode body; body.kind = "text";
+    body.text = "Open a presentation package to get started.\nRun: presenter presentation.slides";
+    root.children = {title, body};
+    welcome.elements.push_back(root);
     welcome.notes = "Press Escape to quit.\n"
                     "Use arrow keys to navigate slides.\n"
                     "Shift+Arrow to switch themes.\n"

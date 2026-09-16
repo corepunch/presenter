@@ -12,8 +12,9 @@ the eight classic themes. Switch using Shift+Left / Shift+Right.
 
 Studio uses Inter; Porcelain pairs Source Serif 4 headings with Source Sans 3
 body text; Tidal uses Source Sans 3; Ember pairs Source Serif 4 with Inter.
-All four use bold headings, JetBrains Mono code, 56px slide margins and 28px
-rounded corners (14px in the notes window). Fonts ship with the app for offline use.
+All four use bold headings, JetBrains Mono code, and 28px corners on code and
+chart/icon cards. The notes window uses a plain background and text. Images have square corners by
+default. Manual layouts set their own margins. Fonts ship with the app for offline use.
 
 ## Choose a preset
 
@@ -37,7 +38,7 @@ Use an inline style or a standalone style file:
           punctuation="#DDDCE5"/>
   <layout margin="56" padding="24" gap="28" columnGap="32"
           linePadding="8" bulletGap="24" presenterMargin="20"
-          cornerRadius="28" presenterCornerRadius="14"/>
+          cornerRadius="28" imageCornerRadius="0" presenterCornerRadius="14"/>
 </style>
 ```
 
@@ -60,9 +61,28 @@ The syntax palette also supplies the surface and border for native chart/icon
 cards. `boldTitles` controls title and child-heading weight; inline bold and
 italic body formatting continues to select the corresponding real font face.
 
-bg2 adds a gentle gradient on title and section slides and the presenter background.
-Body slides stay solid so nested content and rounded images compose cleanly.
-Subtitle font size is now used on opening slides; long titles wrap within margins.
+Use `imageCornerRadius` to opt into rounded images independently of other cards:
+
+```xml
+<style theme="Studio">
+  <layout imageCornerRadius="20"/>
+</style>
+```
+
+The radius is in slide-canvas pixels; 0 keeps square corners. Both fit and fill
+images use this setting. Rounded corners are transparent, so the enclosing
+card or slide background shows through. Oversized radii are limited to half
+the rendered image's shorter side. Negative values become 0.
+Changing `cornerRadius` does not change image corners.
+Explicit `border` elements keep their own `cornerRadius` property.
+
+Both audience and presenter windows use the solid background color. The
+presenter view stacks its title and notes without gaps or decorations, using
+`presenterMargin` as outer padding. A `Next: …` cue follows with 12px of top
+spacing and pale-yellow text. Override its color with
+`<colors presenterNext="#FFF2B3"/>` inside a style. The legacy
+`presenterCornerRadius` setting is accepted but has no visible effect.
+Text roles select the corresponding theme font sizes.
 
 Try the portable demonstration:
 

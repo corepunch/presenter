@@ -144,10 +144,10 @@ float Font::drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y
 
     for (int gy = 0; gy < height; gy++) {
         int py = baseY + gy;
-        if (py < 0 || py >= surface->h) continue;
+        if (py < surface->clip_rect.y || py >= surface->clip_rect.y + surface->clip_rect.h) continue;
         for (int gx = 0; gx < width; gx++) {
             int px = baseX + gx;
-            if (px < 0 || px >= surface->w) continue;
+            if (px < surface->clip_rect.x || px >= surface->clip_rect.x + surface->clip_rect.w) continue;
 
             uint8_t alpha = bitmap[gy * width + gx];
             if (alpha == 0) continue;

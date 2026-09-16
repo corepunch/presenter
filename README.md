@@ -62,8 +62,8 @@ Typical workflow:
 
 ## Features
 
-- **XML slide format** with recursive composition — slides nest inside slides
-- **6 layout types**: title, content, image, columns, section, blank
+- **XML slide format** with recursive composition — containers nest inside containers
+- **Explicit layouts**: stacks, grids, and padded borders with measure/arrange
 - **Dual-window output**: full audience screen + smaller presenter view with notes
 - **Inline formatting**: `<b>bold</b>`, `<i>italic</i>`, `<code>code</code>` in text blocks
 - **Image support**: PNG, JPG, JPEG, GIF, BMP with fit/fill scaling
@@ -202,25 +202,12 @@ Include the DTD in your presentation files for validation:
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
 <presentation name="My Talk">
-  <slide layout="title" title="My Talk">
-    <notes>Welcome everyone. Today I will explain the three ideas that matter most.</notes>
-    <subtitle>Subtitle here</subtitle>
-  </slide>
-
-  <slide layout="content" title="Key Points">
-    <notes>These points form the core of the talk. I will start with the first and show how each one leads to the next.</notes>
-    <text icon="rocket"><b>Bold</b> point one</text>
-    <text icon="none">Unmarked source or footnote</text>
-    <text>Standard bullet</text>
-  </slide>
-
-  <slide layout="content" title="Q3 Results">
-    <notes>Revenue accelerated through Q3, with September closing at 92 thousand euros.</notes>
-    <chart type="bar" title="Revenue (€k)" icon="chart-bar">
-      <point label="Jul" value="64"/>
-      <point label="Aug" value="78"/>
-      <point label="Sep" value="92"/>
-    </chart>
+  <slide title="My Talk">
+    <notes>Welcome. Today we will agree on the next milestone.</notes>
+    <stack margin="60" gap="24" verticalAlignment="center">
+      <text role="title">My Talk</text>
+      <text role="subtitle">The next milestone</text>
+    </stack>
   </slide>
 </presentation>
 ```
@@ -240,14 +227,13 @@ Recommended workflow:
 
 ## Layouts
 
-| Layout | Description |
-|--------|-------------|
-| `title` | Centered title + optional subtitle (opening/closing slides) |
-| `content` | Title + vertical stack of text blocks (default) |
-| `image` | Title + full-width image + caption |
-| `columns` | Title + horizontal slots via child slides with `slot` attribute |
-| `section` | Centered title only (divider) |
-| `blank` | No header, children fill full area |
+Only explicit layouts are supported: `stack`, `grid`, and `border`, containing
+ordered text, image, code, chart, and icon elements. Grids support pixel, auto,
+and weighted-star tracks, with row/column spans. Elements support margins,
+padding, constraints, and alignment. Text never silently shrinks to fit.
+
+This is a breaking format change: preset attributes and nested slides are
+rejected. See [the format guide](skills/presentation.md) and migrated demos.
 
 ## Theming
 
@@ -294,7 +280,7 @@ presenter/
 ├── src/            # Source files
 │   ├── ui.cpp          # Declarative UI layout engine
 │   ├── renderer.cpp    # Slide + presenter view rendering
-│   ├── layout.cpp      # Slide part layout computation
+│   ├── layout.cpp      # Ordered XML → visual tree factory
 │   ├── image.cpp       # Image loading and scaling
 │   ├── charts.cpp      # Bar, line, pie, donut, and icon rendering
 │   ├── font.cpp        # TTF font loading via stb_truetype
@@ -303,12 +289,12 @@ presenter/
 │   ├── style.cpp       # Theme loading + 8 built-in themes
 │   └── main.cpp        # Entry point, SDL windows, event loop
 ├── include/        # Headers
-│   ├── ui.hpp          # ui::Element, Stack, Border, Text
-│   ├── common.h        # Slide, Presentation, layout enums
+│   ├── ui.hpp          # ui::Element, Stack, Grid, Border, Text
+│   ├── common.h        # Slide, Presentation, ordered LayoutNode tree
 │   ├── style.h         # PresentationStyle, Color
 │   ├── font.h          # FontSet, FontVariants
 │   ├── renderer.h      # Renderer class
-│   ├── layout.h        # LayoutMetrics, SlidePart
+│   ├── layout.h        # Visual tree factory
 │   └── image.h         # ImageBuf, ImageRect
 ├── demo/           # Example presentation and styles
 ├── docs/           # DTD schemas and format spec
@@ -326,45 +312,35 @@ use the displayed name in `icon="..."`. The upstream license is included at
 
 ## Architecture
 
-### Slide rendering (part-based)
+### Shared measure/arrange pipeline
 
-Slides use a layout-then-render pipeline. `layout.cpp` computes `SlidePart` rectangles from the slide structure; `renderer.cpp` draws each part using `Renderer::fillRect()` and `Renderer::drawRectOutline()` with theme colors — no raw `SDL_FillRect` or hardcoded RGB values.
+Slides and the presenter view use `ui::Element`: `measure()` delegates to
+`measureOverride()`, then `arrange()` delegates to `arrangeOverride()`. Grid
+resolves column widths before measuring wrapped heights. Rendering clips to
+allocated bounds and reports overflow. Slide titles are metadata; all visible
+content comes from the explicit element tree.
 
-### Presenter view (ui:: widget tree)
+### Presenter view
 
-The presenter view uses a declarative **ui:: layout engine** built on composable widgets:
-
-| Class | Role |
-|-------|------|
-| `ui::Element` | Base class with `measure() → arrange() → render()` lifecycle and `margin` |
-| `ui::Stack` | Lays out children vertically or horizontally with `gap` and flex `grow` weights |
-| `ui::Border` | Draws a background, border, and rounded corners around a child, with `padding` |
-| `ui::Text` | Measures and renders word-wrapped plain or inline-formatted text |
-
-A `ui::BorderStyle` struct bundles the visual properties (background color, border color, corner radius) so card styling is defined once and shared across all cards. The whole presenter view is a widget tree:
-
-```
-Stack (root, margin = presenterMargin, gap = partGap)
-├── Border (cardStyle) → Stack
-│   ├── Text ("Slide N / M", smallFonts, dimColor)
-│   └── Text (title, baseFonts, titleColor, wrap)
-├── Border (cardStyle) → Stack (grow=1.0, fills remaining space)
-│   ├── Text ("Notes", smallFonts, dimColor)
-│   └── Text (notes, smallFonts, wrap, grow=1.0)
-└── Border (cardStyle) → Stack [shown when next slide exists]
-    ├── Text ("Next", smallFonts, dimColor)
-    └── Text (next title, smallFonts, wrap)
+The presenter view uses the same measure/arrange engine as slides: a plain
+background, an undecorated padding container, and a vertical stack with zero
+gap. The current title uses the body font size, notes use the small font size,
+and the next title uses small, pale-yellow text prefixed with `Next:` and
+12px of space above it. Empty title/notes fields are omitted. There
+are no counters, section labels, cards, borders, or flexible spacers. The theme's
+`presenterMargin` controls the outer padding; regular font line spacing remains.
+make test
+# Run only measurement and arrangement tests:
+make build/test_layout && ./build/test_layout
 ```
 
-## Testing
-
-```bash
-make
-./build/test_textbounds
-./build/test_layout
-./build/test_xml_parser
-./build/test_image
-```
+The layout suite runs headlessly, using synthetic leaves with known intrinsic
+sizes plus bundled-font text cases. It covers override lifecycles, constraints,
+all alignment combinations, margins, padding, stacks, grow weights, grid tracks
+and spans, nested containers, remeasurement, resizing, overflow, and rounding.
+Sweeps verify pixel conservation and span geometry across declaration orders.
+Checks remain active with `NDEBUG`, and failures print the case name, source
+line, expected value, and actual value.
 
 ## License
 

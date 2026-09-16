@@ -32,11 +32,13 @@ public:
     void renderTextBlock(const std::string& text, int x, int y,
                          const Font& font, SDL_Color color, int maxWidth = 0);
     std::vector<std::string> wordWrap(const std::string& text, const FontVariants& fonts, int maxWidth);
+    float formattedWidth(const std::string& text, const FontVariants& fonts);
     void fillRect(const SDL_Rect& rect, Color color, int cornerRadius = 0);
     void drawRectOutline(const SDL_Rect& rect, Color color, int cornerRadius = 0);
 
     int width() const { return m_width; }
     int height() const { return m_height; }
+    int layoutOverflowCount() const { return m_layoutOverflows; }
 
     SDL_Surface* surface() const { return m_surface; }
     void setSurface(SDL_Surface* s) { m_surface = s; }
@@ -52,4 +54,5 @@ private:
     const PresentationStyle* m_style = nullptr;
     int m_width = 0;
     int m_height = 0;
+    int m_layoutOverflows = 0;
 };

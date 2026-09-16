@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+#include <map>
 
 enum class FontType {
     Regular,
@@ -12,14 +13,6 @@ enum class FontType {
     Monospace
 };
 
-enum class SlideLayout {
-    Title,    // Centered title + optional subtitle
-    Content,  // Title + vertical stack of text/images (default)
-    Image,    // Title + full-width image + caption
-    Columns,  // Title + horizontal slots with child slides
-    Section,  // Centered title only (divider)
-    Blank     // No header, children fill full area
-};
 
 enum class ImageFit {
     Fit,   // scale = min(sx, sy), centered (default)
@@ -57,27 +50,20 @@ struct IconBlock {
     std::string text;
 };
 
-struct Slide {
-    SlideLayout layout = SlideLayout::Content;
-    std::string slot;       // "left", "right", "0", "1", ... (for Columns parent)
-    std::string title;
-    std::string subtitle;
-    std::vector<std::string> texts;  // bullet points / captions
-    // Per-text bullet override: empty = standard bullet, "none" = no marker,
-    // otherwise a Font Awesome Free Solid icon name.
-    std::vector<std::string> textIcons;
-    std::string notes;
-    std::string imagePath;
-    std::string imageAlt;
-    std::string caption;      // used only by layout="image"
-    ImageFit imageFit = ImageFit::Fit;
-    int cols = 2;             // column count for layout="columns"
-    int gap = 24;             // gap between slots (pixels)
+// Ordered visual tree. Container and leaf properties are interpreted by the
+// layout builder; slide metadata (title and notes) stays outside this tree.
+struct LayoutNode {
+    std::string kind;
+    std::string text;
+    std::map<std::string, std::string> attributes;
+    std::vector<LayoutNode> children;
+    Chart chart;
+};
 
-    std::vector<CodeBlock> codeBlocks;
-    std::vector<Chart> charts;
-    std::vector<IconBlock> icons;
-    std::vector<Slide> children;  // recursively nested slides
+struct Slide {
+    std::vector<LayoutNode> elements;
+    std::string title;
+    std::string notes;
 };
 
 struct Presentation {

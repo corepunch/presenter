@@ -1,106 +1,183 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
 <presentation name="Nature Portfolio">
-  <slide layout="title" title="Nature Portfolio">
+  <slide title="Nature Portfolio">
     <notes>Welcome everyone. Today I'm showcasing five landscape shots from the Alpine region, taken during a two-week trek in July 2026. All photos shot on a Canon R5 with the RF 24-70mm f/2.8.</notes>
-    <subtitle>Alpine Landscapes — July 2026</subtitle>
+    <stack margin="60" gap="24" verticalAlignment="center">
+      <text role="title">Nature Portfolio</text>
+      <text role="subtitle" color="muted">Alpine Landscapes — July 2026</text>
+    </stack>
   </slide>
-
-  <slide layout="content" title="The Route">
+  <slide title="The Route">
     <notes>These five locations span 120km of trail. Start with the iconic Matterhorn reflection in Riffelsee at dawn, then the Aletsch glacier panorama from Eggishorn, the Engadin forest near St. Moritz, an alpine meadow at 2200m in Zermatt, and finish with the Ligurian coast near Portofino. Each slide has one photo — use the arrow keys to advance.</notes>
-    <text icon="mountain"><b>Mountain</b> — Matterhorn reflection, Riffelsee (2800m)</text>
-    <text icon="snowflake"><b>Lake</b> — Aletsch glacier panorama, Eggishorn (2900m)</text>
-    <text icon="tree"><b>Forest</b> — Engadin pine forest, St. Moritz (1800m)</text>
-    <text icon="seedling"><b>Meadow</b> — Alpine wildflowers, Zermatt valley (2200m)</text>
-    <text icon="water"><b>Coast</b> — Ligurian shoreline, Portofino (sea level)</text>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">The Route</text>
+      <stack row="1" gap="20">
+        <text>
+          <b>Mountain</b> — Matterhorn reflection, Riffelsee (2800m)</text>
+        <text>
+          <b>Lake</b> — Aletsch glacier panorama, Eggishorn (2900m)</text>
+        <text>
+          <b>Forest</b> — Engadin pine forest, St. Moritz (1800m)</text>
+        <text>
+          <b>Meadow</b> — Alpine wildflowers, Zermatt valley (2200m)</text>
+        <text>
+          <b>Coast</b> — Ligurian shoreline, Portofino (sea level)</text>
+      </stack>
+    </grid>
   </slide>
-
-  <slide layout="section" title="Charts &amp; Icons"/>
-
-  <slide layout="columns" gap="24" title="Q3 Portfolio Results">
+  <slide title="Charts &amp; Icons">
+    <stack margin="60" gap="24" verticalAlignment="center">
+      <text role="title">Charts &amp; Icons</text>
+    </stack>
+  </slide>
+  <slide title="Q3 Portfolio Results">
     <notes>Q3 was our strongest quarter. Print revenue rose every month, finishing at 92 thousand euros in September. On the right, direct referrals and social together account for nearly three quarters of new clients. The point is not just growth; it is increasingly diversified, repeatable growth.</notes>
-    <slide slot="left" title="Print revenue">
-      <chart type="bar" title="Revenue (€k)" icon="chart-bar" height="330">
-        <point label="Jul" value="64"/>
-        <point label="Aug" value="78"/>
-        <point label="Sep" value="92"/>
-      </chart>
-    </slide>
-    <slide slot="right" title="New clients">
-      <chart type="donut" title="Acquisition mix" icon="chart-pie" height="330">
-        <point label="Referral" value="42"/>
-        <point label="Social" value="31"/>
-        <point label="Gallery" value="17"/>
-        <point label="Other" value="10"/>
-      </chart>
-    </slide>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Q3 Portfolio Results</text>
+      <grid row="1" columns="* *" rows="*" gap="24">
+        <grid rows="auto *" gap="24" row="0" column="0">
+          <text role="heading">Print revenue</text>
+          <stack row="1" gap="20">
+            <chart type="bar" title="Revenue (€k)" icon="chart-bar" height="330">
+              <point label="Jul" value="64" />
+              <point label="Aug" value="78" />
+              <point label="Sep" value="92" />
+            </chart>
+          </stack>
+        </grid>
+        <grid rows="auto *" gap="24" row="0" column="1">
+          <text role="heading">New clients</text>
+          <stack row="1" gap="20">
+            <chart type="donut" title="Acquisition mix" icon="chart-pie" height="330">
+              <point label="Referral" value="42" />
+              <point label="Social" value="31" />
+              <point label="Gallery" value="17" />
+              <point label="Other" value="10" />
+            </chart>
+          </stack>
+        </grid>
+      </grid>
+    </grid>
   </slide>
-
-  <slide layout="content" title="Momentum Is Compounding">
+  <slide title="Momentum Is Compounding">
     <notes>Portfolio reach has more than doubled since April, from 18 thousand to 49 thousand monthly viewers. The acceleration begins after the Alpine series launches in July. Use the slope of the final three points to underline that the work is finding a larger audience each month.</notes>
-    <chart type="line" title="Monthly portfolio viewers (thousands)" icon="arrow-trend-up" height="390">
-      <point label="Apr" value="18"/>
-      <point label="May" value="21"/>
-      <point label="Jun" value="24"/>
-      <point label="Jul" value="31"/>
-      <point label="Aug" value="39"/>
-      <point label="Sep" value="49"/>
-    </chart>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Momentum Is Compounding</text>
+      <stack row="1" gap="20">
+        <chart type="line" title="Monthly portfolio viewers (thousands)" icon="arrow-trend-up" height="390">
+          <point label="Apr" value="18" />
+          <point label="May" value="21" />
+          <point label="Jun" value="24" />
+          <point label="Jul" value="31" />
+          <point label="Aug" value="39" />
+          <point label="Sep" value="49" />
+        </chart>
+      </stack>
+    </grid>
   </slide>
-
-  <slide layout="content" title="Signals at a Glance">
+  <slide title="Signals at a Glance">
     <notes>Custom bullet icons are useful when a slide needs fast visual anchors rather than another chart. We crossed one hundred print orders, reached twelve thousand newsletter readers, and won the Alpine Photo Award. The final source line deliberately has no marker.</notes>
-    <text icon="rocket"><b>100+ print orders</b> — the Alpine collection launched ahead of plan</text>
-    <text icon="users"><b>12,400 readers</b> — newsletter reach grew 38% quarter over quarter</text>
-    <text icon="trophy"><b>Alpine Photo Award</b> — landscape series selected as the jury winner</text>
-    <text icon="none"><i>Source: Q3 portfolio analytics, October 2026</i></text>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Signals at a Glance</text>
+      <stack row="1" gap="20">
+        <text>
+          <b>100+ print orders</b> — the Alpine collection launched ahead of plan</text>
+        <text>
+          <b>12,400 readers</b> — newsletter reach grew 38% quarter over quarter</text>
+        <text>
+          <b>Alpine Photo Award</b> — landscape series selected as the jury winner</text>
+        <text>
+          <i>Source: Q3 portfolio analytics, October 2026</i>
+        </text>
+      </stack>
+    </grid>
   </slide>
-
-  <slide layout="image" title="Mountain — Matterhorn at Dawn">
+  <slide title="Mountain — Matterhorn at Dawn">
     <notes>Shot at 6:15 AM — golden hour. The water was perfectly still for about 10 minutes before the wind picked up. ISO 100, f/8, 1/60s on a tripod. The reflection is razor-sharp because there was zero wind. This is the most-printed photo from the trip.</notes>
-    <image src="./images/mountain.jpg" alt="Matterhorn reflected in Riffelsee at sunrise"/>
-    <text>The Matterhorn mirrored in Riffelsee — 6:15 AM, zero wind, perfect reflection</text>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Mountain — Matterhorn at Dawn</text>
+      <grid row="1" rows="* auto" gap="16">
+        <image src="./images/mountain.jpg" alt="Matterhorn reflected in Riffelsee at sunrise" fit="fill" />
+        <stack row="1" gap="8">
+          <text role="small">The Matterhorn mirrored in Riffelsee — 6:15 AM, zero wind, perfect reflection</text>
+        </stack>
+      </grid>
+    </grid>
   </slide>
-
-  <slide layout="columns" gap="24" title="Ice and Forest">
+  <slide title="Ice and Forest">
     <notes>Left: the Aletsch glacier is the largest in the Alps at 23km long. Shot from Eggishorn at 11 AM with polarizing filter to cut glare. Right: Engadin pine forest at 5 PM with low-angle sun creating long shadows. Two completely different moods — glacial ice vs warm forest floor.</notes>
-    <slide slot="left">
-      <image src="./images/lake.jpg" alt="Aletsch glacier"/>
-      <text><b>Aletsch Glacier</b> — 23km, largest in the Alps</text>
-    </slide>
-    <slide slot="right">
-      <image src="./images/forest.jpg" alt="Engadin pine forest"/>
-      <text><b>Engadin Forest</b> — old-growth stone pines at 1800m</text>
-    </slide>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Ice and Forest</text>
+      <grid row="1" columns="* *" rows="*" gap="24">
+        <grid rows="*" row="0" column="0">
+          <grid row="0" rows="* auto" gap="16">
+            <image src="./images/lake.jpg" alt="Aletsch glacier" fit="fill" />
+            <stack row="1" gap="8">
+              <text role="small">
+                <b>Aletsch Glacier</b> — 23km, largest in the Alps</text>
+            </stack>
+          </grid>
+        </grid>
+        <grid rows="*" row="0" column="1">
+          <grid row="0" rows="* auto" gap="16">
+            <image src="./images/forest.jpg" alt="Engadin pine forest" fit="fill" />
+            <stack row="1" gap="8">
+              <text role="small">
+                <b>Engadin Forest</b> — old-growth stone pines at 1800m</text>
+            </stack>
+          </grid>
+        </grid>
+      </grid>
+    </grid>
   </slide>
-
-  <slide layout="columns" cols="3" gap="16" title="From Alps to Sea">
+  <slide title="From Alps to Sea">
     <notes>Three perspectives from the last day of the trek. Left: alpine meadow at 2200m with blooming wildflowers in late July. Center: the Ligurian coast near Portofino at golden hour. Right: back to the Matterhorn at sunset with alpenglow — the mountain turns pink for about 8 minutes.</notes>
-    <slide slot="left">
-      <image src="./images/meadow.jpg" alt="Alpine meadow"/>
-      <text>Alpine meadow, 2200m</text>
-    </slide>
-    <slide slot="center">
-      <image src="./images/coast.jpg" alt="Ligurian coast"/>
-      <text>Ligurian coast at sunset</text>
-    </slide>
-    <slide slot="right">
-      <image src="./images/mountain.jpg" alt="Matterhorn alpenglow"/>
-      <text>Matterhorn alpenglow</text>
-    </slide>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">From Alps to Sea</text>
+      <grid row="1" columns="* * *" rows="*" gap="16">
+        <grid rows="*" row="0" column="0">
+          <grid row="0" rows="* auto" gap="16">
+            <image src="./images/meadow.jpg" alt="Alpine meadow" fit="fill" />
+            <stack row="1" gap="8">
+              <text role="small">Alpine meadow, 2200m</text>
+            </stack>
+          </grid>
+        </grid>
+        <grid rows="*" row="0" column="1">
+          <grid row="0" rows="* auto" gap="16">
+            <image src="./images/coast.jpg" alt="Ligurian coast" fit="fill" />
+            <stack row="1" gap="8">
+              <text role="small">Ligurian coast at sunset</text>
+            </stack>
+          </grid>
+        </grid>
+        <grid rows="*" row="0" column="2">
+          <grid row="0" rows="* auto" gap="16">
+            <image src="./images/mountain.jpg" alt="Matterhorn alpenglow" fit="fill" />
+            <stack row="1" gap="8">
+              <text role="small">Matterhorn alpenglow</text>
+            </stack>
+          </grid>
+        </grid>
+      </grid>
+    </grid>
   </slide>
-
-  <slide layout="section" title="Code Examples"/>
-
-  <slide layout="content" title="C++ — Syntax Highlighting">
+  <slide title="Code Examples">
+    <stack margin="60" gap="24" verticalAlignment="center">
+      <text role="title">Code Examples</text>
+    </stack>
+  </slide>
+  <slide title="C++ — Syntax Highlighting">
     <notes>Presenter now supports syntax-highlighted code blocks with lang= attribute. The monospace font and color palette make code readable on slides.</notes>
-    <code lang="cpp">#include &lt;iostream&gt;
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">C++ — Syntax Highlighting</text>
+      <stack row="1" gap="20">
+        <code lang="cpp">#include &lt;iostream&gt;
 #include &lt;vector&gt;
 #include &lt;string&gt;
-
 int main(int argc, char** argv) {
     std::vector&lt;std::string&gt; args(argv, argv + argc);
-
     // Print each argument with its index
     for (size_t i = 0; i &lt; args.size(); i++) {
         std::cout &lt;&lt; "arg[" &lt;&lt; i &lt;&lt; "] = "
@@ -108,16 +185,16 @@ int main(int argc, char** argv) {
     }
     return 0;
 }</code>
+      </stack>
+    </grid>
   </slide>
-
-  <slide layout="content" title="Python — Multiline Block">
-    <notes>Code blocks scale automatically: more lines = smaller rendering, fewer lines = larger.</notes>
-    <code lang="python">def process_images(paths, size=(800, 600)):
-    """Resize and convert a batch of images.
-    
-    Uses bilinear interpolation for high-quality
-    downscaling in multiple steps.
-    """
+  <slide title="Python — Multiline Block">
+    <notes>Code keeps its chosen font size. Keep examples short enough for the allocated area; overflow is reported rather than silently scaled.</notes>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Python — Multiline Block</text>
+      <stack row="1" gap="20">
+        <code lang="python">def process_images(paths, size=(800, 600)):
+    """Resize a batch with bilinear interpolation."""
     results = []
     for p in paths:
         img = load_image(p)
@@ -126,50 +203,52 @@ int main(int argc, char** argv) {
         img = resize(img, size)
         results.append(img)
     return results</code>
+      </stack>
+    </grid>
   </slide>
-
-  <slide layout="content" title="Inline Code">
+  <slide title="Inline Code">
     <notes>Inline code uses monospace font and different color. Single-line expressions stay inline.</notes>
-    <text>Use <code lang="cpp">std::vector&lt;int&gt;</code> for dynamic arrays in C++</text>
-    <text>Python's <code lang="python">list.append()</code> is amortized O(1)</text>
-    <text>Rust uses <code lang="rust">let mut</code> for mutable bindings</text>
-    <text>Bash scripting: <code lang="bash">grep -r "TODO" src/</code></text>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Inline Code</text>
+      <stack row="1" gap="20">
+        <text>Use <code lang="cpp">std::vector&lt;int&gt;</code> for dynamic arrays in C++</text>
+        <text>Python's <code lang="python">list.append()</code> is amortized O(1)</text>
+        <text>Rust uses <code lang="rust">let mut</code> for mutable bindings</text>
+        <text>Bash scripting: <code lang="bash">grep -r "TODO" src/</code>
+        </text>
+      </stack>
+    </grid>
   </slide>
-
-  <slide layout="content" title="Multiple Languages">
-    <notes>Four different languages on one slide. The lang= attribute controls which keyword set is loaded.</notes>
-    <code lang="javascript">function fibonacci(n) {
+  <slide title="Multiple Languages">
+    <notes>Two short examples share the slide. The lang attribute controls syntax highlighting. Each block retains the theme's code font size.</notes>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Multiple Languages</text>
+      <stack row="1" gap="20">
+        <code lang="javascript">function fibonacci(n) {
     if (n &lt;= 1) return n;
-    let a = 0, b = 1;
-    for (let i = 2; i &lt;= n; i++) {
-        [a, b] = [b, a + b];
-    }
-    return b;
+    return fibonacci(n - 1) + fibonacci(n - 2);
 }</code>
-    <code lang="rust">fn factorial(n: u64) -&gt; u64 {
-    match n {
-        0 | 1 =&gt; 1,
-        _ =&gt; n * factorial(n - 1),
-    }
+        <code lang="rust">fn factorial(n: u64) -&gt; u64 {
+    (1..=n).product()
 }</code>
+      </stack>
+    </grid>
   </slide>
-
-  <slide layout="content" title="JSON &amp; XML">
-    <code lang="json">{
+  <slide title="JSON &amp; XML">
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">JSON &amp; XML</text>
+      <stack row="1" gap="20">
+        <code lang="json">{
     "name": "Presenter",
-    "version": "1.0",
-    "features": ["layout", "images",
-                 "code highlighting"],
-    "dependencies": {
-        "sdl2": ">= 2.0",
-        "tinyxml2": ">= 8.0"
-    }
+    "features": ["stacks", "grids"]
 }</code>
-    <code lang="xml">&lt;slide layout="content" title="Example"&gt;
-    &lt;notes&gt;Demo notes&lt;/notes&gt;
-    &lt;text&gt;A bullet point&lt;/text&gt;
+        <code lang="xml">&lt;slide title="Example"&gt;
+  &lt;stack margin="40" gap="20"&gt;
+    &lt;text&gt;An explicit text block&lt;/text&gt;
     &lt;code lang="cpp"&gt;int x = 42;&lt;/code&gt;
+  &lt;/stack&gt;
 &lt;/slide&gt;</code>
+      </stack>
+    </grid>
   </slide>
-
 </presentation>

@@ -1,6 +1,8 @@
 #include "style.h"
 #include <tinyxml2.h>
 #include <cstdio>
+#include <algorithm>
+#include <cstdlib>
 
 // --- Table-driven attribute setter ---
 
@@ -45,6 +47,7 @@ static const AttrEntry STYLE_ATTRS[] = {
     {"colors", "subtitle", [](PresentationStyle& s, const char* v) { s.subtitleColor = v; }},
     {"colors", "accent",   [](PresentationStyle& s, const char* v) { s.accentColor = v; }},
     {"colors", "dim",      [](PresentationStyle& s, const char* v) { s.dimColor = v; }},
+    {"colors", "presenterNext", [](PresentationStyle& s, const char* v) { s.presenterNextColor = v; }},
     {"colors", "line",     [](PresentationStyle& s, const char* v) { s.lineColor = v; }},
     // charts
     {"charts", "series1", [](PresentationStyle& s, const char* v) { s.chartSeries1 = v; }},
@@ -63,6 +66,9 @@ static const AttrEntry STYLE_ATTRS[] = {
     {"layout", "linePadding",     parseAttr<&PresentationStyle::linePadding,     atoi>},
     {"layout", "presenterMargin", parseAttr<&PresentationStyle::presenterMargin, atoi>},
     {"layout", "cornerRadius",    parseAttr<&PresentationStyle::cornerRadius,    atoi>},
+    {"layout", "imageCornerRadius", [](PresentationStyle& s, const char* v) {
+        s.imageCornerRadius = std::max(0, std::atoi(v));
+    }},
     {"layout", "presenterCornerRadius", parseAttr<&PresentationStyle::presenterCornerRadius, atoi>},
     {"layout", "bulletGap",       parseAttr<&PresentationStyle::bulletGap,       atoi>},
 };

@@ -1,37 +1,89 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
 <presentation name="Theme Studio" style="./styles/Studio.style">
-  <slide layout="title" title="Beautiful slides.">
+  <slide title="Beautiful slides.">
     <notes>Presenter pairs a polished deck with private speaker notes. Let your agent organize the source material and write a natural script, then review the result before your meeting.</notes>
-    <subtitle>Words to say.</subtitle>
+    <stack margin="60" gap="24" verticalAlignment="center">
+      <text role="title">Beautiful slides.</text>
+      <text role="subtitle" color="muted">Words to say.</text>
+    </stack>
   </slide>
-  <slide layout="columns" title="Ready for the room." cols="2">
+  <slide title="Ready for the room.">
     <notes>The audience sees your slides. Your speaking notes stay in a separate window. Share only the audience window in your meeting app.</notes>
-    <slide slot="left" title="A clear story">
-      <icon name="layer-group">Six native layouts</icon>
-      <icon name="palette">Coordinated themes</icon>
-      <icon name="chart-bar">Charts from your data</icon>
-    </slide>
-    <slide slot="right" title="A confident delivery">
-      <icon name="comment">Private speaker notes</icon>
-      <icon name="desktop">Separate audience window</icon>
-      <icon name="folder">Portable slide packages</icon>
-    </slide>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Ready for the room.</text>
+      <grid row="1" columns="* *" rows="*" gap="24">
+        <grid rows="auto *" gap="24" row="0" column="0">
+          <text role="heading">A clear story</text>
+          <stack row="1" gap="20">
+            <icon name="layer-group">Stacks and grids</icon>
+            <icon name="palette">Coordinated themes</icon>
+            <icon name="chart-bar">Charts from your data</icon>
+          </stack>
+        </grid>
+        <grid rows="auto *" gap="24" row="0" column="1">
+          <text role="heading">A confident delivery</text>
+          <stack row="1" gap="20">
+            <icon name="comment">Private speaker notes</icon>
+            <icon name="desktop">Separate audience window</icon>
+            <icon name="folder">Portable slide packages</icon>
+          </stack>
+        </grid>
+      </grid>
+    </grid>
   </slide>
-  <slide layout="content" title="Make the numbers legible.">
+  <slide title="Make the numbers legible.">
     <notes>This chart uses illustrative data to demonstrate the theme palette. These values are not product measurements.</notes>
-    <chart type="bar" title="Illustrative project milestones">
-      <point label="Discover" value="24"/>
-      <point label="Design" value="48"/>
-      <point label="Build" value="72"/>
-      <point label="Launch" value="92"/>
-    </chart>
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">Make the numbers legible.</text>
+      <stack row="1" gap="20">
+        <chart type="bar" title="Illustrative project milestones">
+          <point label="Discover" value="24" />
+          <point label="Design" value="48" />
+          <point label="Build" value="72" />
+          <point label="Launch" value="92" />
+        </chart>
+      </stack>
+    </grid>
   </slide>
-  <slide layout="content" title="A format your agent can read.">
+  <slide title="A format your agent can read.">
     <notes>The XML package holds slides, notes and relative paths to assets. The code panel uses JetBrains Mono and a syntax palette coordinated with the theme.</notes>
-    <code lang="xml">&lt;slide layout="title" title="Your next idea"&gt;
-  &lt;notes&gt;Start with the one thing that matters.&lt;/notes&gt;
-  &lt;subtitle&gt;Ready to share.&lt;/subtitle&gt;
+    <grid rows="auto *" gap="24" margin="40">
+      <text role="heading">A format your agent can read.</text>
+      <stack row="1" gap="20">
+        <code lang="xml">&lt;slide title="Your next idea"&gt;
+  &lt;stack margin="60" gap="24"&gt;
+    &lt;text role="title"&gt;Your next idea&lt;/text&gt;
+    &lt;text&gt;Ready to share.&lt;/text&gt;
+  &lt;/stack&gt;
 &lt;/slide&gt;</code>
+      </stack>
+    </grid>
+  </slide>
+  <slide title="Space you can reason about.">
+    <notes>The heading spans both columns. The left column receives twice the remaining width of the right. Cards have explicit padding; the footer is measured from its text. No content is automatically scaled.</notes>
+    <grid margin="40" columns="2* *" rows="auto * auto" gap="24">
+      <text columnSpan="2" role="heading">Space you can reason about.</text>
+      <border row="1" padding="28" background="panel" borderColor="line" cornerRadius="20">
+        <stack gap="20" verticalAlignment="center">
+          <text role="heading" color="accent">Two shares of the space</text>
+          <text>Grid allocates widths first. Text then wraps at its actual column width.</text>
+          <text role="small" color="muted">Padding: 28 px · Gap: 24 px</text>
+        </stack>
+      </border>
+      <border row="1" column="1" padding="24" background="panel" cornerRadius="20">
+        <stack gap="20" verticalAlignment="center">
+          <text role="heading">One share</text>
+          <text>Short, focused supporting detail.</text>
+        </stack>
+      </border>
+      <stack row="2" columnSpan="2" orientation="horizontal" gap="24">
+        <text role="small" color="accent">MEASURE</text>
+        <text role="small" color="muted">→</text>
+        <text role="small" color="accent">ARRANGE</text>
+        <text role="small" color="muted">→</text>
+        <text role="small" color="accent">RENDER</text>
+      </stack>
+    </grid>
   </slide>
 </presentation>

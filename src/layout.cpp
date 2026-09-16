@@ -1,169 +1,99 @@
 #include "layout.h"
-#include <algorithm>
+#include <sstream>
+#include <cstdlib>
 
-ImageCaptionStack computeImageCaptionStack(const Rect& available,
-                                           int imageW, int imageH,
-                                           int captionH, int gap,
-                                           ImageFit fit) {
-    ImageCaptionStack result;
-    result.caption = {available.x, available.y, available.w, std::max(0, captionH)};
-
-    if (available.w <= 0 || available.h <= 0 || imageW <= 0 || imageH <= 0) {
-        return result;
+namespace {
+std::string attr(const LayoutNode& node, const char* key, const std::string& fallback = "") {
+    auto it = node.attributes.find(key);
+    return it == node.attributes.end() ? fallback : it->second;
+}
+int number(const LayoutNode& node, const char* key, int fallback = 0) {
+    auto it = node.attributes.find(key);
+    return it == node.attributes.end() ? fallback : std::atoi(it->second.c_str());
+}
+ui::Thickness thickness(const std::string& value) {
+    std::istringstream input(value);
+    std::vector<int> v; int n;
+    while (input >> n) v.push_back(n);
+    if (v.size() == 4) return {v[0], v[1], v[2], v[3]};
+    if (v.size() == 2) return {v[0], v[1]};
+    return ui::Thickness(v.empty() ? 0 : v[0]);
+}
+ui::Alignment alignment(const std::string& value) {
+    if (value == "start") return ui::Alignment::Start;
+    if (value == "center") return ui::Alignment::Center;
+    if (value == "end") return ui::Alignment::End;
+    return ui::Alignment::Stretch;
+}
+Color color(const std::string& value, const PresentationStyle& s) {
+    if (value == "background") return s.bgColor;
+    if (value == "panel") return s.codeBg;
+    if (value == "accent") return s.accentColor;
+    if (value == "title") return s.titleColor;
+    if (value == "muted") return s.dimColor;
+    if (value == "line") return s.lineColor;
+    if (!value.empty() && value[0] == '#') return Color(value.c_str());
+    return s.textColor;
+}
+std::vector<ui::Track> tracks(const std::string& value) {
+    std::vector<ui::Track> result;
+    std::istringstream input(value); std::string token;
+    while (input >> token) {
+        if (token == "auto") result.push_back({ui::Track::Unit::Auto, 0});
+        else if (token.back() == '*') result.push_back({ui::Track::Unit::Star, token == "*" ? 1 : std::strtod(token.c_str(), nullptr)});
+        else result.push_back({ui::Track::Unit::Pixel, std::strtod(token.c_str(), nullptr)});
     }
-
-    int stackGap = captionH > 0 ? std::max(0, gap) : 0;
-    int maxImageH = std::max(0, available.h - captionH - stackGap);
-    if (maxImageH == 0) {
-        result.caption.y = available.y + std::max(0, (available.h - captionH) / 2);
-        return result;
-    }
-
-    int renderedW = available.w;
-    int renderedH = maxImageH;
-    if (fit == ImageFit::Fit) {
-        float scaleX = static_cast<float>(available.w) / static_cast<float>(imageW);
-        float scaleY = static_cast<float>(maxImageH) / static_cast<float>(imageH);
-        float scale = std::min(scaleX, scaleY);
-        renderedW = std::max(1, std::min(available.w, static_cast<int>(imageW * scale)));
-        renderedH = std::max(1, std::min(maxImageH, static_cast<int>(imageH * scale)));
-    }
-
-    int stackH = renderedH + stackGap + captionH;
-    int stackY = available.y + std::max(0, (available.h - stackH) / 2);
-    result.image = {
-        available.x + (available.w - renderedW) / 2,
-        stackY,
-        renderedW,
-        renderedH
-    };
-    result.caption.y = stackY + renderedH + stackGap;
+    if (result.empty()) result.push_back({});
     return result;
 }
 
-LayoutKind layoutFromSlide(const Slide& slide) {
-    switch (slide.layout) {
-        case SlideLayout::Title:   return LayoutKind::Title;
-        case SlideLayout::Section: return LayoutKind::Section;
-        case SlideLayout::Columns: return LayoutKind::Columns;
-        case SlideLayout::Image:   return LayoutKind::HeaderImage;
-        case SlideLayout::Blank:   return LayoutKind::HeaderBody;
-        case SlideLayout::Content:
-        default:
-            if (!slide.imagePath.empty()) return LayoutKind::HeaderImage;
-            return LayoutKind::HeaderBody;
-    }
 }
 
-std::vector<SlidePart> computeParts(LayoutKind kind, const Slide& slide,
-                                    const LayoutMetrics& metrics,
-                                    const PresentationStyle& s) {
-    std::vector<SlidePart> parts;
-    int contentW = metrics.slideW - 2 * s.slideMargin;
-
-    switch (kind) {
-        case LayoutKind::Title:
-        case LayoutKind::Section: {
-            SlidePart full;
-            full.role = PartRole::FullSlide;
-            full.rect = {s.slideMargin, 0, contentW, metrics.slideH};
-            parts.push_back(full);
-            break;
-        }
-        case LayoutKind::HeaderBody: {
-            int headerH = static_cast<int>(metrics.titleLineH) + 2 * s.partPadding;
-            SlidePart header;
-            header.role = PartRole::Header;
-            header.rect = {s.slideMargin, 0, contentW, headerH};
-            parts.push_back(header);
-
-            int bodyY = headerH + s.partGap;
-            int footerH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
-            int bodyH = metrics.slideH - bodyY - footerH - s.partPadding;
-            SlidePart body;
-            body.role = PartRole::Body;
-            body.rect = {s.slideMargin, bodyY, contentW, bodyH};
-            parts.push_back(body);
-
-            SlidePart footer;
-            footer.role = PartRole::Footer;
-            footer.rect = {s.slideMargin, metrics.slideH - footerH, contentW, footerH};
-            parts.push_back(footer);
-            break;
-        }
-        case LayoutKind::Columns: {
-            int headerH = static_cast<int>(metrics.titleLineH) + 2 * s.partPadding;
-            SlidePart header;
-            header.role = PartRole::Header;
-            header.rect = {s.slideMargin, 0, contentW, headerH};
-            parts.push_back(header);
-
-            int bodyY = headerH + s.partGap;
-            int footerH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
-            int bodyH = metrics.slideH - bodyY - footerH - s.partPadding;
-
-            int nCols = std::max(1, slide.cols);
-            int gap = slide.gap > 0 ? slide.gap : s.columnGap;
-            int nSlots = static_cast<int>(slide.children.size());
-            int nRows = (nSlots + nCols - 1) / nCols;
-            int nGapsH = nCols - 1;
-            int nGapsV = nRows - 1;
-            int colW = (contentW - nGapsH * gap) / nCols;
-            int rowH = (bodyH - nGapsV * gap) / std::max(1, nRows);
-
-            for (int i = 0; i < nSlots; i++) {
-                int col = i % nCols;
-                int row = i / nCols;
-                SlidePart slot;
-                slot.role = PartRole::Slot;
-                slot.childIndex = i;
-                slot.rect = {
-                    s.slideMargin + col * (colW + gap),
-                    bodyY + row * (rowH + gap),
-                    colW,
-                    rowH
-                };
-                parts.push_back(slot);
-            }
-
-            SlidePart footer;
-            footer.role = PartRole::Footer;
-            footer.rect = {s.slideMargin, metrics.slideH - footerH, contentW, footerH};
-            parts.push_back(footer);
-            break;
-        }
-        case LayoutKind::HeaderImage: {
-            int headerH = slide.title.empty() ? 0 : static_cast<int>(metrics.titleLineH) + 2 * s.partPadding;
-            int gapAbove = headerH > 0 ? s.partGap : 0;
-            if (!slide.title.empty()) {
-                SlidePart header;
-                header.role = PartRole::Header;
-                header.rect = {s.slideMargin, 0, contentW, headerH};
-                parts.push_back(header);
-            }
-
-            int footerH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
-            int captionH = static_cast<int>(metrics.bodyLineH) + s.partPadding;
-            int imageAreaY = headerH + gapAbove;
-            int imageAreaH = metrics.slideH - imageAreaY - s.partGap - captionH - footerH;
-
-            SlidePart image;
-            image.role = PartRole::Image;
-            image.rect = {s.slideMargin, imageAreaY, contentW, imageAreaH};
-            parts.push_back(image);
-
-            SlidePart caption;
-            caption.role = PartRole::Caption;
-            caption.rect = {s.slideMargin, imageAreaY + imageAreaH + s.partGap, contentW, captionH};
-            parts.push_back(caption);
-
-            SlidePart footer;
-            footer.role = PartRole::Footer;
-            footer.rect = {s.slideMargin, metrics.slideH - footerH, contentW, footerH};
-            parts.push_back(footer);
-            break;
-        }
-    }
-
-    return parts;
+std::unique_ptr<ui::Element> buildSlideLayout(const LayoutNode& node,
+        const FontSet& fonts, const PresentationStyle& style) {
+    std::unique_ptr<ui::Element> result;
+    if (node.kind == "stack") {
+        auto stack = std::make_unique<ui::Stack>(attr(node, "orientation") == "horizontal" ?
+            ui::Stack::Orientation::Horizontal : ui::Stack::Orientation::Vertical);
+        stack->gap = number(node, "gap");
+        for (const auto& child : node.children) stack->add(buildSlideLayout(child, fonts, style));
+        result = std::move(stack);
+    } else if (node.kind == "grid") {
+        auto grid = std::make_unique<ui::Grid>();
+        grid->rows = tracks(attr(node, "rows", "*"));
+        grid->columns = tracks(attr(node, "columns", "*"));
+        grid->gap = number(node, "gap");
+        for (const auto& child : node.children) grid->add(buildSlideLayout(child, fonts, style),
+            number(child, "row"), number(child, "column"), number(child, "rowSpan", 1), number(child, "columnSpan", 1));
+        result = std::move(grid);
+    } else if (node.kind == "border") {
+        auto border = std::make_unique<ui::Border>();
+        border->style.padding = thickness(attr(node, "padding"));
+        border->style.hasBackground = node.attributes.count("background");
+        border->style.background = color(attr(node, "background"), style);
+        border->style.hasBorder = node.attributes.count("borderColor");
+        border->style.borderColor = color(attr(node, "borderColor"), style);
+        border->style.cornerRadius = number(node, "cornerRadius");
+        if (!node.children.empty()) border->setChild(buildSlideLayout(node.children[0], fonts, style));
+        result = std::move(border);
+    } else if (node.kind == "text") {
+        std::string role = attr(node, "role", "body");
+        auto fv = role == "title" ? fonts.titleVariants() : role == "subtitle" ? fonts.subtitleVariants() :
+            role == "heading" ? fonts.childTitleVariants() : role == "small" ? fonts.smallVariants() : fonts.variants();
+        auto text = std::make_unique<ui::Text>(node.text, fv,
+            color(attr(node, "color", role == "title" || role == "heading" ? "title" : "text"), style));
+        text->wrap = attr(node, "wrap", "true") == "true";
+        text->textAlignment = alignment(attr(node, "textAlignment", "start"));
+        result = std::move(text);
+    } else result = createVisualLeaf(node, fonts);
+    result->margin = thickness(attr(node, "margin"));
+    result->width = number(node, "width", -1);
+    result->height = number(node, "height", -1);
+    result->minWidth = number(node, "minWidth");
+    result->minHeight = number(node, "minHeight");
+    result->maxWidth = number(node, "maxWidth", ui::Unbounded);
+    result->maxHeight = number(node, "maxHeight", ui::Unbounded);
+    result->horizontalAlignment = alignment(attr(node, "horizontalAlignment", "stretch"));
+    result->verticalAlignment = alignment(attr(node, "verticalAlignment", "stretch"));
+    return result;
 }

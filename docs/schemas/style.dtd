@@ -35,6 +35,7 @@
     subtitle CDATA #IMPLIED
     accent   CDATA #IMPLIED
     dim      CDATA #IMPLIED
+    presenterNext CDATA #IMPLIED
     line     CDATA #IMPLIED>
 
 <!ELEMENT charts EMPTY>
@@ -69,5 +70,6 @@
     linePadding     CDATA #IMPLIED
     presenterMargin CDATA #IMPLIED
     cornerRadius    CDATA #IMPLIED
+    imageCornerRadius CDATA #IMPLIED
     presenterCornerRadius CDATA #IMPLIED
     bulletGap       CDATA #IMPLIED>

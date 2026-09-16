@@ -16,6 +16,7 @@ make
 ./build/presenter "demo/Nature Portfolio.slides"
 
 # Tests
+make test
 ./build/test_textbounds
 ./build/test_layout
 ./build/test_xml_parser
@@ -36,9 +37,10 @@ clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2)
 | `src/style.cpp` | Loads theme XML into `PresentationStyle`; defines 8 built-in themes |
 | `src/font.cpp` | TTF font loading via SDL_ttf-style API (bundled Inter + JetBrains Mono) |
 | `src/renderer.cpp` | SDL2 rendering — slides, presenter view, text layout |
-| `src/layout.cpp` | Recursive layout engine: sizes slides, positions children |
+| `src/layout.cpp` | Builds the visual tree from ordered XML nodes |
+| `src/ui.cpp` | Shared measure/arrange engine: Stack, Grid, Border, Text |
 | `src/image.cpp` | Image loading (SDL_image) and scaling (fit/fill) |
-| `include/common.h` | Core types: `Slide`, `Presentation`, `SlideLayout`, `ImageFit` enums |
+| `include/common.h` | Core types: `Slide`, `Presentation`, ordered `LayoutNode` tree |
 | `include/style.h` | `PresentationStyle` and `Color` structs — Color has `toSDLColor()` and `toUint32(fmt)` methods |
 | `include/constants.h` | Compile-time layout constants (margins, font scales) |
 
@@ -47,15 +49,15 @@ clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2)
 1. `xml_parser.cpp` reads XML → fills `Presentation` with `Slide` tree
 2. `style.cpp` loads theme → `PresentationStyle` (colors, font sizes, spacing)
 3. `font.cpp` loads TTF fonts at sizes from style
-4. `layout.cpp` computes bounding boxes recursively (no rendering)
+4. `layout.cpp` builds the visual tree; `ui.cpp` measures and arranges it
 5. `renderer.cpp` walks laid-out tree, draws to SDL textures
 6. `main.cpp` presents textures to both windows
 
 ### Key Types
 
 - `Presentation` — owns slide vector, current index, style
-- `Slide` — recursive: has `children` vector for column layouts
-- `SlideLayout` enum: Title, Content, Image, Columns, Section, Blank
+- `Slide` — title/notes metadata and one manual root container
+- `LayoutNode` — ordered stack/grid/border/leaf tree; no presets or nested slides
 - `ImageFit` enum: Fit (contain) or Fill (cover/crop)
 
 ## Conventions
@@ -88,17 +90,21 @@ When generating presentations:
 
 ## Common Tasks
 
-### Adding a new layout type
+### Adding a new layout element
 
-1. Add enum value to `SlideLayout` in `include/common.h`
-2. Add layout handling in `src/layout.cpp` (compute bounds)
-3. Add rendering in `src/renderer.cpp` (draw to SDL)
-4. Add DTD attribute value in `schemas/presentation.dtd`
-5. Test with a sample XML slide
+1. Add a `ui::Element` subclass with `measureOverride` and `arrangeOverride`
+2. Add parsing and validation in `src/xml_parser.cpp`
+3. Add construction to `buildSlideLayout` and themed rendering
+4. Update `schemas/presentation.dtd` and `skills/presentation.md`
+5. Test measurement, arrangement, clipping, and rendered XML
+
+Manual layouts are mandatory. Never add preset attributes or nested slides.
+Use the local format guide during development; synchronize the hosted copy
+with `scripts/build-site.sh`.
 
 ### Modifying slide styles
 
-Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/Nature Portfolio.slides/styles/`. The presenter ships with 8 built-in themes switchable at runtime via `Shift+Left`/`Shift+Right`: Dracula, Monokai, Solarized Dark, GitHub Light, Solarized Light, Nord, Sunset, Arc. Rounded corners on code blocks, images, and notes panels use the `cornerRadius` style property (default 12px).
+Edit `PresentationStyle` defaults in `include/style.h`, or create/modify theme XML in `demo/Nature Portfolio.slides/styles/`. Built-in themes switch at runtime via `Shift+Left`/`Shift+Right`. Code and chart/icon cards use `cornerRadius`. Images independently use `imageCornerRadius`, default 0 (square). Manual borders have their own explicit radius. Presenter View is plain text on a solid background: one zero-gap stack with outer padding from `presenterMargin`, no labels or decorative panels.
 
 ### Adding a new built-in theme
 

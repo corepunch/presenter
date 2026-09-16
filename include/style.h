@@ -52,6 +52,7 @@ struct PresentationStyle {
     Color subtitleColor  = {160, 160, 176, 255};
     Color accentColor    = {255, 204, 0,   255};
     Color dimColor       = {140, 140, 155, 255};
+    Color presenterNextColor = Color("#FFF2B3");
     Color lineColor      = {100, 100, 120, 255};
 
     // Code block colors
@@ -84,6 +85,7 @@ struct PresentationStyle {
     int linePadding     = LINE_PADDING;
     int presenterMargin = PRESENTER_MARGIN;
     int cornerRadius    = CORNER_RADIUS;
+    int imageCornerRadius = 0; // Square images by default; independent of cards.
     int presenterCornerRadius = PRESENTER_CORNER_RADIUS;
     int bulletGap       = BULLET_GAP;
 

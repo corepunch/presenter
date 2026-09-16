@@ -37,8 +37,8 @@ $(BUILD)/presenter: src/main.cpp $(CORE_SRC) $(THIRD_SRC) | $(BUILD)
 $(BUILD)/test_textbounds: test/test_textbounds.cpp $(CORE_SRC) $(THIRD_SRC) | $(BUILD)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CORE_SRC) $(THIRD_SRC) $(LDFLAGS) $(LDLIBS)
 
-$(BUILD)/test_layout: test/test_layout.cpp src/layout.cpp src/style.cpp $(THIRD_SRC) | $(BUILD)
-	$(CXX) $(CXXFLAGS) -o $@ $< src/layout.cpp src/style.cpp $(THIRD_SRC) $(LDFLAGS) $(LDLIBS)
+$(BUILD)/test_layout: test/test_layout.cpp $(CORE_SRC) $(THIRD_SRC) | $(BUILD)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CORE_SRC) $(THIRD_SRC) $(LDFLAGS) $(LDLIBS)
 
 $(BUILD)/test_xml_parser: test/test_xml_parser.cpp src/xml_parser.cpp src/style.cpp $(THIRD_SRC) | $(BUILD)
 	$(CXX) $(CXXFLAGS) -o $@ $< src/xml_parser.cpp src/style.cpp $(THIRD_SRC) $(LDFLAGS) $(LDLIBS)
@@ -61,6 +61,14 @@ $(BUILD)/test_screenshot: $(wildcard include/*.h include/*.hpp)
 
 demo: $(BUILD)/presenter
 	./$(BUILD)/presenter "demo/Nature Portfolio.slides"
+
+test: all
+	./$(BUILD)/test_layout
+	./$(BUILD)/test_textbounds
+	./$(BUILD)/test_xml_parser
+	./$(BUILD)/test_image
+	./$(BUILD)/test_highlight
+	./$(BUILD)/test_screenshot
 
 clean:
 	rm -rf $(BUILD)

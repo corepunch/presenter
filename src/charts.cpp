@@ -224,10 +224,10 @@ void renderCircularChart(Renderer* renderer, SDL_Surface* surface,
         mappedSeries[i] = seriesColor(style, i).toUint32(surface->format);
     for (int dy = -radius; dy <= radius; ++dy) {
         int py = cy + dy;
-        if (py < 0 || py >= surface->h) continue;
+        if (py < surface->clip_rect.y || py >= surface->clip_rect.y + surface->clip_rect.h) continue;
         for (int dx = -radius; dx <= radius; ++dx) {
             int px = cx + dx;
-            if (px < 0 || px >= surface->w ||
+            if (px < surface->clip_rect.x || px >= surface->clip_rect.x + surface->clip_rect.w ||
                 dx * dx + dy * dy > radius * radius) continue;
             double angle = std::atan2(static_cast<double>(dy),
                                       static_cast<double>(dx)) + PI / 2.0;
@@ -355,10 +355,10 @@ void renderChart(Renderer* renderer, SDL_Surface* surface,
 
 void renderIconBlock(Renderer* renderer, SDL_Surface* surface,
                      const IconBlock& icon, const FontSet& fonts,
-                     int x, int y, int width) {
+                     int x, int y, int width, int height) {
     if (!renderer || !surface || width <= 0) return;
     const auto& style = renderer->style();
-    int height = iconBlockNaturalHeight(renderer, fonts);
+    if (height <= 0) height = iconBlockNaturalHeight(renderer, fonts);
     int pad = std::max(8, style.partPadding / 2);
     renderer->fillRect({x, y, width, height}, style.codeBg,
                        style.cornerRadius);

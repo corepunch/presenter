@@ -10,6 +10,9 @@ class Renderer;
 
 namespace ui {
 
+constexpr int Unbounded = 1000000;
+enum class Alignment { Stretch, Start, Center, End };
+
 struct Size {
     int width = 0;
     int height = 0;
@@ -41,6 +44,7 @@ struct Thickness {
 
 struct LayoutContext {
     Renderer& renderer;
+    int overflowCount = 0;
 };
 
 class Element {
@@ -57,6 +61,12 @@ public:
     const Rect& bounds() const { return m_bounds; }
 
     Thickness margin;
+    int width = -1, height = -1;
+    int minWidth = 0, minHeight = 0;
+    int maxWidth = Unbounded, maxHeight = Unbounded;
+    Alignment horizontalAlignment = Alignment::Stretch;
+    Alignment verticalAlignment = Alignment::Stretch;
+    bool overflow = false;
 
 protected:
     virtual Size measureOverride(LayoutContext& context, Size availableSize);
@@ -68,6 +78,33 @@ private:
     Size m_renderSize;
     Rect m_layoutSlot;
     Rect m_bounds;
+    Size m_naturalSize;
+};
+
+struct Track {
+    enum class Unit { Auto, Pixel, Star };
+    Unit unit = Unit::Star;
+    double value = 1;
+};
+
+class Grid final : public Element {
+public:
+    std::vector<Track> rows = {{}};
+    std::vector<Track> columns = {{}};
+    int gap = 0;
+    Element& add(std::unique_ptr<Element> child, int row = 0, int column = 0,
+                 int rowSpan = 1, int columnSpan = 1);
+protected:
+    Size measureOverride(LayoutContext&, Size) override;
+    Size arrangeOverride(LayoutContext&, Size) override;
+    void renderOverride(LayoutContext&) override;
+private:
+    struct Cell {
+        std::unique_ptr<Element> element;
+        int row, column, rowSpan, columnSpan;
+    };
+    std::vector<Cell> m_children;
+    std::vector<int> m_rows, m_columns;
 };
 
 class Stack final : public Element {
@@ -142,6 +179,7 @@ public:
     FontVariants fonts;
     Color color;
     bool wrap = false;
+    Alignment textAlignment = Alignment::Start;
 
 protected:
     Size measureOverride(LayoutContext& context, Size availableSize) override;
