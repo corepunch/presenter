@@ -18,6 +18,15 @@ Use images that directly support the slide. Preserve aspect ratios and do not cr
 
 Do not reuse the same image on multiple slides unless repetition is intentional. Do not present generated illustrations as documentary evidence.
 
+## Icons
+
+Use `<icon name="...">` to pair a short label with a bundled Font Awesome Solid glyph. Keep labels concise — one or two words. Icons render as a glyph beside text, so they work best inside border cards or next to headings.
+
+- **Purpose over decoration.** An icon should clarify or emphasize a concept. If it does not help the audience understand the point faster, leave it out.
+- **One per card or section.** Use icons to draw attention to key ideas, not every bullet. A single well-placed icon has more impact than several competing ones.
+- **Keep labels short.** Long text next to an icon defeats the purpose. Move explanation into a separate text element or into notes.
+- **Consistent placement.** When multiple cards use icons, keep them in the same position relative to the label (typically top-left or above the text).
+
 ## Evidence
 
 Use native Presenter tables and charts when they clarify structured data. Keep quantities, units, labels, and comparisons faithful to the source. For engineering demos, prefer real runtime screenshots over mockups when the application can produce them.
