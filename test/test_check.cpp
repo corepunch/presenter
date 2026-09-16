@@ -32,7 +32,7 @@ int main() {
         return checkPresentation(pres, fonts, renderer);
     };
     LayoutNode text; text.kind = "text"; text.text = "Readable text";
-    auto r = run(text); REQUIRE(r.issues.empty()); REQUIRE(r.slidesChecked == 1);
+    auto r = run(text); REQUIRE(has(r, "underpopulated_slide")); REQUIRE(r.slidesChecked == 1);
     pres.style.smallFontSize = 12; REQUIRE(fonts.load(pres.style));
     text.attributes["role"] = "small"; REQUIRE(has(run(text), "small_text"));
     pres.style = PresentationStyle::builtInThemes()[0]; REQUIRE(fonts.load(pres.style));
@@ -76,12 +76,41 @@ int main() {
     REQUIRE(find(r, "image_upscaled").measurements.at("displayWidth") == 600);
     REQUIRE(!has(r, "image_cropped")); REQUIRE(r.failsStrict());
     image.attributes["width"] = "10"; image.attributes["height"] = "10";
-    r = run(image); REQUIRE(has(r, "image_downscaled")); REQUIRE(!r.failsStrict());
+    r = run(image); REQUIRE(has(r, "image_downscaled")); REQUIRE(r.failsStrict());
     REQUIRE(find(r, "image_downscaled").measurements.at("scalePercent") == 10);
     for (int size : {11, 100, 199}) {
         image.attributes["width"] = image.attributes["height"] = std::to_string(size);
-        REQUIRE(run(image).issues.empty());
+        r = run(image); REQUIRE(!has(r, "image_upscaled")); REQUIRE(!has(r, "image_downscaled"));
     }
+    // A line plus a small image leaves a large trailing gap, even inside
+    // a full-canvas panel. Empty containers do not mask the gap.
+    text.text = "One line"; text.attributes.clear();
+    image.attributes = {{"src", path}, {"width", "100"}, {"height", "100"}};
+    stack.attributes.clear(); stack.children = {text, image};
+    border.attributes = {{"background", "panel"}}; border.children = {stack};
+    r = run(border);
+    const auto& sparse = find(r, "underpopulated_slide");
+    REQUIRE(sparse.severity == IssueSeverity::Warning);
+    REQUIRE(sparse.element == "/slide[1]"); REQUIRE(r.failsStrict());
+    REQUIRE(sparse.measurements.at("emptyBelowFraction") > 0.7);
+    REQUIRE(!has(r, "empty_slide"));
+    // Centered sparse content is deliberate whitespace, not a trailing gap.
+    stack.attributes["verticalAlignment"] = "center";
+    REQUIRE(!has(run(stack), "underpopulated_slide"));
+    // A stretched text slot still contains only one line.
+    text.attributes["height"] = "720";
+    REQUIRE(has(run(text), "underpopulated_slide"));
+    // Threshold is inclusive at 45% (324 px) of the 720 px canvas.
+    image.attributes = {{"src", path}, {"width", "396"}, {"height", "396"}};
+    REQUIRE(has(run(image), "underpopulated_slide"));
+    image.attributes["width"] = image.attributes["height"] = "397";
+    REQUIRE(!has(run(image), "underpopulated_slide"));
+    // Contained images use the actual centered destination, not their slot.
+    image.attributes = {{"src", path}, {"width", "100"}, {"height", "720"}};
+    REQUIRE(!has(run(image), "underpopulated_slide"));
+    stack.attributes.clear(); stack.children.clear();
+    r = run(stack); REQUIRE(has(r, "empty_slide")); REQUIRE(!has(r, "underpopulated_slide"));
+    image.attributes = {{"src", path}};
     image.attributes["width"] = image.attributes["height"] = "200";
     REQUIRE(has(run(image), "image_upscaled"));
     image.attributes["fit"] = "fill"; image.attributes["width"] = "100"; image.attributes["height"] = "10";

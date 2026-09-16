@@ -74,11 +74,19 @@ severity, and a suggested action. JSON includes stable issue codes, bounds,
 measurements, and `schemaVersion: 1` for agent feedback loops.
 
 - Errors: missing/unreadable images and unavailable icons.
-- Warnings: overflowing text/code, clipped or zero-sized elements, empty slides,
+- Warnings: overflowing text/code, clipped or zero-sized elements, empty or underpopulated slides,
   text below 18px, text contrast below 3:1, images enlarged to at least 200%,
   and fill crops removing more than half the source area.
 - Information: images reduced to 10% or less. This is often intentional;
   enlarge the display area only if important details become unreadable.
+
+`underpopulated_slide` warns when at least 45% of the canvas height is empty
+below visible content and the space above is less than half the space below.
+It uses laid-out text lines and displayed image bounds, ignores empty containers
+and panel backgrounds, and exempts balanced, vertically centered compositions.
+This is a trailing-whitespace heuristic, not an overall content-density score;
+intentional minimalist layouts may still trigger it. JSON measurements include
+`contentTop`, `contentBottom`, `emptyBelowPx`, and `emptyBelowFraction`.
 
 Scale percentages compare displayed dimensions with sampled source pixels
 (100% means 1:1), not image area. Thresholds are advisory, not design rules.

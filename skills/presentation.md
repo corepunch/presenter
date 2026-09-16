@@ -209,6 +209,14 @@ is informational. Scale describes dimensions, not area. `--strict` exits 2
 on warnings/errors (0 otherwise); invalid input exits 1. `--slide N` checks
 only one slide. JSON stdout contains only the report, with `schemaVersion: 1`.
 
+`underpopulated_slide` warns when at least 45% of the canvas height is empty
+below visible content, with less than half that much space above. It measures
+text lines and displayed image bounds rather than stretched containers or
+panel backgrounds; balanced centered layouts are exempt. Review the reported
+`contentTop`, `contentBottom`, `emptyBelowPx`, and `emptyBelowFraction` before
+enlarging or redistributing content, combining slides, or keeping intentional
+whitespace. This heuristic detects trailing empty space, not all sparse layouts.
+
 Render every slide and inspect the images. Check for overflow diagnostics,
 missing images, unreadable chart labels, unsuitable crops, and excessive
 text. Fix constraints or edit the content; do not rely on automatic scaling.

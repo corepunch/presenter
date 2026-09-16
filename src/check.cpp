@@ -51,6 +51,8 @@ struct Checker {
     LayoutElements& elements;
     int slide;
     int visibleLeaves = 0;
+    int contentTop = SLIDE_CANVAS_HEIGHT;
+    int contentBottom = 0;
     const ui::Rect canvas{0, 0, SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT};
 
     void visit(const LayoutNode& node, const std::string& path, ui::Rect parentClip, Color background) {
@@ -80,6 +82,7 @@ struct Checker {
             if (border.style.hasBackground) background = border.style.background;
         }
         bool content = false;
+        ui::Rect contentBounds = bounds;
         if (node.kind == "text" || node.kind == "code" || node.kind == "icon") {
             content = hasText(node.text) || (node.kind == "icon" && !attr(node, "name").empty());
             auto desired = element.contentDesiredSize();
@@ -90,6 +93,15 @@ struct Checker {
                 desired = {0, static_cast<int>(lines.size()) * renderer.textHeight(text.fonts.get(FontType::Regular))};
                 for (const auto& line : lines)
                     desired.width = std::max(desired.width, static_cast<int>(std::ceil(renderer.formattedWidth(line, text.fonts))));
+                // Text draws at the top of its slot, even when the slot stretches.
+                // Blank leading/trailing lines do not count as visible content.
+                int first = 0, last = static_cast<int>(lines.size());
+                int lineHeight = renderer.textHeight(text.fonts.get(FontType::Regular));
+                last = lineHeight > 0 ? std::min(last, bounds.height / lineHeight) : 0;
+                while (first < last && !hasText(lines[first])) ++first;
+                while (last > first && !hasText(lines[last - 1])) --last;
+                contentBounds.y += first * lineHeight;
+                contentBounds.height = (last - first) * lineHeight;
                 double fontSize = text.fonts.get(FontType::Regular).getFontSize();
                 if (content && fontSize < 18)
                     issue("small_text", IssueSeverity::Warning, "Text is " + decimal(fontSize) + " px on the slide canvas.",
@@ -132,6 +144,7 @@ struct Checker {
                 auto placement = placeImage(w, h, {bounds.x, bounds.y, bounds.width, bounds.height}, attr(node, "fit") == "fill");
                 const auto& crop = placement.source;
                 const auto& dest = placement.destination;
+                contentBounds = {dest.x, dest.y, dest.w, dest.h};
                 if (crop.w > 0 && crop.h > 0) {
                     double sx = double(dest.w) / crop.w, sy = double(dest.h) / crop.h;
                     double scale = std::max(sx, sy);
@@ -156,7 +169,12 @@ struct Checker {
                 }
             }
         }
-        if (content && visible.width > 0 && visible.height > 0) ++visibleLeaves;
+        const auto visibleContent = intersect(contentBounds, visible);
+        if (content && visibleContent.width > 0 && visibleContent.height > 0) {
+            ++visibleLeaves;
+            contentTop = std::min(contentTop, visibleContent.y);
+            contentBottom = std::max(contentBottom, visibleContent.y + visibleContent.height);
+        }
         std::map<std::string, int> siblings;
         for (const auto& child : node.children) {
             int index = ++siblings[child.kind];
@@ -197,6 +215,19 @@ CheckReport checkPresentation(const Presentation& pres, const FontSet& fonts, Re
             report.issues.push_back({i + 1, "/slide[" + std::to_string(i + 1) + "]", "", "empty_slide",
                 "Slide has no visible content.", "Add visible content or remove this slide.",
                 IssueSeverity::Warning, checker.canvas, {}});
+        else {
+            int emptyBelow = SLIDE_CANVAS_HEIGHT - checker.contentBottom;
+            double emptyBelowFraction = double(emptyBelow) / SLIDE_CANVAS_HEIGHT;
+            // A large trailing gap suggests an unfinished layout. Balanced whitespace
+            // around centered title/section slides is intentionally exempt.
+            if (emptyBelowFraction >= 0.45 && checker.contentTop * 2 < emptyBelow)
+                report.issues.push_back({i + 1, "/slide[" + std::to_string(i + 1) + "]", "", "underpopulated_slide",
+                    "Slide may be underpopulated: " + decimal(emptyBelowFraction * 100) + "% of the canvas is empty below the content.",
+                    "Consider enlarging or redistributing content, combining slides, or keeping the whitespace if intentional.",
+                    IssueSeverity::Warning, checker.canvas,
+                    {{"contentTop", checker.contentTop}, {"contentBottom", checker.contentBottom},
+                     {"emptyBelowPx", emptyBelow}, {"emptyBelowFraction", emptyBelowFraction}}});
+        }
     }
     return report;
 }
