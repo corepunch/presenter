@@ -11,6 +11,14 @@ struct ImageRect {
     int x = 0, y = 0, w = 0, h = 0;
 };
 
+// Shared by rendering and preflight checks. Source is the sampled crop;
+// destination is the actual displayed image, not the enclosing layout slot.
+struct ImagePlacement {
+    ImageRect source;
+    ImageRect destination;
+};
+ImagePlacement placeImage(int sourceW, int sourceH, ImageRect area, bool fill);
+
 // Scale an image to fit entirely inside an area without changing its aspect
 // ratio. The result is centered horizontally and aligned to the area's bottom,
 // giving adjacent images a shared lower edge for captions.

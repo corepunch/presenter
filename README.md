@@ -60,10 +60,43 @@ Typical workflow:
 
 ![Three AI-generated presentation scenarios: a competitor landscape report, a conference talk built from blog posts, and a product launch recap assembled from social reactions](docs/images/presenter-hypothetical-scenarios.jpg)
 
+## Check a presentation before presenting
+
+```sh
+presenter --check "My Talk.slides"
+presenter --check --json --strict "My Talk.slides"
+presenter --check "My Talk.slides" --slide 3
+```
+
+Checks run headlessly using the renderer's 1280×720 measure/arrange layout.
+Reports identify the slide, element path, source image, measured dimensions,
+severity, and a suggested action. JSON includes stable issue codes, bounds,
+measurements, and `schemaVersion: 1` for agent feedback loops.
+
+- Errors: missing/unreadable images and unavailable icons.
+- Warnings: overflowing text/code, clipped or zero-sized elements, empty slides,
+  text below 18px, text contrast below 3:1, images enlarged to at least 200%,
+  and fill crops removing more than half the source area.
+- Information: images reduced to 10% or less. This is often intentional;
+  enlarge the display area only if important details become unreadable.
+
+Scale percentages compare displayed dimensions with sampled source pixels
+(100% means 1:1), not image area. Thresholds are advisory, not design rules.
+Normal checks exit 0 even with findings; `--strict` exits 2 for warnings/errors.
+Invalid input or execution failures exit 1. `--json` keeps stdout JSON-only;
+diagnostics go to stderr. Check mode cannot be combined with screenshot mode.
+
+Agents should generate → check → revise → render and visually inspect.
+Checks cannot judge image meaning, detect text inside images, or guarantee a
+good composition. Contrast checks cover text elements against inherited solid
+backgrounds, not overlapping images, gradients, inline colors, or chart labels.
+Presenter notes are not checked. Always review screenshots too.
+
 ## Features
 
 - **XML slide format** with recursive composition — containers nest inside containers
 - **Explicit layouts**: stacks, grids, and padded borders with measure/arrange
+- **Headless sanity checks**: actual layout measurements, image scaling/cropping, actionable issues and JSON for agents
 - **Dual-window output**: full audience screen + smaller presenter view with notes
 - **Inline formatting**: `<b>bold</b>`, `<i>italic</i>`, `<code>code</code>` in text blocks
 - **Image support**: PNG, JPG, JPEG, GIF, BMP with fit/fill scaling

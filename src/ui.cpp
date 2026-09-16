@@ -29,6 +29,7 @@ void Element::measure(LayoutContext& context, Size availableSize) {
     inner.height = std::min(inner.height, std::clamp(height >= 0 ? height : inner.height,
         minHeight, std::max(minHeight, maxHeight)));
     Size desired = clampSize(measureOverride(context, inner));
+    m_contentDesiredSize = desired;
     desired.width = std::clamp(width >= 0 ? width : desired.width, minWidth, std::max(minWidth, maxWidth));
     desired.height = std::clamp(height >= 0 ? height : desired.height, minHeight, std::max(minHeight, maxHeight));
     m_naturalSize = desired;

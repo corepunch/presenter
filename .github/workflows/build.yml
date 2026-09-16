@@ -31,20 +31,5 @@ jobs:
       - name: Build
         run: make
 
-      - name: Test (Linux)
-        if: runner.os == 'Linux'
-        run: |
-          xvfb-run ./build/test_textbounds
-          ./build/test_layout
-          ./build/test_xml_parser
-          ./build/test_image
-          ./build/test_highlight
-
-      - name: Test (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          ./build/test_textbounds
-          ./build/test_layout
-          ./build/test_xml_parser
-          ./build/test_image
-          ./build/test_highlight
+      - name: Test
+        run: make test

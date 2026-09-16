@@ -572,45 +572,19 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
     unsigned char* data = stbi_load(imagePath.c_str(), &imgW, &imgH, &channels, 4);
 
     if (data && imgW > 0 && imgH > 0) {
-        float scaleX = static_cast<float>(rect.width) / static_cast<float>(imgW);
-        float scaleY = static_cast<float>(rect.height) / static_cast<float>(imgH);
-
-        int dstW, dstH, dstX, dstY;
-        ImageBuf srcBuf;
-
+        ImagePlacement placement = placeImage(imgW, imgH,
+            {rect.x, rect.y, rect.width, rect.height}, fit == ImageFit::Fill);
+        const auto& crop = placement.source;
+        const auto& destination = placement.destination;
+        int dstW = destination.w, dstH = destination.h;
+        int dstX = destination.x, dstY = destination.y;
+        ImageBuf srcBuf{data, imgW, imgH};
         if (fit == ImageFit::Fill) {
-            float scale = std::max(scaleX, scaleY);
-            int cropW = static_cast<int>(rect.width / scale);
-            int cropH = static_cast<int>(rect.height / scale);
-            int cropX = std::max(0, (imgW - cropW) / 2);
-            int cropY = std::max(0, (imgH - cropH) / 2);
-            cropW = std::min(cropW, imgW - cropX);
-            cropH = std::min(cropH, imgH - cropY);
-
-            srcBuf.w = cropW;
-            srcBuf.h = cropH;
-            srcBuf.data = new uint8_t[cropW * cropH * 4];
-            for (int row = 0; row < cropH; ++row)
-                std::memcpy(srcBuf.data + row * cropW * 4,
-                            data + ((cropY + row) * imgW + cropX) * 4,
-                            cropW * 4);
-
-            dstW = rect.width;
-            dstH = rect.height;
-            dstX = rect.x;
-            dstY = rect.y;
-        } else {
-            ImageRect placement = fitImageToArea(
-                imgW, imgH,
-                rect.x, rect.y, rect.width, rect.height);
-            dstW = placement.w;
-            dstH = placement.h;
-            dstX = placement.x;
-            dstY = placement.y;
-
-            srcBuf.w = imgW;
-            srcBuf.h = imgH;
-            srcBuf.data = data;
+            srcBuf = {new uint8_t[crop.w * crop.h * 4], crop.w, crop.h};
+            for (int row = 0; row < crop.h; ++row)
+                std::memcpy(srcBuf.data + row * crop.w * 4,
+                            data + ((crop.y + row) * imgW + crop.x) * 4,
+                            crop.w * 4);
         }
 
         ImageBuf resampled = resampleBilinear(srcBuf, dstW, dstH);

@@ -195,9 +195,19 @@ Validate against the local schema when developing with this checkout:
 
 ```sh
 xmllint --noout --dtdvalid schemas/presentation.dtd "My Talk.slides/presentation.xml"
+./build/presenter --check --json --strict "My Talk.slides"
 ./build/presenter "My Talk.slides" --slide 1 --screenshot /tmp/slide.png
 ./build/presenter "My Talk.slides" --slide 1 --presenter-screenshot /tmp/notes.png
 ```
+
+Run the sanity checker before rendering. Use each issue's stable `code`,
+one-based `slide`, element path, bounds, and measurements to revise the XML.
+Suggestions are options, not mandatory changes: avoid blindly shrinking text
+or enlarging every downscaled image. Enlargement to 200% or more and crops
+discarding over half the source area are warnings; downscaling to 10% or less
+is informational. Scale describes dimensions, not area. `--strict` exits 2
+on warnings/errors (0 otherwise); invalid input exits 1. `--slide N` checks
+only one slide. JSON stdout contains only the report, with `schemaVersion: 1`.
 
 Render every slide and inspect the images. Check for overflow diagnostics,
 missing images, unreadable chart labels, unsuitable crops, and excessive

@@ -56,6 +56,7 @@ public:
     void render(LayoutContext& context);
 
     const Size& desiredSize() const { return m_desiredSize; }
+    const Size& contentDesiredSize() const { return m_contentDesiredSize; }
     const Size& renderSize() const { return m_renderSize; }
     const Rect& layoutSlot() const { return m_layoutSlot; }
     const Rect& bounds() const { return m_bounds; }
@@ -79,6 +80,7 @@ private:
     Rect m_layoutSlot;
     Rect m_bounds;
     Size m_naturalSize;
+    Size m_contentDesiredSize;
 };
 
 struct Track {

@@ -50,20 +50,20 @@ std::vector<ui::Track> tracks(const std::string& value) {
 }
 
 std::unique_ptr<ui::Element> buildSlideLayout(const LayoutNode& node,
-        const FontSet& fonts, const PresentationStyle& style) {
+        const FontSet& fonts, const PresentationStyle& style, LayoutElements* elements) {
     std::unique_ptr<ui::Element> result;
     if (node.kind == "stack") {
         auto stack = std::make_unique<ui::Stack>(attr(node, "orientation") == "horizontal" ?
             ui::Stack::Orientation::Horizontal : ui::Stack::Orientation::Vertical);
         stack->gap = number(node, "gap");
-        for (const auto& child : node.children) stack->add(buildSlideLayout(child, fonts, style));
+        for (const auto& child : node.children) stack->add(buildSlideLayout(child, fonts, style, elements));
         result = std::move(stack);
     } else if (node.kind == "grid") {
         auto grid = std::make_unique<ui::Grid>();
         grid->rows = tracks(attr(node, "rows", "*"));
         grid->columns = tracks(attr(node, "columns", "*"));
         grid->gap = number(node, "gap");
-        for (const auto& child : node.children) grid->add(buildSlideLayout(child, fonts, style),
+        for (const auto& child : node.children) grid->add(buildSlideLayout(child, fonts, style, elements),
             number(child, "row"), number(child, "column"), number(child, "rowSpan", 1), number(child, "columnSpan", 1));
         result = std::move(grid);
     } else if (node.kind == "border") {
@@ -74,7 +74,7 @@ std::unique_ptr<ui::Element> buildSlideLayout(const LayoutNode& node,
         border->style.hasBorder = node.attributes.count("borderColor");
         border->style.borderColor = color(attr(node, "borderColor"), style);
         border->style.cornerRadius = number(node, "cornerRadius");
-        if (!node.children.empty()) border->setChild(buildSlideLayout(node.children[0], fonts, style));
+        if (!node.children.empty()) border->setChild(buildSlideLayout(node.children[0], fonts, style, elements));
         result = std::move(border);
     } else if (node.kind == "text") {
         std::string role = attr(node, "role", "body");
@@ -95,5 +95,6 @@ std::unique_ptr<ui::Element> buildSlideLayout(const LayoutNode& node,
     result->maxHeight = number(node, "maxHeight", ui::Unbounded);
     result->horizontalAlignment = alignment(attr(node, "horizontalAlignment", "stretch"));
     result->verticalAlignment = alignment(attr(node, "verticalAlignment", "stretch"));
+    if (elements) (*elements)[&node] = result.get();
     return result;
 }

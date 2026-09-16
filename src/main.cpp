@@ -4,6 +4,8 @@
 #include "font.h"
 #include "renderer.h"
 #include "screenshot.h"
+#include "check.h"
+#include <charconv>
 
 #include <SDL2/SDL.h>
 #include <cstdio>
@@ -14,6 +16,9 @@ static void printUsage(const char* prog) {
     printf("Usage: %s <presentation.slides> [options]\n", prog);
     printf("  --style <style.style>             Override the presentation style\n");
     printf("  --slide <number>                  Select a 1-based slide for capture\n");
+    printf("  --check                           Check layout without opening windows\n");
+    printf("  --json                            Output check results as JSON\n");
+    printf("  --strict                          Exit 2 on check warnings/errors\n");
     printf("  --screenshot <output.png>         Save the audience view and exit\n");
     printf("  --presenter-screenshot <file.png> Save the presenter view and exit\n");
 }
@@ -110,36 +115,46 @@ int main(int argc, char* argv[]) {
     std::string screenshotPath;
     std::string presenterScreenshotPath;
     int selectedSlide = 1;
+    bool check = false, json = false, strict = false, slideSpecified = false;
 
-    if (argc >= 2) {
-        xmlPath = argv[1];
-
-        for (int i = 2; i < argc; i++) {
-            std::string arg = argv[i];
-            if (arg == "--style" && i + 1 < argc) {
-                stylePath = argv[++i];
-            } else if (optionValue(arg, "--style", &stylePath)) {
-            } else if (arg == "--screenshot" && i + 1 < argc) {
-                screenshotPath = argv[++i];
-            } else if (optionValue(arg, "--screenshot", &screenshotPath)) {
-            } else if (arg == "--presenter-screenshot" && i + 1 < argc) {
-                presenterScreenshotPath = argv[++i];
-            } else if (optionValue(arg, "--presenter-screenshot",
-                                   &presenterScreenshotPath)) {
-            } else if (arg == "--slide" && i + 1 < argc) {
-                selectedSlide = std::atoi(argv[++i]);
-            } else {
-                std::string slideValue;
-                if (optionValue(arg, "--slide", &slideValue)) {
-                    selectedSlide = std::atoi(slideValue.c_str());
-                } else {
-                    fprintf(stderr, "Unknown or incomplete option: %s\n", arg.c_str());
-                    printUsage(argv[0]);
-                    return 1;
-                }
+    for (int i = 1; i < argc; i++) {
+        std::string arg = argv[i];
+        std::string slideValue;
+        if (arg == "--help") { printUsage(argv[0]); return 0;
+        } else if (arg == "--check") { check = true;
+        } else if (arg == "--json") { json = true;
+        } else if (arg == "--strict") { strict = true;
+        } else if (arg == "--style" && i + 1 < argc) {
+            stylePath = argv[++i];
+        } else if (optionValue(arg, "--style", &stylePath)) {
+        } else if (arg == "--screenshot" && i + 1 < argc) {
+            screenshotPath = argv[++i];
+        } else if (optionValue(arg, "--screenshot", &screenshotPath)) {
+        } else if (arg == "--presenter-screenshot" && i + 1 < argc) {
+            presenterScreenshotPath = argv[++i];
+        } else if (optionValue(arg, "--presenter-screenshot",
+                               &presenterScreenshotPath)) {
+        } else if ((arg == "--slide" && i + 1 < argc && (slideValue = argv[++i], true)) ||
+                   optionValue(arg, "--slide", &slideValue)) {
+            slideSpecified = true;
+            auto parsed = std::from_chars(slideValue.data(), slideValue.data() + slideValue.size(), selectedSlide);
+            if (parsed.ec != std::errc() || parsed.ptr != slideValue.data() + slideValue.size() || selectedSlide < 1) {
+                fprintf(stderr, "Invalid slide number\n"); return 1;
             }
+        } else if (!arg.empty() && arg[0] != '-' && xmlPath.empty()) {
+            xmlPath = arg;
+        } else {
+            fprintf(stderr, "Unknown or incomplete option: %s\n", arg.c_str());
+            return 1;
         }
+    }
+    if ((!check && (json || strict)) ||
+        (check && (xmlPath.empty() || !screenshotPath.empty() || !presenterScreenshotPath.empty()))) {
+        fprintf(stderr, "--json/--strict require --check; checking requires a presentation and cannot be combined with screenshots.\n");
+        return 1;
+    }
 
+    if (!xmlPath.empty()) {
         pres = parseXml(xmlPath);
         if (pres.empty()) {
             fprintf(stderr, "Error: no slides found in %s\n", xmlPath.c_str());
@@ -155,7 +170,7 @@ int main(int argc, char* argv[]) {
         }
         pres.current = selectedSlide - 1;
 
-        printf("Loaded %d slides from %s\n", pres.size(), xmlPath.c_str());
+        if (!check) printf("Loaded %d slides from %s\n", pres.size(), xmlPath.c_str());
     } else {
         pres = makeWelcomePresentation();
     }
@@ -168,7 +183,7 @@ int main(int argc, char* argv[]) {
 
     bool captureOnly = !screenshotPath.empty() ||
                        !presenterScreenshotPath.empty();
-    if (SDL_Init(captureOnly ? 0 : SDL_INIT_VIDEO) < 0) {
+    if (SDL_Init((captureOnly || check) ? 0 : SDL_INIT_VIDEO) < 0) {
         fprintf(stderr, "SDL_Init failed: %s\n", SDL_GetError());
         return 1;
     }
@@ -178,6 +193,13 @@ int main(int argc, char* argv[]) {
         fprintf(stderr, "Failed to load fonts\n");
         SDL_Quit();
         return 1;
+    }
+    if (check) {
+        Renderer renderer;
+        auto report = checkPresentation(pres, fonts, renderer, slideSpecified ? selectedSlide : 0);
+        printf("%s", formatCheckReport(report, json).c_str());
+        SDL_Quit();
+        return strict && report.failsStrict() ? 2 : 0;
     }
     printf("Loaded fonts (title:%.0f subtitle:%.0f content:%.0f bullet:%.0f small:%.0f childTitle:%.0f)\n",
            pres.style.titleFontSize, pres.style.subtitleFontSize,

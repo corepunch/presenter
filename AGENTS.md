@@ -21,6 +21,11 @@ make test
 ./build/test_layout
 ./build/test_xml_parser
 ./build/test_image
+./build/test_check
+python3 test/test_check_cli.py build/presenter
+
+# Headless sanity checks (strict: exit 2 on warnings/errors)
+./build/presenter --check --json --strict "demo/Nature Portfolio.slides"
 
 # Lint (if clang-tidy is available)
 clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2)
@@ -39,6 +44,7 @@ clang-tidy src/*.cpp -- -Iinclude -Ithird_party $(pkg-config --cflags sdl2)
 | `src/renderer.cpp` | SDL2 rendering — slides, presenter view, text layout |
 | `src/layout.cpp` | Builds the visual tree from ordered XML nodes |
 | `src/ui.cpp` | Shared measure/arrange engine: Stack, Grid, Border, Text |
+| `src/check.cpp` | Headless measured-layout checks, readable/JSON issue reports |
 | `src/image.cpp` | Image loading (SDL_image) and scaling (fit/fill) |
 | `include/common.h` | Core types: `Slide`, `Presentation`, ordered `LayoutNode` tree |
 | `include/style.h` | `PresentationStyle` and `Color` structs — Color has `toSDLColor()` and `toUint32(fmt)` methods |

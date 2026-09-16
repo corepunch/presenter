@@ -11,7 +11,7 @@ BUILD     = build
 
 CORE_SRC = src/xml_parser.cpp src/style.cpp src/font.cpp src/renderer.cpp \
            src/layout.cpp src/image.cpp src/highlight.cpp src/ui.cpp \
-           src/screenshot.cpp src/charts.cpp
+           src/screenshot.cpp src/charts.cpp src/check.cpp
 
 THIRD_SRC = third_party/tinyxml2.cpp
 
@@ -21,7 +21,7 @@ THIRD_SRC = third_party/tinyxml2.cpp
 
 all: $(BUILD)/presenter $(BUILD)/test_textbounds $(BUILD)/test_layout \
      $(BUILD)/test_xml_parser $(BUILD)/test_image $(BUILD)/test_highlight \
-     $(BUILD)/test_screenshot
+     $(BUILD)/test_screenshot $(BUILD)/test_check
 	@cp -r assets $(BUILD)/
 	@cp -r share $(BUILD)/
 
@@ -33,6 +33,9 @@ $(BUILD)/presenter: src/main.cpp $(CORE_SRC) $(THIRD_SRC) | $(BUILD)
 	$(CXX) $(CXXFLAGS) -o $@ src/main.cpp $(CORE_SRC) $(THIRD_SRC) $(LDFLAGS) $(LDLIBS)
 
 # --- tests -----------------------------------------------------------------
+
+$(BUILD)/test_check: test/test_check.cpp $(CORE_SRC) $(THIRD_SRC) | $(BUILD)
+	$(CXX) $(CXXFLAGS) -o $@ $< $(CORE_SRC) $(THIRD_SRC) $(LDFLAGS) $(LDLIBS)
 
 $(BUILD)/test_textbounds: test/test_textbounds.cpp $(CORE_SRC) $(THIRD_SRC) | $(BUILD)
 	$(CXX) $(CXXFLAGS) -o $@ $< $(CORE_SRC) $(THIRD_SRC) $(LDFLAGS) $(LDLIBS)
@@ -57,7 +60,7 @@ $(BUILD)/test_screenshot: test/test_screenshot.cpp src/screenshot.cpp | $(BUILD)
 # Theme/font headers affect every consumer even when no .cpp file changes.
 $(BUILD)/presenter $(BUILD)/test_textbounds $(BUILD)/test_layout \
 $(BUILD)/test_xml_parser $(BUILD)/test_image $(BUILD)/test_highlight \
-$(BUILD)/test_screenshot: $(wildcard include/*.h include/*.hpp)
+$(BUILD)/test_screenshot $(BUILD)/test_check: $(wildcard include/*.h include/*.hpp)
 
 demo: $(BUILD)/presenter
 	./$(BUILD)/presenter "demo/Nature Portfolio.slides"
@@ -69,6 +72,8 @@ test: all
 	./$(BUILD)/test_image
 	./$(BUILD)/test_highlight
 	./$(BUILD)/test_screenshot
+	./$(BUILD)/test_check
+	python3 test/test_check_cli.py $(BUILD)/presenter
 
 clean:
 	rm -rf $(BUILD)

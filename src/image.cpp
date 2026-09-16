@@ -22,6 +22,16 @@ ImageRect fitImageToArea(int srcW, int srcH,
     };
 }
 
+ImagePlacement placeImage(int sourceW, int sourceH, ImageRect area, bool fill) {
+    if (sourceW <= 0 || sourceH <= 0 || area.w <= 0 || area.h <= 0) return {};
+    if (!fill) return {{0, 0, sourceW, sourceH},
+        fitImageToArea(sourceW, sourceH, area.x, area.y, area.w, area.h)};
+    double scale = std::max(double(area.w) / sourceW, double(area.h) / sourceH);
+    int w = std::clamp(static_cast<int>(area.w / scale), 1, sourceW);
+    int h = std::clamp(static_cast<int>(area.h / scale), 1, sourceH);
+    return {{(sourceW - w) / 2, (sourceH - h) / 2, w, h}, area};
+}
+
 // Single bilinear pass: resample src into a freshly-allocated dst of (dstW x dstH).
 static ImageBuf bilinearPass(const ImageBuf& src, int dstW, int dstH) {
     ImageBuf dst;
