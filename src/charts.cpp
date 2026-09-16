@@ -1,5 +1,6 @@
 #include "charts.h"
 
+#include "fa_icons.h"
 #include "font.h"
 #include "renderer.h"
 #include "style.h"
@@ -7,9 +8,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstdio>
-#include <fstream>
 #include <string>
-#include <unordered_map>
 
 namespace {
 
@@ -285,46 +284,7 @@ int iconBlockNaturalHeight(Renderer* renderer, const FontSet& fonts) {
 }
 
 uint32_t iconCodepoint(const std::string& name) {
-    static const std::unordered_map<std::string, uint32_t> icons = [] {
-        std::unordered_map<std::string, uint32_t> result;
-        std::ifstream css("assets/FontAwesome-Free.css");
-        std::string line;
-        std::string currentName;
-        while (std::getline(css, line)) {
-            if (line.rfind(".fa-", 0) == 0) {
-                size_t end = line.find(" {");
-                currentName = end == std::string::npos
-                    ? std::string()
-                    : line.substr(4, end - 4);
-                continue;
-            }
-            if (currentName.empty()) continue;
-            size_t property = line.find("--fa:");
-            size_t slash = line.find('\\', property);
-            size_t quote = line.find('"', slash);
-            if (property == std::string::npos || slash == std::string::npos ||
-                quote == std::string::npos) continue;
-            std::string hex = line.substr(slash + 1, quote - slash - 1);
-            char* end = nullptr;
-            unsigned long value = std::strtoul(hex.c_str(), &end, 16);
-            if (end && *end == '\0' && value > 0)
-                result[currentName] = static_cast<uint32_t>(value);
-            currentName.clear();
-        }
-
-        // Keep the core examples working if the optional name map cannot be
-        // opened (for example, in a partially copied development build).
-        if (result.empty()) {
-            result = {
-                {"arrow-trend-up", 0xE098}, {"chart-bar", 0xF080},
-                {"chart-line", 0xF201}, {"chart-pie", 0xF200},
-                {"circle-check", 0xF058}, {"lightbulb", 0xF0EB},
-                {"rocket", 0xF135}, {"trophy", 0xF091},
-                {"users", 0xF0C0},
-            };
-        }
-        return result;
-    }();
+    const auto& icons = faIcons();
     auto found = icons.find(name);
     return found == icons.end() ? 0 : found->second;
 }
