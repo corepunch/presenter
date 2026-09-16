@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE presentation SYSTEM "https://corepunch.github.io/presenter/schemas/presentation.dtd">
+<presentation name="Hello World">
+  <slide title="Cover">
+    <notes>Welcome everyone. Today I will show you how to create presentations using Presenter, a C++17 rendering engine that turns XML into beautiful slides.</notes>
+    <stack margin="60" gap="24" verticalAlignment="center">
+      <text role="title">Hello World</text>
+      <text role="subtitle" color="muted">A simple Presenter demo</text>
+    </stack>
+  </slide>
+  <slide title="What is Presenter">
+    <notes>Presenter reads XML slide definitions and renders them via SDL2. It supports manual layouts with stacks, grids, and borders. Every element is placed explicitly — no hidden auto-formatting.</notes>
+    <stack margin="60" gap="32">
+      <text role="heading">What is Presenter?</text>
+      <text role="body">A C++17 presentation renderer that reads XML and outputs to two windows: an audience display and a presenter view with notes.</text>
+      <grid rows="*" columns="* * *" gap="16">
+        <border column="0" padding="20" background="panel" borderColor="line" cornerRadius="12">
+          <stack gap="8">
+            <text role="heading">Manual layouts</text>
+            <text role="small" color="muted">Stack, grid, and border elements give you full control.</text>
+          </stack>
+        </border>
+        <border column="1" padding="20" background="panel" borderColor="line" cornerRadius="12">
+          <stack gap="8">
+            <text role="heading">Speaker notes</text>
+            <text role="small" color="muted">Private notes visible only in the presenter view.</text>
+          </stack>
+        </border>
+        <border column="2" padding="20" background="panel" borderColor="line" cornerRadius="12">
+          <stack gap="8">
+            <text role="heading">Themes</text>
+            <text role="small" color="muted">Built-in and custom styles with hotkey switching.</text>
+          </stack>
+        </border>
+      </grid>
+    </stack>
+  </slide>
+  <slide title="Closing">
+    <notes>That is the basics. Presenter is open source and available on GitHub. Thank you for your time.</notes>
+    <stack margin="60" gap="24" verticalAlignment="center">
+      <text role="title">Thank you</text>
+      <text role="subtitle" color="muted">github.com/corepunch/presenter</text>
+    </stack>
+  </slide>
+</presentation>
