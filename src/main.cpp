@@ -21,6 +21,8 @@ static void printUsage(const char* prog) {
     printf("  --strict                          Exit 2 on check warnings/errors\n");
     printf("  --screenshot <output.png>         Save the audience view and exit\n");
     printf("  --presenter-screenshot <file.png> Save the presenter view and exit\n");
+    printf("  --pixel-ratio <scale>             Raster scale for screenshots/windows (1-4, default: auto)\n");
+    printf("  --retina                          Shortcut for --pixel-ratio 2\n");
 }
 
 using ThemeIterator = std::vector<PresentationStyle>::const_iterator;
@@ -34,7 +36,7 @@ static bool optionValue(const std::string& arg, const char* name,
 }
 
 static bool saveRenderedView(const Presentation& pres, const FontSet& fonts,
-                             bool presenterView, const std::string& path) {
+                             bool presenterView, const std::string& path, float pixelRatio) {
     int width = presenterView ? 640 : SLIDE_CANVAS_WIDTH;
     int height = presenterView ? 480 : SLIDE_CANVAS_HEIGHT;
     SDL_Surface* target = SDL_CreateRGBSurfaceWithFormat(
@@ -48,6 +50,7 @@ static bool saveRenderedView(const Presentation& pres, const FontSet& fonts,
     }
 
     Renderer renderer;
+    renderer.setPixelRatio(pixelRatio);
     bool initialized = renderer.init(sdlRenderer, width, height);
     SDL_Texture* texture = nullptr;
     if (initialized) {
@@ -86,6 +89,26 @@ static SDL_Renderer* createDisplayRenderer(SDL_Window* window) {
     return renderer;
 }
 
+// Detect the drawable/window scale for a display renderer (1.0 on standard
+// displays, 2.0 on macOS retina). Falls back to 1.0 when sizes are unknown.
+static float detectDisplayScale(SDL_Window* window, SDL_Renderer* renderer,
+                                int logicalW, int logicalH) {
+    if (!window || logicalW <= 0 || logicalH <= 0) return DEFAULT_PIXEL_RATIO;
+    int outputW = 0, outputH = 0;
+    if (renderer && SDL_GetRendererOutputSize(renderer, &outputW, &outputH) == 0 &&
+        outputW > 0 && outputH > 0) {
+        float scale = std::min(static_cast<float>(outputW) / logicalW,
+                               static_cast<float>(outputH) / logicalH);
+        if (scale >= MIN_PIXEL_RATIO && scale <= MAX_PIXEL_RATIO) return scale;
+    }
+    int drawableW = 0, drawableH = 0;
+    SDL_GetWindowSize(window, &drawableW, &drawableH);
+    // SDL_GetWindowSize returns points; on HiDPI the drawable is larger.
+    // Without a renderer size we cannot confirm, so stay at 1x.
+    (void)drawableW; (void)drawableH;
+    return DEFAULT_PIXEL_RATIO;
+}
+
 static Presentation makeWelcomePresentation() {
     Presentation pres;
     pres.style = PresentationStyle::builtInThemes()[0];
@@ -116,14 +139,28 @@ int main(int argc, char* argv[]) {
     std::string presenterScreenshotPath;
     int selectedSlide = 1;
     bool check = false, json = false, strict = false, slideSpecified = false;
+    float pixelRatioFlag = 0.0f; // 0 = auto for display, 1x for headless capture
 
     for (int i = 1; i < argc; i++) {
         std::string arg = argv[i];
         std::string slideValue;
+        std::string ratioValue;
         if (arg == "--help") { printUsage(argv[0]); return 0;
         } else if (arg == "--check") { check = true;
         } else if (arg == "--json") { json = true;
         } else if (arg == "--strict") { strict = true;
+        } else if (arg == "--retina") { pixelRatioFlag = RETINA_PIXEL_RATIO;
+        } else if ((arg == "--pixel-ratio" && i + 1 < argc && (ratioValue = argv[++i], true)) ||
+                   optionValue(arg, "--pixel-ratio", &ratioValue)) {
+            try {
+                pixelRatioFlag = std::stof(ratioValue);
+            } catch (...) {
+                fprintf(stderr, "Invalid pixel ratio: %s\n", ratioValue.c_str()); return 1;
+            }
+            if (!(pixelRatioFlag >= MIN_PIXEL_RATIO && pixelRatioFlag <= MAX_PIXEL_RATIO)) {
+                fprintf(stderr, "Pixel ratio must be between %.0f and %.0f\n",
+                        MIN_PIXEL_RATIO, MAX_PIXEL_RATIO); return 1;
+            }
         } else if (arg == "--style" && i + 1 < argc) {
             stylePath = argv[++i];
         } else if (optionValue(arg, "--style", &stylePath)) {
@@ -207,15 +244,19 @@ int main(int argc, char* argv[]) {
            pres.style.smallFontSize, pres.style.childTitleFontSize);
 
     if (captureOnly) {
+        // Headless captures have no display whose scale can be detected. Keep
+        // the historical 1x output unless the caller explicitly requests a
+        // higher raster scale.
+        float captureRatio = pixelRatioFlag > 0 ? pixelRatioFlag : DEFAULT_PIXEL_RATIO;
         bool ok = true;
         if (!screenshotPath.empty()) {
-            ok = saveRenderedView(pres, fonts, false, screenshotPath) && ok;
+            ok = saveRenderedView(pres, fonts, false, screenshotPath, captureRatio) && ok;
             fprintf(ok ? stdout : stderr, "%s audience screenshot: %s\n",
                     ok ? "Saved" : "Failed to save", screenshotPath.c_str());
         }
         if (!presenterScreenshotPath.empty()) {
             bool presenterOk = saveRenderedView(
-                pres, fonts, true, presenterScreenshotPath);
+                pres, fonts, true, presenterScreenshotPath, captureRatio);
             ok = presenterOk && ok;
             fprintf(presenterOk ? stdout : stderr,
                     "%s presenter screenshot: %s\n",
@@ -233,13 +274,14 @@ int main(int argc, char* argv[]) {
         audienceTitle,
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
     );
     if (!audienceWindow) {
         fprintf(stderr, "Failed to create audience window: %s\n", SDL_GetError());
         SDL_Quit();
         return 1;
     }
+    SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2");
     SDL_Renderer* audienceRenderer = createDisplayRenderer(audienceWindow);
     if (!audienceRenderer) {
         fprintf(stderr, "Failed to create audience renderer: %s\n", SDL_GetError());
@@ -256,7 +298,7 @@ int main(int argc, char* argv[]) {
         "Presenter View",
         SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED,
         640, 480,
-        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE
+        SDL_WINDOW_SHOWN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
     );
     if (!presenterWindow) {
         fprintf(stderr, "Failed to create presenter window: %s\n", SDL_GetError());
@@ -280,9 +322,21 @@ int main(int argc, char* argv[]) {
 
     int pw, ph;
     SDL_GetWindowSize(presenterWindow, &pw, &ph);
+    // Rasterize at the drawable scale so retina windows get full-resolution
+    // text, shapes and images. Layout still uses logical canvas units.
+    float audienceScale = pixelRatioFlag > 0
+        ? pixelRatioFlag
+        : detectDisplayScale(audienceWindow, audienceRenderer,
+                             SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT);
+    float presenterScale = pixelRatioFlag > 0
+        ? pixelRatioFlag
+        : detectDisplayScale(presenterWindow, presenterRenderer, pw, ph);
+    audienceRend.setPixelRatio(audienceScale);
+    presenterRend.setPixelRatio(presenterScale);
     audienceRend.init(
         audienceRenderer, SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT);
     presenterRend.init(presenterRenderer, pw, ph);
+    printf("Display scale: audience %.2fx, presenter %.2fx\n", audienceScale, presenterScale);
 
     bool running = bool(true);
     bool audienceDirty = true;
@@ -377,12 +431,27 @@ int main(int argc, char* argv[]) {
                 }
                 break;
             case SDL_WINDOWEVENT:
-                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED) {
+                if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED ||
+                    event.window.event == SDL_WINDOWEVENT_DISPLAY_CHANGED) {
                     if (event.window.windowID == SDL_GetWindowID(audienceWindow)) {
+                        if (pixelRatioFlag <= 0) {
+                            float updated = detectDisplayScale(audienceWindow, audienceRenderer,
+                                SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT);
+                            if (updated != audienceRend.pixelRatio()) {
+                                audienceRend.setPixelRatio(updated);
+                                audienceRend.init(audienceRenderer,
+                                    SLIDE_CANVAS_WIDTH, SLIDE_CANVAS_HEIGHT);
+                                audienceDirty = true;
+                            }
+                        }
                         presentAudience = true;
                     } else if (event.window.windowID ==
                                SDL_GetWindowID(presenterWindow)) {
                         SDL_GetWindowSize(presenterWindow, &pw, &ph);
+                        if (pixelRatioFlag <= 0)
+                            presenterScale = detectDisplayScale(presenterWindow,
+                                presenterRenderer, pw, ph);
+                        presenterRend.setPixelRatio(presenterScale);
                         presenterRend.init(presenterRenderer, pw, ph);
                         presenterDirty = true;
                     }

@@ -32,7 +32,11 @@ public:
 
     // Render a single glyph directly to a 32-bit RGBA surface with alpha
     // blending. Returns the horizontal advance in pixels.
-    float drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y, SDL_Color color) const;
+    // x/y are in surface (device) pixels; deviceScale multiplies the logical
+    // font size so glyph coverage is generated at full retina resolution.
+    // Measurement helpers (measureString/measureGlyph/getAscent/...) always
+    // stay in logical units for layout.
+    float drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y, SDL_Color color, float deviceScale = 1.0f) const;
 
     // Get pixel width of a UTF-8 string
     float measureString(const std::string& text) const;

@@ -163,6 +163,10 @@ struct Checker {
                         issue("image_downscaled", IssueSeverity::Info, geometry + "Reduced to " +
                               decimal(scale * 100) + "% of source dimensions.",
                               "If this contains fine detail or labels, inspect readability or give it more space.", values);
+                    else if (scale * RETINA_PIXEL_RATIO >= 2)
+                        issue("image_retina_soft", IssueSeverity::Info, geometry + "Sharp at 1x but enlarged to " +
+                              decimal(scale * RETINA_PIXEL_RATIO * 100) + "% on a 2x retina display; may appear soft.",
+                              "Use a source at least twice the display size for crisp retina output.", values);
                     if (cropped > 0.5)
                         issue("image_cropped", IssueSeverity::Warning, geometry + decimal(cropped * 100) + "% of source area is cropped.",
                               "Use fit instead of fill, or change the image/container aspect ratio if important details are lost.", values);

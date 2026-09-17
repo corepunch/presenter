@@ -19,6 +19,15 @@ public:
     bool init(SDL_Renderer* renderer, int width, int height);
     void cleanup();
 
+    // Device pixel ratio (1.0 = legacy 1:1, 2.0 = retina). Must be set before
+    // init(); the offscreen surface is allocated at logical*ratio pixels while
+    // width()/height() and all public coordinates stay in logical units so
+    // layout and --check output are unaffected.
+    void setPixelRatio(float ratio);
+    float pixelRatio() const { return m_pixelRatio; }
+    int deviceWidth() const;
+    int deviceHeight() const;
+
     SDL_Texture* renderSlide(const Slide& slide, const FontSet& fonts, const PresentationStyle& style, int slideNum = 1, int totalSlides = 1);
     SDL_Texture* renderPresenterView(const Presentation& pres, const FontSet& fonts);
 
@@ -40,6 +49,13 @@ public:
     int height() const { return m_height; }
     int layoutOverflowCount() const { return m_layoutOverflows; }
 
+    // Logical -> device helpers used by raster backends. Layout stays in
+    // logical units; only pixel output is scaled.
+    int toDevice(int v) const;
+    float toDevice(float v) const;
+    SDL_Rect toDeviceRect(const SDL_Rect& r) const;
+    SDL_Rect toDeviceRect(int x, int y, int w, int h) const;
+
     SDL_Surface* surface() const { return m_surface; }
     void setSurface(SDL_Surface* s) { m_surface = s; }
     SDL_Renderer* sdlRenderer() const { return m_renderer; }
@@ -55,4 +71,5 @@ private:
     int m_width = 0;
     int m_height = 0;
     int m_layoutOverflows = 0;
+    float m_pixelRatio = 1.0f;
 };

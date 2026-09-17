@@ -99,16 +99,18 @@ const void* Font::resolveFont(uint32_t codepoint, float* outScale) const {
     return nullptr;
 }
 
-float Font::drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y, SDL_Color color) const {
-    float scale = 0;
-    const stbtt_fontinfo* info = static_cast<const stbtt_fontinfo*>(resolveFont(codepoint, &scale));
+float Font::drawGlyph(SDL_Surface* surface, uint32_t codepoint, float x, float y, SDL_Color color, float deviceScale) const {
+    if (deviceScale <= 0.0f) deviceScale = 1.0f;
+    float baseScale = 0;
+    const stbtt_fontinfo* info = static_cast<const stbtt_fontinfo*>(resolveFont(codepoint, &baseScale));
 
     // Missing everywhere: fall back to '?' so we don't render tofu
     if (!info) {
         codepoint = '?';
-        info = static_cast<const stbtt_fontinfo*>(resolveFont(codepoint, &scale));
+        info = static_cast<const stbtt_fontinfo*>(resolveFont(codepoint, &baseScale));
         if (!info) return 0;
     }
+    float scale = baseScale * deviceScale;
 
     int advanceWidth;
     stbtt_GetCodepointHMetrics(info, static_cast<int>(codepoint), &advanceWidth, nullptr);

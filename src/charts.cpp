@@ -80,6 +80,15 @@ void drawLine(SDL_Surface* surface, int x0, int y0, int x1, int y1,
     }
 }
 
+// Logical-coordinate wrappers: layout stays in canvas units, raster output
+// is scaled to device pixels for retina crispness.
+void drawLineLogical(Renderer* renderer, SDL_Surface* surface,
+                     int x0, int y0, int x1, int y1, Color color, int thickness = 1) {
+    drawLine(surface, renderer->toDevice(x0), renderer->toDevice(y0),
+             renderer->toDevice(x1), renderer->toDevice(y1), color,
+             std::max(1, renderer->toDevice(thickness)));
+}
+
 void fillCircle(SDL_Surface* surface, int cx, int cy, int radius, Color color) {
     Uint32 pixel = color.toUint32(surface->format);
     for (int dy = -radius; dy <= radius; ++dy) {
@@ -90,6 +99,12 @@ void fillCircle(SDL_Surface* surface, int cx, int cy, int radius, Color color) {
     }
 }
 
+void fillCircleLogical(Renderer* renderer, SDL_Surface* surface,
+                       int cx, int cy, int radius, Color color) {
+    fillCircle(surface, renderer->toDevice(cx), renderer->toDevice(cy),
+               std::max(1, renderer->toDevice(radius)), color);
+}
+
 void renderChartHeading(Renderer* renderer, SDL_Surface* surface,
                         const Chart& chart, const FontSet& fonts,
                         int x, int y, int width) {
@@ -98,9 +113,10 @@ void renderChartHeading(Renderer* renderer, SDL_Surface* surface,
     int cursorX = x;
     uint32_t codepoint = iconCodepoint(chart.icon);
     if (codepoint && fonts.icons().hasGlyph(codepoint)) {
-        fonts.icons().drawGlyph(surface, codepoint, static_cast<float>(cursorX),
-                                y + titleFont.getAscent(),
-                                style.chartSeries1.toSDLColor());
+        fonts.icons().drawGlyph(surface, codepoint,
+                                renderer->toDevice(static_cast<float>(cursorX)),
+                                renderer->toDevice(y + titleFont.getAscent()),
+                                style.chartSeries1.toSDLColor(), renderer->pixelRatio());
         cursorX += static_cast<int>(fonts.icons().getFontSize()) + style.partGap / 2;
     }
     std::string title = fitLabel(chart.title, titleFont, width - (cursorX - x));
@@ -131,7 +147,7 @@ void renderAxesChart(Renderer* renderer, SDL_Surface* surface,
 
     for (int i = 0; i <= 5; ++i) {
         int gy = bottom - (bottom - top) * i / 5;
-        drawLine(surface, left, gy, right, gy, style.chartGrid);
+        drawLineLogical(renderer, surface, left, gy, right, gy, style.chartGrid);
         std::string value = formatValue(maxValue * i / 5.0);
         renderer->drawText(value,
                            left - labelFont.measureString(value) - 8,
@@ -175,10 +191,10 @@ void renderAxesChart(Renderer* renderer, SDL_Surface* surface,
         int py = bottom - static_cast<int>(
             std::max(0.0, point.value) / maxValue * plotH);
         if (i > 0)
-            drawLine(surface, previousX, previousY, px, py,
+            drawLineLogical(renderer, surface, previousX, previousY, px, py,
                      style.chartSeries1, 4);
-        fillCircle(surface, px, py, 6, style.chartSeries2);
-        fillCircle(surface, px, py, 3, style.chartSeries1);
+        fillCircleLogical(renderer, surface, px, py, 6, style.chartSeries2);
+        fillCircleLogical(renderer, surface, px, py, 3, style.chartSeries1);
         if (chart.showValues) {
             drawCentered(renderer, formatValue(point.value), px,
                          py - 10, valueFont, style.chartLabel);
@@ -215,19 +231,23 @@ void renderCircularChart(Renderer* renderer, SDL_Surface* surface,
         total += std::max(0.0, point.value);
     if (total <= 0.0) return;
 
+    // Rasterize the disc in device pixels for retina-sharp edges.
+    int devCx = renderer->toDevice(cx);
+    int devCy = renderer->toDevice(cy);
+    int devRadius = renderer->toDevice(radius);
     SDL_LockSurface(surface);
     auto* pixels = static_cast<Uint32*>(surface->pixels);
     int pitch = surface->pitch / 4;
     Uint32 mappedSeries[6];
     for (size_t i = 0; i < 6; ++i)
         mappedSeries[i] = seriesColor(style, i).toUint32(surface->format);
-    for (int dy = -radius; dy <= radius; ++dy) {
-        int py = cy + dy;
+    for (int dy = -devRadius; dy <= devRadius; ++dy) {
+        int py = devCy + dy;
         if (py < surface->clip_rect.y || py >= surface->clip_rect.y + surface->clip_rect.h) continue;
-        for (int dx = -radius; dx <= radius; ++dx) {
-            int px = cx + dx;
+        for (int dx = -devRadius; dx <= devRadius; ++dx) {
+            int px = devCx + dx;
             if (px < surface->clip_rect.x || px >= surface->clip_rect.x + surface->clip_rect.w ||
-                dx * dx + dy * dy > radius * radius) continue;
+                dx * dx + dy * dy > devRadius * devRadius) continue;
             double angle = std::atan2(static_cast<double>(dy),
                                       static_cast<double>(dx)) + PI / 2.0;
             if (angle < 0) angle += 2.0 * PI;
@@ -244,7 +264,7 @@ void renderCircularChart(Renderer* renderer, SDL_Surface* surface,
     SDL_UnlockSurface(surface);
 
     if (chart.type == ChartType::Donut) {
-        fillCircle(surface, cx, cy, radius * 11 / 20, style.codeBg);
+        fillCircleLogical(renderer, surface, cx, cy, radius * 11 / 20, style.codeBg);
         std::string totalText = formatValue(total);
         drawCentered(renderer, totalText, cx,
                      cy + valueFont.getAscent() / 2.0f,
@@ -339,8 +359,13 @@ void renderIconBlock(Renderer* renderer, SDL_Surface* surface,
     auto lines = renderer->wordWrap(icon.text, variants, textWidth);
     int layerHeight = std::max(height, static_cast<int>(lines.size() + 2) *
                                       renderer->textHeight(textFont));
+    // Offscreen ink layer is allocated at device resolution so formatted text
+    // and the icon glyph rasterize at full retina detail before centering.
+    int devWidth = renderer->toDevice(width);
+    int devLayerHeight = renderer->toDevice(layerHeight);
+    int devHeight = renderer->toDevice(height);
     SDL_Surface* layer = SDL_CreateRGBSurfaceWithFormat(
-        0, width, layerHeight, 32, SDL_PIXELFORMAT_RGBA32);
+        0, devWidth, devLayerHeight, 32, SDL_PIXELFORMAT_RGBA32);
     if (!layer) return;
     Color transparentPanel = style.codeBg;
     transparentPanel.a = 0;
@@ -352,15 +377,15 @@ void renderIconBlock(Renderer* renderer, SDL_Surface* surface,
         static_cast<int>(std::ceil(textFont.getAscent())) + pad,
         variants, style.textColor.toSDLColor(), textWidth);
     if (codepoint && fonts.icons().hasGlyph(codepoint))
-        fonts.icons().drawGlyph(layer, codepoint, pad,
-            std::ceil(fonts.icons().getAscent()) + pad,
-            style.chartSeries1.toSDLColor());
+        fonts.icons().drawGlyph(layer, codepoint, renderer->toDevice(static_cast<float>(pad)),
+            renderer->toDevice(std::ceil(fonts.icons().getAscent()) + pad),
+            style.chartSeries1.toSDLColor(), renderer->pixelRatio());
     renderer->setSurface(saved);
 
     auto centerInk = [&](int left, int right) {
-        int top = layerHeight, bottom = -1;
+        int top = devLayerHeight, bottom = -1;
         auto* pixels = static_cast<Uint32*>(layer->pixels);
-        for (int row = 0; row < layerHeight; ++row) {
+        for (int row = 0; row < devLayerHeight; ++row) {
             for (int col = left; col < right; ++col) {
                 Uint8 red, green, blue, alpha;
                 SDL_GetRGBA(pixels[row * (layer->pitch / 4) + col],
@@ -370,10 +395,12 @@ void renderIconBlock(Renderer* renderer, SDL_Surface* surface,
         }
         if (bottom < top) return;
         SDL_Rect source = {left, top, right - left, bottom - top + 1};
-        SDL_Rect target = {x + left, y + (height - source.h) / 2, source.w, source.h};
+        SDL_Rect target = {renderer->toDevice(x) + left,
+                           renderer->toDevice(y) + (devHeight - source.h) / 2,
+                           source.w, source.h};
         SDL_BlitSurface(layer, &source, surface, &target);
     };
-    centerInk(0, localTextX);
-    centerInk(localTextX, width);
+    centerInk(0, renderer->toDevice(localTextX));
+    centerInk(renderer->toDevice(localTextX), devWidth);
     SDL_FreeSurface(layer);
 }

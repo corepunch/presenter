@@ -73,8 +73,10 @@ void Element::render(LayoutContext& context) {
         m_bounds.x, m_bounds.y, m_naturalSize.width, m_naturalSize.height, m_bounds.width, m_bounds.height);
     if (m_bounds.width <= 0 || m_bounds.height <= 0) return;
     SDL_Surface* surface = context.renderer.surface();
-    SDL_Rect previous{}, clip{m_bounds.x, m_bounds.y, m_bounds.width, m_bounds.height}, intersection{};
+    SDL_Rect previous{}, clip, intersection{};
     if (surface) {
+        // Bounds are logical; the surface is device pixels (logical*ratio).
+        clip = context.renderer.toDeviceRect(m_bounds.x, m_bounds.y, m_bounds.width, m_bounds.height);
         SDL_GetClipRect(surface, &previous);
         SDL_IntersectRect(&previous, &clip, &intersection);
         SDL_SetClipRect(surface, &intersection);

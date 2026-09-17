@@ -6,6 +6,15 @@
 inline constexpr int SLIDE_CANVAS_WIDTH = 1280;
 inline constexpr int SLIDE_CANVAS_HEIGHT = 720;
 
+// HiDPI/retina raster scale. Layout always runs in logical (canvas) units;
+// the renderer rasterizes at logical * pixelRatio device pixels so text,
+// vector shapes and resampled images stay crisp on 2x displays. A ratio of
+// 1 preserves the legacy 1:1 bitmap.
+inline constexpr float DEFAULT_PIXEL_RATIO = 1.0f;
+inline constexpr float RETINA_PIXEL_RATIO = 2.0f;
+inline constexpr float MIN_PIXEL_RATIO = 1.0f;
+inline constexpr float MAX_PIXEL_RATIO = 4.0f;
+
 // Font sizes (pixels). Base size can be overridden with --size.
 #define FONT_SIZE_BASE 28.0f
 

@@ -18,12 +18,43 @@ Renderer::~Renderer() {
     cleanup();
 }
 
+void Renderer::setPixelRatio(float ratio) {
+    if (!(ratio >= MIN_PIXEL_RATIO && ratio <= MAX_PIXEL_RATIO)) {
+        ratio = std::clamp(ratio, MIN_PIXEL_RATIO, MAX_PIXEL_RATIO);
+    }
+    m_pixelRatio = ratio;
+}
+
+int Renderer::deviceWidth() const {
+    return static_cast<int>(std::lround(m_width * m_pixelRatio));
+}
+
+int Renderer::deviceHeight() const {
+    return static_cast<int>(std::lround(m_height * m_pixelRatio));
+}
+
+int Renderer::toDevice(int v) const {
+    return static_cast<int>(std::lround(v * m_pixelRatio));
+}
+
+float Renderer::toDevice(float v) const {
+    return v * m_pixelRatio;
+}
+
+SDL_Rect Renderer::toDeviceRect(const SDL_Rect& r) const {
+    return toDeviceRect(r.x, r.y, r.w, r.h);
+}
+
+SDL_Rect Renderer::toDeviceRect(int x, int y, int w, int h) const {
+    return {toDevice(x), toDevice(y), std::max(0, toDevice(w)), std::max(0, toDevice(h))};
+}
+
 bool Renderer::init(SDL_Renderer* renderer, int width, int height) {
     cleanup();
     m_renderer = renderer;
     m_width = width;
     m_height = height;
-    m_surface = SDL_CreateRGBSurface(0, width, height, 32,
+    m_surface = SDL_CreateRGBSurface(0, deviceWidth(), deviceHeight(), 32,
         0x000000FF, 0x0000FF00, 0x00FF0000, 0xFF000000);
     return m_surface != nullptr;
 }
@@ -169,15 +200,19 @@ void Renderer::drawText(const std::string& text, float x, float y,
                         const Font& font, SDL_Color color) {
     if (text.empty() || !m_surface) return;
 
-    float curX = x;
+    // Logical coordinates in, device pixels out: glyph bitmaps are generated
+    // at fontSize*pixelRatio so coverage stays sharp on retina surfaces.
+    float curX = toDevice(x);
+    float deviceY = toDevice(y);
+    float ratio = m_pixelRatio;
     utf8_int32_t prev = 0;
     const utf8_int8_t* s = reinterpret_cast<const utf8_int8_t*>(text.c_str());
     while (*s) {
         utf8_int32_t cp = 0;
         s = utf8codepoint(s, &cp);
 
-        if (prev) curX += font.getKerning(static_cast<uint32_t>(prev), static_cast<uint32_t>(cp));
-        curX += font.drawGlyph(m_surface, static_cast<uint32_t>(cp), curX, y, color);
+        if (prev) curX += font.getKerning(static_cast<uint32_t>(prev), static_cast<uint32_t>(cp)) * ratio;
+        curX += font.drawGlyph(m_surface, static_cast<uint32_t>(cp), curX, deviceY, color, ratio);
 
         prev = cp;
     }
@@ -348,13 +383,15 @@ int Renderer::textHeight(const Font& font) {
 
 void Renderer::fillRect(const SDL_Rect& rect, Color color, int cornerRadius) {
     if (!m_surface || rect.w <= 0 || rect.h <= 0) return;
-    fillRoundedRect(m_surface, rect, cornerRadius, color.toUint32(m_surface->format));
+    fillRoundedRect(m_surface, toDeviceRect(rect), toDevice(cornerRadius),
+        color.toUint32(m_surface->format));
 }
 
 void Renderer::drawRectOutline(const SDL_Rect& rect, Color color, int cornerRadius) {
     if (!m_surface || rect.w <= 0 || rect.h <= 0) return;
     drawRoundedRectOutline(
-        m_surface, rect, cornerRadius, color.toUint32(m_surface->format));
+        m_surface, toDeviceRect(rect), toDevice(cornerRadius),
+        color.toUint32(m_surface->format));
 }
 
 std::vector<std::string> Renderer::wordWrap(const std::string& text,
@@ -513,10 +550,10 @@ static void renderCodeBlock(Renderer* r, SDL_Surface* surf,
 
     Uint32 bg = SDL_MapRGBA(surf->format, s.codeBg.r, s.codeBg.g, s.codeBg.b, s.codeBg.a);
     SDL_Rect bgRect = {x, y, blockW, blockH};
-    fillRoundedRect(surf, bgRect, s.cornerRadius, bg);
+    fillRoundedRect(surf, r->toDeviceRect(bgRect), r->toDevice(s.cornerRadius), bg);
 
     Uint32 brd = SDL_MapRGBA(surf->format, s.codeBorder.r, s.codeBorder.g, s.codeBorder.b, s.codeBorder.a);
-    drawRoundedRectOutline(surf, bgRect, s.cornerRadius, brd);
+    drawRoundedRectOutline(surf, r->toDeviceRect(bgRect), r->toDevice(s.cornerRadius), brd);
 
     LanguageSpec spec;
     if (!cb.lang.empty()) spec = loadLanguage(cb.lang);
@@ -563,7 +600,7 @@ static void renderCodeBlock(Renderer* r, SDL_Surface* surf,
     }
 }
 
-static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
+static void renderImageAt(Renderer* renderer, SDL_Surface* surf, const std::string& imagePath,
                           const ui::Rect& rect, ImageFit fit,
                           int cornerRadius, Color placeholderBg) {
     if (imagePath.empty()) return;
@@ -576,8 +613,14 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
             {rect.x, rect.y, rect.width, rect.height}, fit == ImageFit::Fill);
         const auto& crop = placement.source;
         const auto& destination = placement.destination;
-        int dstW = destination.w, dstH = destination.h;
-        int dstX = destination.x, dstY = destination.y;
+        // Resample to device pixels so retina displays use full source detail
+        // instead of magnifying a 1x bitmap. Layout stays in logical units.
+        float ratio = renderer ? renderer->pixelRatio() : 1.0f;
+        int dstW = std::max(1, static_cast<int>(std::lround(destination.w * ratio)));
+        int dstH = std::max(1, static_cast<int>(std::lround(destination.h * ratio)));
+        int dstX = static_cast<int>(std::lround(destination.x * ratio));
+        int dstY = static_cast<int>(std::lround(destination.y * ratio));
+        int devRadius = static_cast<int>(std::lround(cornerRadius * ratio));
         ImageBuf srcBuf{data, imgW, imgH};
         if (fit == ImageFit::Fill) {
             srcBuf = {new uint8_t[crop.w * crop.h * 4], crop.w, crop.h};
@@ -600,7 +643,7 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
                 SDL_Rect dstRect = {dstX, dstY, dstW, dstH};
                 // Mask the image alpha before compositing so rounded corners
                 // reveal the actual parent surface, including colored cards.
-                maskImageCorners(imgSurface, {0, 0, dstW, dstH}, cornerRadius);
+                maskImageCorners(imgSurface, {0, 0, dstW, dstH}, devRadius);
                 SDL_SetSurfaceBlendMode(imgSurface, SDL_BLENDMODE_BLEND);
                 SDL_BlitSurface(imgSurface, nullptr, surf, &dstRect);
                 SDL_FreeSurface(imgSurface);
@@ -610,8 +653,11 @@ static void renderImageAt(SDL_Surface* surf, const std::string& imagePath,
 
         stbi_image_free(data);
     } else {
-        SDL_Rect ph = {rect.x, rect.y, rect.width, rect.height};
-        fillRoundedRect(surf, ph, cornerRadius, placeholderBg.toUint32(surf->format));
+        SDL_Rect ph = renderer ? renderer->toDeviceRect(rect.x, rect.y, rect.width, rect.height)
+                               : SDL_Rect{rect.x, rect.y, rect.width, rect.height};
+        int phRadius = renderer ? renderer->toDevice(cornerRadius) : cornerRadius;
+        fillRoundedRect(surf, ph, phRadius,
+            placeholderBg.toUint32(surf->format));
     }
 }
 
@@ -662,7 +708,7 @@ protected:
         const auto& b = bounds();
         if (node.kind == "chart") renderChart(&r, r.surface(), node.chart, fonts, b.x, b.y, b.width, b.height);
         else if (node.kind == "icon") renderIconBlock(&r, r.surface(), {attr(node, "name"), node.text}, fonts, b.x, b.y, b.width, b.height);
-        else if (node.kind == "image") renderImageAt(r.surface(), attr(node, "src"), b,
+        else if (node.kind == "image") renderImageAt(&r, r.surface(), attr(node, "src"), b,
             attr(node, "fit") == "fill" ? ImageFit::Fill : ImageFit::Fit,
             r.style().imageCornerRadius, r.style().codeBg);
         else renderCodeBlock(&r, r.surface(), {node.text, attr(node, "lang")},
